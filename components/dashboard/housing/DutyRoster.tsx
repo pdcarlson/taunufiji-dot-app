@@ -6,15 +6,9 @@ import {
   reassignTaskAction,
 } from "@/lib/actions/housing.actions";
 import { account } from "@/lib/client/appwrite";
-import {
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Plus,
-  Coins,
-  Briefcase,
-} from "lucide-react";
+import { CheckCircle, Clock, AlertCircle, Plus, Briefcase } from "lucide-react";
 import toast from "react-hot-toast";
+import { Loader } from "@/components/ui/Loader";
 
 import { HousingTask, Member } from "@/lib/types/models";
 
@@ -36,6 +30,7 @@ export default function DutyRoster({
   userId,
   onRefresh,
 }: DutyRosterProps) {
+  const [updatingTask, setUpdatingTask] = useState<string | null>(null);
   const recurring = tasks.filter((t) => t.type === "duty");
 
   // REASSIGN HANDLER
@@ -46,12 +41,16 @@ export default function DutyRoster({
       members.find((m) => m.$id === newId)?.full_name || "Unknown";
 
     try {
+      setUpdatingTask(taskId);
       const { jwt } = await account.createJWT();
       await reassignTaskAction(taskId, newId || "", assigneeName, jwt);
       toast.success("Roster Updated");
-      onRefresh();
+      // onRefresh(); // Some parents might not update fast enough?
+      if (onRefresh) onRefresh();
     } catch {
       toast.error("Update Failed");
+    } finally {
+      setUpdatingTask(null);
     }
   };
 
@@ -97,20 +96,26 @@ export default function DutyRoster({
                   {/* ASSIGNEE COLUMN */}
                   <td className="p-4">
                     {isAdmin ? (
-                      <select
-                        className="bg-transparent border-b border-dashed border-stone-300 focus:border-fiji-purple outline-none py-1 w-full max-w-[150px] text-stone-700 font-medium"
-                        value={task.assigned_to || ""}
-                        onChange={(e) =>
-                          handleReassign(task.$id, e.target.value)
-                        }
-                      >
-                        <option value="">-- Unassigned --</option>
-                        {members.map((m) => (
-                          <option key={m.$id} value={m.$id}>
-                            {m.full_name}
-                          </option>
-                        ))}
-                      </select>
+                      updatingTask === task.$id ? (
+                        <div className="py-1">
+                          <Loader size="sm" />
+                        </div>
+                      ) : (
+                        <select
+                          className="bg-transparent border-b border-dashed border-stone-300 focus:border-fiji-purple outline-none py-1 w-full max-w-[150px] text-stone-700 font-medium"
+                          value={task.assigned_to || ""}
+                          onChange={(e) =>
+                            handleReassign(task.$id, e.target.value)
+                          }
+                        >
+                          <option value="">-- Unassigned --</option>
+                          {members.map((m) => (
+                            <option key={m.$id} value={m.$id}>
+                              {m.full_name}
+                            </option>
+                          ))}
+                        </select>
+                      )
                     ) : (
                       <span className="text-stone-600 font-medium">
                         {members.find((m) => m.$id === task.assigned_to)

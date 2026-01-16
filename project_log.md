@@ -92,3 +92,5 @@
   - **Structure Upgrade**: Merged `LedgerPage` into `DashboardHome`. Moved logic to reusable `PointsHistory` component. Removed `/dashboard/ledger` route and updated navigation (Sidebar/Mobile) to match.
   - **Visual Consistency**: Created shared `Loader` component. Standardized Loading states across `HousingPage`, `PointsHistory`.
   - **UI/UX Polish**: Renamed Sidebar items to "Tasks" and "Library" for simplicity. Standardized Housing Dashboard to have consistent "Loading" spinners and "Boxed/Dashed" empty states for both "My Responsibilities" and "Bounties". Verified Mobile consistency.
+  - **Leaderboard Logic**: Implemented `getMyRankAction` to fix "Your Rank: #-" issue. Component now fetches personal rank in parallel with Top 5.
+  - **Critical ID Correction**: Fixed `HousingStats` and `LeaderboardWidget` using Auth ID instead of Discord ID for database lookups. Updated `README.md` with explicit Data Architecture usage guide. Removed hardcoded Mock Data from Housing Widget.

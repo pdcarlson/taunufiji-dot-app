@@ -95,43 +95,64 @@ export const LibraryService = {
    */
   async getSearchMetadata() {
     try {
-      console.log("[LibraryService] Fetching Metadata...");
-
-      // Debug: Check Key existence (do not log full key)
-      console.log("[LibraryService] Has API Key:", !!env.APPWRITE_API_KEY);
-
       // Fetch all courses
       // Note: If scale is large, this is bad. For now (<1000 courses), it's OK.
       // Appwrite default max limit is usually 100. Using 100 for safety.
       const coursesRes = await db.listDocuments(DB_ID, COLLECTIONS.COURSES, [
         Query.limit(100),
       ]);
-      console.log("[LibraryService] Courses Fetched:", coursesRes.total);
 
       const professorsRes = await db.listDocuments(
         DB_ID,
         COLLECTIONS.PROFESSORS,
         [Query.limit(100)]
       );
-      console.log("[LibraryService] Professors Fetched:", professorsRes.total);
 
       // Group courses by Dept
       const courses: Record<string, { number: string; name: string }[]> = {};
 
-      coursesRes.documents.forEach((doc: any) => {
-        const dept = doc.department;
+      interface Course extends Models.Document {
+        department: string;
+        course_number: string;
+        course_name: string;
+        abbreviation: string;
+      }
+
+      interface Professor extends Models.Document {
+        name: string;
+      }
+
+      interface CreateResourceDTO {
+        title: string;
+        course_id: string;
+        professor_id: string;
+        semester: string;
+        year: number;
+        type: "exam" | "notes" | "syllabus" | "other";
+        file_s3_key: string;
+        uploaded_by: string;
+        status: "pending" | "approved";
+      }
+
+      // ...
+
+      coursesRes.documents.forEach((doc: Models.Document) => {
+        const c = doc as Course;
+        const dept = c.department;
         if (!courses[dept]) courses[dept] = [];
         courses[dept].push({
-          number: doc.course_number,
-          name: doc.course_name,
+          number: c.course_number,
+          name: c.course_name,
         });
       });
 
       // Extract Professor Names
-      const professors = professorsRes.documents.map((d: any) => d.name).sort();
+      const professors = professorsRes.documents
+        .map((d: Models.Document) => (d as Professor).name)
+        .sort();
 
       return { courses, professors };
-    } catch (error: any) {
+    } catch (error) {
       console.error("[LibraryService] getSearchMetadata Failed:", error);
       throw error;
     }
@@ -140,7 +161,7 @@ export const LibraryService = {
   /**
    * Creates a new Library Resource
    */
-  async createResource(data: any) {
+  async createResource(data: CreateResourceDTO) {
     return await db.createDocument(
       DB_ID,
       COLLECTIONS.LIBRARY,

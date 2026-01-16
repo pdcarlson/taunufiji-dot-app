@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 // import { getLeaderboard } from "@/lib/tasks"; // Need to check where this function is in internal-os
 import { useAuth } from "@/components/auth/AuthProvider";
-import { getLeaderboardAction } from "@/lib/actions/dashboard.actions";
+import {
+  getLeaderboardAction,
+  getMyRankAction,
+} from "@/lib/actions/dashboard.actions";
 import { Trophy, Medal, Crown, Loader2, AlertCircle } from "lucide-react";
 import clsx from "clsx";
 import { TasksService } from "@/lib/services/tasks.service";
@@ -16,29 +19,42 @@ interface LeaderboardMember {
 }
 
 export default function LeaderboardWidget() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [leaders, setLeaders] = useState<LeaderboardMember[]>([]);
+  const [myStats, setMyStats] = useState<{
+    rank: number;
+    points: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-    const fetchLeaders = async () => {
-      try {
-        // Use Server Action
-        const data = await getLeaderboardAction();
-        if (Array.isArray(data)) {
-          setLeaders(data as any); // Cast to match interface or update interface
-        }
-      } catch (err) {
-        console.error("Leaderboard error:", err);
-        setError("Failed to load");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchLeaders = async () => {
+    try {
+      // Use Server Action
+      const [data, myData] = await Promise.all([
+        getLeaderboardAction(),
+        profile?.discord_id
+          ? getMyRankAction(profile.discord_id)
+          : Promise.resolve(null),
+      ]);
 
-    useEffect(() => {
-      fetchLeaders();
-    }, []);
+      if (Array.isArray(data)) {
+        setLeaders(data as any); // Cast to match interface or update interface
+      }
+      if (myData) {
+        setMyStats(myData);
+      }
+    } catch (err) {
+      console.error("Leaderboard error:", err);
+      setError("Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeaders();
+  }, [user, profile]);
 
   // Standardized Name Formatter
   const formatName = (fullName: string) => {
@@ -50,9 +66,12 @@ export default function LeaderboardWidget() {
   };
 
   // Find my stats
-  const myRankIndex = leaders.findIndex((m) => m.userId === user?.$id);
-  const myRank = myRankIndex !== -1 ? myRankIndex + 1 : "-";
-  const myPoints = myRankIndex !== -1 ? leaders[myRankIndex].points : 0;
+  // Prioritize fetched myStats, fallback to list search (for consistency/optimistic)
+  const listIndex = leaders.findIndex((m) => m.userId === user?.$id);
+
+  const displayRank = myStats?.rank || (listIndex !== -1 ? listIndex + 1 : "-");
+  const displayPoints =
+    myStats?.points ?? (listIndex !== -1 ? leaders[listIndex].points : 0);
 
   if (loading) {
     return (
@@ -153,11 +172,11 @@ export default function LeaderboardWidget() {
           </span>
           <div className="flex items-center gap-2">
             <span className="text-fiji-purple font-bebas text-lg">
-              #{myRank}
+              #{displayRank}
             </span>
             <span className="text-stone-600 text-xs">/</span>
             <span className="text-white font-bebas text-lg">
-              {myPoints} PTS
+              {displayPoints} PTS
             </span>
           </div>
         </div>

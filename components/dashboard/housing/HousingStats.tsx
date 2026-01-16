@@ -5,6 +5,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import {
   getDashboardStatsAction,
   getLeaderboardAction,
+  getMyRankAction,
 } from "@/lib/actions/dashboard.actions";
 import { Trophy, Medal } from "lucide-react";
 // import { Skeleton } from "@/components/ui/Skeleton"; // Use loader if Skeleton missing
@@ -20,23 +21,18 @@ export default function HousingStats() {
 
     const fetchData = async () => {
       try {
-        // 1. Get my stats
-        const stats = await getDashboardStatsAction(user.$id);
-        setPoints(stats.points);
+        if (!profile?.discord_id) return;
 
-        // 2. Get my rank (Lazy Calculation)
-        // NOTE: In a real app, fetch leaderboard from API
-        const leaders: LeaderboardEntry[] = [
-          { id: "1", name: "Dave", points: 2500, rank: 1 },
-          { id: "2", name: "Mike", points: 2100, rank: 2 },
-        ];
-        if (profile) {
-          // Mock Self
-          const myRankIndex = leaders.findIndex(
-            (m: LeaderboardEntry) => m.id === profile.discord_id
-          );
-          setRank(myRankIndex !== -1 ? myRankIndex + 1 : null);
-        }
+        // 1. Get my stats (Use Auth ID)
+        // 2. Get my rank (Use Discord ID)
+
+        const [stats, rankData] = await Promise.all([
+          getDashboardStatsAction(user.$id), // Auth ID for Profile Lookup
+          getMyRankAction(profile.discord_id), // DB ID for Rank
+        ]);
+
+        setPoints(stats.points);
+        setRank(rankData?.rank || null);
       } catch (err) {
         console.error("Failed to load stats", err);
       }

@@ -119,15 +119,6 @@ export async function getHistoryAction(userId: string) {
   return JSON.parse(JSON.stringify(res.documents));
 }
 
-export async function getLeaderboardAction() {
-  const { account } = await createSessionClient();
-  const user = await account.get();
-  if (!(await AuthService.verifyBrother(user.$id))) return [];
-
-  const res = await PointsService.getLeaderboard();
-  return JSON.parse(JSON.stringify(res.documents));
-}
-
 export async function unclaimTaskAction(taskId: string, jwt?: string) {
   try {
     const account = await getAuthAccount(jwt);
@@ -315,7 +306,7 @@ export async function getAllMembersAction(jwt?: string) {
     await account.get();
 
     const members = await TasksService.getMembers();
-    console.log(`[getAllMembersAction] Fetched ${members.length} members`);
+
     return members;
   } catch (e) {
     console.error("Failed to fetch members", e);

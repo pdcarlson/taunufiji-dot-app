@@ -115,14 +115,39 @@ export async function getLeaderboardAction() {
       Query.select(["full_name", "details_points_current", "discord_handle"]),
     ]);
 
-    return res.documents.map((doc) => ({
+    return res.documents.map((doc, i) => ({
       id: doc.$id,
       name: doc.full_name || doc.discord_handle || "Unknown",
       points: doc.details_points_current || 0,
-      rank: 0, // Will apply rank in component or helper
+      rank: i + 1,
     }));
   } catch (e) {
     logger.error("Leaderboard fetch failed", e);
     return [];
+  }
+}
+
+export async function getMyRankAction(userId: string) {
+  try {
+    const user = await db.getDocument(DB_ID, COLLECTIONS.USERS, userId);
+    const myPoints = user.details_points_current || 0;
+
+    // Count users with strictly more points
+    const betterPlayers = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
+      Query.greaterThan("details_points_current", myPoints),
+      Query.limit(1), // Optimization: We want COUNT, not docs. But Appwrite < 1.4 doesn't have count-only efficiently?
+      // Actually listDocuments returns .total. So we can use limit(1) (or 0 if supported) to get total count.
+    ]);
+
+    // Note: If limit(0) is not supported, limit(1) still gives total in response.total
+    const rank = betterPlayers.total + 1;
+
+    return {
+      rank,
+      points: myPoints,
+    };
+  } catch (e) {
+    logger.error("My Rank fetch failed", e);
+    return null;
   }
 }
