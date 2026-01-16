@@ -1,0 +1,48 @@
+
+@import "tailwindcss";
+
+@theme {
+  /* Fonts */
+  --font-bebas: var(--font-bebas);
+  --font-langdon: var(--font-langdon);
+
+  /* Fiji Theme Colors (Matches public-site) */
+  --color-fiji-purple: #800080;
+  --color-fiji-gold: #d4af37;
+  --color-fiji-white: #e7e7e7;
+  --color-fiji-dark: #141414;
+
+  /* Semantic Mappings for Shadcn/Internal UI */
+  --color-background: var(--color-fiji-white);
+  --color-foreground: var(--color-fiji-dark);
+  
+  --color-primary: var(--color-fiji-purple);
+  --color-primary-foreground: var(--color-fiji-white);
+  
+  --color-secondary: var(--color-fiji-gold);
+  --color-secondary-foreground: var(--color-fiji-dark);
+  
+  --color-muted: var(--color-fiji-dark); /* Opacity needed? */
+  --color-muted-foreground: #666;
+  
+  --color-border: #e2e2e2;
+  --color-input: #e2e2e2;
+  --color-ring: var(--color-fiji-purple);
+}
+
+/* Dark Mode Overrides (if class="dark" is on html/body) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: var(--color-fiji-dark);
+    --color-foreground: var(--color-fiji-white);
+    --color-border: #333;
+    --color-input: #333;
+  }
+}
+
+/* Base styles to prevent white screen and match public site */
+body {
+  background-color: var(--color-fiji-white);
+  color: var(--color-fiji-dark);
+  font-family: var(--font-georgia), serif;
+}

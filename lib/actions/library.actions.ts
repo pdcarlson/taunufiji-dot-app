@@ -1,0 +1,121 @@
+"use server";
+
+import { LibraryService } from "@/lib/services/library.service";
+import { PointsService } from "@/lib/services/points.service";
+import { StorageService } from "@/lib/services/s3.service";
+import { AuthService } from "@/lib/services/auth.service";
+import { logger } from "@/lib/logger";
+import { ID, Client, Account } from "node-appwrite";
+import { env } from "@/lib/config/env";
+
+/**
+ * Uploads a file to S3 and returns the Key/ID
+ */
+// server-only import to avoid client bundle issues
+import { createSessionClient } from "@/lib/server/appwrite";
+
+export async function uploadFileAction(formData: FormData) {
+  try {
+    // 1. Security Check
+    const { account } = await createSessionClient();
+    const user = await account.get();
+    if (!user) throw new Error("Unauthorized");
+    
+    const isAuthorized = await AuthService.verifyBrother(user.$id);
+    if (!isAuthorized) throw new Error("Forbidden");
+
+    // 2. Process File
+    const file = formData.get("file") as File;
+    if (!file) throw new Error("No file uploaded");
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    // Use 'library/' folder and keep original filename (sanitized)
+    const key = `library/${file.name.replace(/\s+/g, '_')}`;
+
+    await StorageService.uploadFile(buffer, key, file.type);
+    
+    // Return an ID-like object to satisfy UI
+    return { $id: key, key: key }; 
+  } catch (e: any) {
+    logger.error("Upload Failed", e);
+    throw new Error("Failed to upload file");
+  }
+}
+
+/**
+ * Creates the metadata record in DB
+ */
+export async function createLibraryResourceAction(data: any, jwt: string) {
+  try {
+    // 1. Verify Authentication via JWT
+    const client = new Client()
+        .setEndpoint(env.NEXT_PUBLIC_APPWRITE_ENDPOINT)
+        .setProject(env.NEXT_PUBLIC_APPWRITE_PROJECT_ID)
+        .setJWT(jwt);
+    const account = new Account(client);
+    const user = await account.get();
+    
+    if (!user) throw new Error("Invalid Session");
+
+    // 2. Authorization Check (Discord Roles)
+    // We use the authenticated user's ID to check roles in our DB/Discord
+    const isAuthorized = await AuthService.verifyBrother(user.$id);
+    if (!isAuthorized) throw new Error("Unauthorized Access");
+
+    // 3. Ensure User Profile (Discord ID)
+    const profile = await AuthService.getProfile(user.$id);
+    if (!profile) throw new Error("Profile not found");
+
+    // 4. Ensure Dependents (Course/Professor) exist
+    await LibraryService.ensureMetadata({
+        department: data.metadata.department,
+        course_number: data.metadata.courseNumber,
+        course_name: data.metadata.courseName,
+        professor: data.metadata.professor
+    });
+
+    // 2. Create Record
+    const result = await LibraryService.createResource({
+        department: data.metadata.department,
+        course_number: data.metadata.courseNumber,
+        course_name: data.metadata.courseName,
+        professor: data.metadata.professor,
+        semester: data.metadata.semester,
+        year: parseInt(data.metadata.year),
+        type: data.metadata.assessmentType,
+        version: data.metadata.version,
+        original_filename: data.metadata.standardizedFilename,
+        file_s3_key: data.fileId, // This is the Key from uploadFileAction
+        uploaded_by: profile.$id
+    });
+
+    // 3. Award Points
+    try {
+        await PointsService.awardPoints(user.$id, {
+            amount: 10,
+            reason: "Uploaded Exam/Note",
+            category: "event" 
+        });
+    } catch (e) {
+        logger.error("Failed to award upload points", e);
+        // Do not fail the request if points fail, but log it.
+    }
+
+    return result;
+  } catch (e: any) {
+    logger.error("Create Resource Failed", e);
+    throw new Error("Failed to create record");
+  }
+}
+
+/**
+ * Fetches Metadata for dropdowns
+ */
+export async function getMetadataAction() {
+    try {
+        return await LibraryService.getSearchMetadata();
+    } catch (e) {
+        logger.error("Get Metadata Failed", e);
+        return { courses: {}, professors: [] };
+    }
+}

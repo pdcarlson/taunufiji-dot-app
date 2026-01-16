@@ -1,0 +1,94 @@
+# Internal OS (Tau Nu Fiji)
+
+The secure internal dashboard for the Tau Nu Chapter of Phi Gamma Delta. Built with Next.js 14, Appwrite, and Discord Auth.
+
+## Features
+
+### Authentication
+
+- **Discord SSO:** Users log in via Discord (`AuthService.syncUser`).
+- **Role-Based Access:** "Brothers" (Discord Role) gain access to protected routes.
+- **Session Management:** Handled via Appwrite Sessions and stored cookies.
+- **ID Strategy:** System uses **Discord IDs** (not Auth IDs) for all data associations (Tasks, Uploads) to enable seamless Bot integration.
+
+### 🏠 Housing Dashboard (v2)
+
+- **Goal:** Manage house chores, recurring schedules, and ad-hoc bounties.
+- **Features:**
+  - **Recurring Schedules:** Admin creates templates (e.g., "Trash - Mondays") which auto-spawn tasks.
+  - **Bounties:** Users post optional tasks with Point rewards ("Fix Door - 50pts").
+  - **Assignments:** Direct assignment flow with "Time to Complete" deadlines.
+- **User Flow:**
+  1.  Login -> Dashboard -> Housing.
+  2.  **Duties:** Assigned users see tasks in "My Responsibilities". (0 Pts, -50 Pts optional fine).
+  3.  **Bounties:** Open to all in "Available Bounties". (+Pts).
+  4.  **Admin:** Create Schedule (Recurring) or Assign Duty (One-Off).
+- **Files:** `app/dashboard/housing`, `lib/services/tasks.service.ts`.
+
+### 📚 Scholarship Library
+
+- **Goal:** Searchable repository of past exams and notes (Answer Keys & Student Copies).
+- **How it Works:**
+  - Files stored in S3 (`library/` folder), metadata in Appwrite Database (`library_resources`).
+  - **Upload:** Secure drag-and-drop info redactor (`PdfRedactor`) + S3 direct upload via Server Actions.
+  - **Search:** Premium UI with instant filtering by Dept, Course, and Professor.
+- **User Flow:**
+  1.  Library -> Search ("CS 101") -> Download PDF.
+  2.  Library -> Upload -> Redact -> Submit (+Points).
+- **Files:** `app/dashboard/library/page.tsx`, `lib/actions/library.actions.ts`.
+
+### 📊 Points Ledger
+
+- **Goal:** Track lifetime and current points for housing picks.
+- **How it Works:** Real-time sync with Appwrite `users` collection.
+
+---
+
+## 🔒 Security Model
+
+This application uses a stricter-than-average security model to prevent unauthorized access and data leaks.
+
+### 1. Zero-Permission Database
+
+- **Policy:** No Appwrite Database Collection has `role:all` or `role:member` permissions enabled.
+- **Access:** All data access is performed via **Server Actions** using a secret `APPWRITE_API_KEY`.
+- **Reasoning:** This prevents clients from bypassing business logic or accessing other users' data via the Client SDK.
+
+### 2. Role-Based Access Control (RBAC)
+
+- **Source of Truth:** Discord Roles.
+- **Mechanism:** `AuthService.verifyBrother` (or `verifyRole`) checks the user's active Discord roles against a Server-Side Allowed List (`lib/config/roles.ts`) before every sensitive action.
+- **Fail-Secure:** Unauthorized requests receive empty data or generic errors, not partial data.
+
+---
+
+## 💾 Database Schema (v2_internal_ops)
+
+All collections use **Discord ID** as the primary correlation key where applicable.
+
+| Collection            | Key Attributes                                                                      | Notes                         |
+| :-------------------- | :---------------------------------------------------------------------------------- | :---------------------------- |
+| **users**             | `discord_id`, `full_name`, `position_key`, `details_points_current`                 | Synced from Discord on Login. |
+| **housing_schedules** | `active`, `recurrence_rule`, `points_value`, `assigned_to` (default)                | Templates for spawning tasks. |
+| **assignments**       | `assigned_to`, `status` (`open`, `pending`, `completed`), `proof_url`, `expires_at` | Active tasks/duties.          |
+| **library_resources** | `department`, `course_number`, `professor`, `file_s3_key`, `uploaded_by`            | Metadata for S3 files.        |
+| **ledger**            | `user_id`, `amount`, `reason`, `category`, `timestamp`                              | Immutable history of points.  |
+
+---
+
+## Development
+
+### Commands
+
+- `npm run dev`: Start local server (ensure `.env.local` is set).
+- `npm run build`: Production build.
+- `npm run lint`: Check for code quality issues.
+
+### Environment Variables
+
+Required in `.env.local`:
+
+- `NEXT_PUBLIC_APPWRITE_ENDPOINT`
+- `NEXT_PUBLIC_APPWRITE_PROJECT_ID`
+- `APPWRITE_API_KEY` (Server-side admin)
+- `NEXT_PUBLIC_APPWRITE_DATABASE_ID`
