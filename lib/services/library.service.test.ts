@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { LibraryService } from "../lib/services/library.service";
+import { LibraryService } from "./library.service";
 
 const mocks = vi.hoisted(() => ({
   mockListDocuments: vi.fn(),
@@ -27,14 +27,14 @@ vi.mock("node-appwrite", () => {
 });
 
 // Mock S3 Service
-vi.mock("../lib/services/s3.service", () => ({
+vi.mock("./s3.service", () => ({
   StorageService: {
     getReadUrl: vi.fn().mockResolvedValue("https://example.com/file"),
   },
 }));
 
 // Mock Config
-vi.mock("../lib/config/env", () => ({
+vi.mock("../config/env", () => ({
   env: {
     NEXT_PUBLIC_APPWRITE_ENDPOINT: "http://localhost",
     NEXT_PUBLIC_APPWRITE_PROJECT_ID: "test",
@@ -81,5 +81,32 @@ describe("LibraryService", () => {
     // We verify that it was called. Exact arguments for Query are hard to match strictly
     // without inspecting the mock calls deeply, but we can verify invocation.
     expect(mocks.mockListDocuments).toHaveBeenCalled();
+  });
+
+  it("getSearchMetadata groups courses by department", async () => {
+    // Mock Courses
+    mocks.mockListDocuments.mockResolvedValueOnce({
+      documents: [
+        {
+          department: "CS",
+          course_number: "1200",
+          course_name: "Data Structures",
+        },
+        { department: "MATH", course_number: "1010", course_name: "Calc I" },
+      ],
+      total: 2,
+    });
+
+    // Mock Professors
+    mocks.mockListDocuments.mockResolvedValueOnce({
+      documents: [{ name: "Cutler" }, { name: "Kuzmin" }],
+      total: 2,
+    });
+
+    const metadata = await LibraryService.getSearchMetadata();
+
+    expect(metadata.courses["CS"]).toBeDefined();
+    expect(metadata.courses["CS"][0].number).toBe("1200");
+    expect(metadata.professors).toContain("Cutler");
   });
 });

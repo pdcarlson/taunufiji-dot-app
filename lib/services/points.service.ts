@@ -11,9 +11,9 @@ const client = new Client()
 const db = new Databases(client);
 
 export interface PointsTransaction {
-    amount: number;
-    reason: string;
-    category: "task" | "fine" | "event" | "manual";
+  amount: number;
+  reason: string;
+  category: "task" | "fine" | "event" | "manual";
 }
 
 export const PointsService = {
@@ -24,39 +24,47 @@ export const PointsService = {
    */
   async awardPoints(userId: string, tx: PointsTransaction) {
     try {
-        // 1. Fetch User to get current totals
-        // Note: In high concurrency, this could be race-condition prone.
-        // Appwrite Function is safer, but for internal OS (~50 users), this is acceptable.
-        const user = await db.getDocument(DB_ID, COLLECTIONS.USERS, userId);
-        
-        const currentPoints = user.details_points_current || 0;
-        const lifetimePoints = user.details_points_lifetime || 0;
-        
-        // 2. Calculate New Totals
-        const newCurrent = currentPoints + tx.amount;
-        const newLifetime = tx.amount > 0 ? lifetimePoints + tx.amount : lifetimePoints;
+      // 1. Fetch User to get current totals
+      // Note: In high concurrency, this could be race-condition prone.
+      // Appwrite Function is safer, but for internal OS (~50 users), this is acceptable.
+      let user;
+      try {
+        user = await db.getDocument(DB_ID, COLLECTIONS.USERS, userId);
+      } catch (e) {
+        logger.error(
+          `PointsService: User ${userId} not found for point award.`
+        );
+        throw new Error(`User ${userId} not found`);
+      }
 
-        // 3. Update User
-        await db.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
-            details_points_current: newCurrent,
-            details_points_lifetime: newLifetime
-        });
+      const currentPoints = user.details_points_current || 0;
+      const lifetimePoints = user.details_points_lifetime || 0;
 
-        // 4. Create Ledger Record
-        await db.createDocument(DB_ID, COLLECTIONS.LEDGER, ID.unique(), {
-            user_id: userId,
-            amount: tx.amount,
-            reason: tx.reason,
-            category: tx.category,
-            timestamp: new Date().toISOString()
-        });
-        
-        logger.log(`Points Awarded: ${userId} +${tx.amount} (${tx.reason})`);
-        return true;
+      // 2. Calculate New Totals
+      const newCurrent = currentPoints + tx.amount;
+      const newLifetime =
+        tx.amount > 0 ? lifetimePoints + tx.amount : lifetimePoints;
 
-    } catch (e: any) {
-        logger.error("PointsService Award Failed", e);
-        throw e;
+      // 3. Update User
+      await db.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
+        details_points_current: newCurrent,
+        details_points_lifetime: newLifetime,
+      });
+
+      // 4. Create Ledger Record
+      await db.createDocument(DB_ID, COLLECTIONS.LEDGER, ID.unique(), {
+        user_id: userId,
+        amount: tx.amount,
+        reason: tx.reason,
+        category: tx.category,
+        timestamp: new Date().toISOString(),
+      });
+
+      logger.log(`Points Awarded: ${userId} +${tx.amount} (${tx.reason})`);
+      return true;
+    } catch (e) {
+      logger.error("PointsService Award Failed", e);
+      throw e;
     }
   },
 
@@ -64,17 +72,17 @@ export const PointsService = {
    * Get transaction history for a user
    */
   async getHistory(userId: string) {
-      return await db.listDocuments(DB_ID, COLLECTIONS.LEDGER, [
-          Query.equal("user_id", userId),
-          Query.orderDesc("timestamp"),
-          Query.limit(50)
-      ]);
+    return await db.listDocuments(DB_ID, COLLECTIONS.LEDGER, [
+      Query.equal("user_id", userId),
+      Query.orderDesc("timestamp"),
+      Query.limit(50),
+    ]);
   },
 
   async getLeaderboard() {
-      return await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
-          Query.orderDesc("details_points_current"),
-          Query.limit(20)
-      ]);
-  }
+    return await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
+      Query.orderDesc("details_points_current"),
+      Query.limit(20),
+    ]);
+  },
 };

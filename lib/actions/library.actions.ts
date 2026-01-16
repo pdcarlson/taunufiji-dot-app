@@ -12,15 +12,18 @@ import { env } from "@/lib/config/env";
  * Uploads a file to S3 and returns the Key/ID
  */
 // server-only import to avoid client bundle issues
-import { createSessionClient } from "@/lib/server/appwrite";
+import { createJWTClient } from "@/lib/server/appwrite";
 
 export async function uploadFileAction(formData: FormData) {
   try {
-    // 1. Security Check
-    const { account } = await createSessionClient();
+    // 1. Security Check (JWT)
+    const jwt = formData.get("jwt") as string;
+    if (!jwt) throw new Error("No auth token provided");
+
+    const { account } = createJWTClient(jwt);
     const user = await account.get();
     if (!user) throw new Error("Unauthorized");
-    
+
     const isAuthorized = await AuthService.verifyBrother(user.$id);
     if (!isAuthorized) throw new Error("Forbidden");
 
@@ -30,13 +33,13 @@ export async function uploadFileAction(formData: FormData) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     // Use 'library/' folder and keep original filename (sanitized)
-    const key = `library/${file.name.replace(/\s+/g, '_')}`;
+    const key = `library/${file.name.replace(/\s+/g, "_")}`;
 
     await StorageService.uploadFile(buffer, key, file.type);
-    
+
     // Return an ID-like object to satisfy UI
-    return { $id: key, key: key }; 
-  } catch (e: any) {
+    return { $id: key, key: key };
+  } catch (e) {
     logger.error("Upload Failed", e);
     throw new Error("Failed to upload file");
   }
@@ -45,16 +48,37 @@ export async function uploadFileAction(formData: FormData) {
 /**
  * Creates the metadata record in DB
  */
-export async function createLibraryResourceAction(data: any, jwt: string) {
+interface CreateResourceDTO {
+  fileId: string;
+  metadata: {
+    department: string;
+    courseNumber: string;
+    courseName: string;
+    professor: string;
+    semester: string;
+    year: string | number;
+    assessmentType: string;
+    version: string;
+    standardizedFilename: string;
+  };
+}
+
+/**
+ * Creates the metadata record in DB
+ */
+export async function createLibraryResourceAction(
+  data: CreateResourceDTO,
+  jwt: string
+) {
   try {
     // 1. Verify Authentication via JWT
     const client = new Client()
-        .setEndpoint(env.NEXT_PUBLIC_APPWRITE_ENDPOINT)
-        .setProject(env.NEXT_PUBLIC_APPWRITE_PROJECT_ID)
-        .setJWT(jwt);
+      .setEndpoint(env.NEXT_PUBLIC_APPWRITE_ENDPOINT)
+      .setProject(env.NEXT_PUBLIC_APPWRITE_PROJECT_ID)
+      .setJWT(jwt);
     const account = new Account(client);
     const user = await account.get();
-    
+
     if (!user) throw new Error("Invalid Session");
 
     // 2. Authorization Check (Discord Roles)
@@ -68,41 +92,44 @@ export async function createLibraryResourceAction(data: any, jwt: string) {
 
     // 4. Ensure Dependents (Course/Professor) exist
     await LibraryService.ensureMetadata({
-        department: data.metadata.department,
-        course_number: data.metadata.courseNumber,
-        course_name: data.metadata.courseName,
-        professor: data.metadata.professor
+      department: data.metadata.department,
+      course_number: data.metadata.courseNumber,
+      course_name: data.metadata.courseName,
+      professor: data.metadata.professor,
     });
 
     // 2. Create Record
     const result = await LibraryService.createResource({
-        department: data.metadata.department,
-        course_number: data.metadata.courseNumber,
-        course_name: data.metadata.courseName,
-        professor: data.metadata.professor,
-        semester: data.metadata.semester,
-        year: parseInt(data.metadata.year),
-        type: data.metadata.assessmentType,
-        version: data.metadata.version,
-        original_filename: data.metadata.standardizedFilename,
-        file_s3_key: data.fileId, // This is the Key from uploadFileAction
-        uploaded_by: profile.$id
+      department: data.metadata.department,
+      course_number: data.metadata.courseNumber,
+      course_name: data.metadata.courseName,
+      professor: data.metadata.professor,
+      semester: data.metadata.semester,
+      year:
+        typeof data.metadata.year === "string"
+          ? parseInt(data.metadata.year)
+          : data.metadata.year,
+      type: data.metadata.assessmentType,
+      version: data.metadata.version,
+      original_filename: data.metadata.standardizedFilename,
+      file_s3_key: data.fileId, // This is the Key from uploadFileAction
+      uploaded_by: profile.$id,
     });
 
     // 3. Award Points
     try {
-        await PointsService.awardPoints(user.$id, {
-            amount: 10,
-            reason: "Uploaded Exam/Note",
-            category: "event" 
-        });
+      await PointsService.awardPoints(profile.$id, {
+        amount: 10,
+        reason: "Uploaded Exam/Note",
+        category: "event",
+      });
     } catch (e) {
-        logger.error("Failed to award upload points", e);
-        // Do not fail the request if points fail, but log it.
+      logger.error("Failed to award upload points", e);
+      // Do not fail the request if points fail, but log it.
     }
 
     return result;
-  } catch (e: any) {
+  } catch (e) {
     logger.error("Create Resource Failed", e);
     throw new Error("Failed to create record");
   }
@@ -112,10 +139,10 @@ export async function createLibraryResourceAction(data: any, jwt: string) {
  * Fetches Metadata for dropdowns
  */
 export async function getMetadataAction() {
-    try {
-        return await LibraryService.getSearchMetadata();
-    } catch (e) {
-        logger.error("Get Metadata Failed", e);
-        return { courses: {}, professors: [] };
-    }
+  try {
+    return await LibraryService.getSearchMetadata();
+  } catch (e) {
+    logger.error("Get Metadata Failed", e);
+    return { courses: {}, professors: [] };
+  }
 }

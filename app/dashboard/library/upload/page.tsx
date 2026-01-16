@@ -19,7 +19,10 @@ import {
   Info,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { uploadFileAction, createLibraryResourceAction } from "@/lib/actions/library.actions"; // Need these actions
+import {
+  uploadFileAction,
+  createLibraryResourceAction,
+} from "@/lib/actions/library.actions"; // Need these actions
 import { getMetadataAction } from "@/lib/actions/library.actions"; // Need this action
 
 export default function UnifiedUploadPage() {
@@ -56,8 +59,8 @@ export default function UnifiedUploadPage() {
         // Use Server Action instead of API Route
         const data = await getMetadataAction();
         if (data) {
-            setCourseData(data.courses);
-            setProfessors(data.professors);
+          setCourseData(data.courses);
+          setProfessors(data.professors);
         }
       } catch (e) {
         console.error("Failed to load metadata", e);
@@ -113,17 +116,17 @@ export default function UnifiedUploadPage() {
     const num = pendingCourseNumber;
 
     setIsNamingCourse(false);
-    
-    // We update local state immediately. 
+
+    // We update local state immediately.
     // The actual "creation" happens when a file is uploaded with this metadata.
     setCourseData((prev) => ({
-    ...prev,
-    [dept]: [...(prev[dept] || []), { number: num, name: newCourseName }],
+      ...prev,
+      [dept]: [...(prev[dept] || []), { number: num, name: newCourseName }],
     }));
     setStickyMetadata((prev) => ({
-    ...prev,
-    courseNumber: num,
-    courseName: newCourseName,
+      ...prev,
+      courseNumber: num,
+      courseName: newCourseName,
     }));
     toast.success("Course set!");
   };
@@ -178,38 +181,43 @@ export default function UnifiedUploadPage() {
         });
       }
 
-      // 2. UPLOAD TO STORAGE 
+      // 2. UPLOAD TO STORAGE
       toast.loading("Uploading File...", { id: toastId });
-      
+
       // Use Server Action for Upload to get ID
+      const { jwt } = await account.createJWT(); // Generate JWT for stateless auth
       const formData = new FormData();
       formData.append("file", fileToUpload);
-      
+      formData.append("jwt", jwt); // Pass JWT
+
       // We need a server action that accepts FormData for upload
       const uploadRes = await uploadFileAction(formData);
-      if(!uploadRes || !uploadRes.$id) throw new Error("Upload failed");
+      if (!uploadRes || !uploadRes.$id) throw new Error("Upload failed");
 
       // 3. SUBMIT METADATA TO API
       toast.loading("Finalizing Record...", { id: toastId });
-      
+
       const currentDeptCourses = courseData[stickyMetadata.department] || [];
       const matchedCourse = currentDeptCourses.find(
         (c) => c.number === stickyMetadata.courseNumber
       );
-      const courseName = matchedCourse ? matchedCourse.name : (stickyMetadata.courseName || "");
-      
+      const courseName = matchedCourse
+        ? matchedCourse.name
+        : stickyMetadata.courseName || "";
+
       const resourceData = {
-          fileId: uploadRes.$id,
-          metadata: {
-              ...stickyMetadata,
-              courseName,
-              semester: currentSem,
-              standardizedFilename: stdName
-          }
+        fileId: uploadRes.$id,
+        metadata: {
+          ...stickyMetadata,
+          courseName,
+          semester: currentSem,
+          standardizedFilename: stdName,
+        },
       };
 
       // Generate JWT for secure server-side verification
-      const { jwt } = await account.createJWT();
+      // WE ALREADY HAVE JWT from step 2 (Upload)
+      // const { jwt } = await account.createJWT(); <--- REMOVED
       await createLibraryResourceAction(resourceData, jwt);
 
       toast.success("Success! (+10 PTS)", { id: toastId });
@@ -310,7 +318,7 @@ export default function UnifiedUploadPage() {
             !currentFile || dataLoading
               ? "opacity-50 pointer-events-none"
               : "opacity-100"
-            }`}
+          }`}
         >
           {/* DEPT & COURSE */}
           <div className="grid grid-cols-3 gap-2">

@@ -25,14 +25,14 @@ export default function CreateOneOffModal({
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
-      
+
       const payload = {
-          title: data.title,
-          description: data.description,
-          points_value: 0, // Default 0 for Duties
-          assigned_to: data.assigned_to,
-          due_at: new Date(data.due_at).toISOString(),
-          type: "one_off" as const
+        title: data.title,
+        description: data.description,
+        points_value: 0, // Default 0 for Duties
+        assigned_to: data.assigned_to || undefined,
+        due_at: new Date(data.due_at).toISOString(),
+        type: "one_off" as const,
       };
 
       await createTaskAction(payload, jwt);
@@ -51,8 +51,13 @@ export default function CreateOneOffModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
         <div className="p-6 border-b border-stone-100 flex justify-between items-center">
-          <h2 className="font-bebas text-2xl text-stone-800">Assign One-Time Duty</h2>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-600">
+          <h2 className="font-bebas text-2xl text-stone-800">
+            Assign One-Time Duty
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-stone-400 hover:text-stone-600"
+          >
             <X size={20} />
           </button>
         </div>
@@ -98,18 +103,20 @@ export default function CreateOneOffModal({
 
           {/* ASSIGNEE */}
           <div>
-             <label className="block text-xs font-bold text-stone-500 uppercase mb-1">
-                Assign To
-              </label>
-              <select
-                {...register("assigned_to", { required: true })}
-                className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-fiji-purple/20"
-              >
-                 <option value="">-- Select Member --</option>
-                 {members.map(m => (
-                     <option key={m.$id} value={m.$id}>{m.full_name}</option>
-                 ))}
-              </select>
+            <label className="block text-xs font-bold text-stone-500 uppercase mb-1">
+              Assign To
+            </label>
+            <select
+              {...register("assigned_to", { required: true })}
+              className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-fiji-purple/20"
+            >
+              <option value="">-- Select Member --</option>
+              {members.map((m) => (
+                <option key={m.$id} value={m.$id}>
+                  {m.full_name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button

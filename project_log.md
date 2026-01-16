@@ -78,6 +78,14 @@
   - **LibraryService**: Fixed existing tests and added `search` coverage.
   - **PointsService**: Fixed logger mock to pass tests.
 - **Cleanup**:
+
   - Deleted `logs/` directory.
   - Archived old migration scripts in `scripts/archive/`.
   - Audit passed with **0 TODOs**.
+
+- **Bug Fixes**:
+  - **Library Metadata 500 Error**: Refactored `api/library/metadata` to use `LibraryService.getSearchMetadata()` (Server-Side Admin Client) instead of Client Session, bypassing the strict 0-permission DB policy.
+  - **Upload Session Error**: Refactored `uploadFileAction` to use JWT-based authentication (passed via FormData) instead of Cookie-based session, resolving cross-domain `No session` errors.
+  - **Repo Consistency**: Moved `__tests__/library.test.ts` to `lib/services/library.service.test.ts` to match colocation pattern. Validation passed.
+  - **Points System Repair**: Fixed ID Mismatch where `library.actions.ts` and `ledger.actions.ts` used Auth ID instead of Profile ID (Discord ID), causing silent failures. Hardened `PointsService` to throw explicit errors if user not found.
+  - **Deep Audit**: Removed `any` type usage across `lib/services` and `lib/actions`. Enforced strict DTOs (`CreateAssignmentDTO`, `CreateResourceDTO`) ensuring full type safety between Client and Server Actions. Fixed client-side Modal payloads to match Schema.
