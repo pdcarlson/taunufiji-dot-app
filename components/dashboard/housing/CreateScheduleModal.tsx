@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, FieldValues } from "react-hook-form";
 import { X, Calendar, DollarSign, User, FileText, Check } from "lucide-react";
 import { createScheduleAction } from "@/lib/actions/housing.actions";
 import { account } from "@/lib/client/appwrite";
 import toast from "react-hot-toast";
 
+import { Member } from "@/lib/types/models";
+
 interface Props {
   onClose: () => void;
   onSuccess: () => void;
-  members?: any[];
+  members?: Member[];
 }
 
 export default function CreateScheduleModal({
@@ -29,7 +31,7 @@ export default function CreateScheduleModal({
   // Watch frequency to show helper text
   const frequency = watch("frequency");
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FieldValues) => {
     setLoading(true);
     try {
       const jwt = await account.createJWT();
@@ -173,7 +175,7 @@ export default function CreateScheduleModal({
                 className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all appearance-none cursor-pointer"
               >
                 <option value="">-- Floating / Open --</option>
-                {members?.map((m: any) => (
+                {members?.map((m: Member) => (
                   <option key={m.$id} value={m.$id}>
                     {m.full_name}
                   </option>

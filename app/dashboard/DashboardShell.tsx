@@ -6,7 +6,13 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
-import { Home, ListTodo, GraduationCap, User, LogOut } from "lucide-react"; // Icons
+import {
+  Home,
+  ListTodo,
+  GraduationCap,
+  LogOut,
+  LucideIcon,
+} from "lucide-react"; // Icons
 import Sidebar from "@/components/dashboard/Sidebar";
 
 export default function DashboardShell({
@@ -21,8 +27,8 @@ export default function DashboardShell({
     if (!loading && !user) {
       router.push("/login");
     } else if (user) {
-        // Trigger Sync
-        syncUserAction(user.$id);
+      // Trigger Sync
+      syncUserAction(user.$id);
     }
   }, [user, loading, router]);
 
@@ -48,30 +54,61 @@ export default function DashboardShell({
       {/* Mobile Bottom Nav (Visible on Mobile) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 z-50 pb-safe">
         <div className="flex justify-around items-center h-16">
-           <MobileNavLink href="/dashboard" icon={Home} label="Home" />
-           <MobileNavLink href="/dashboard/housing" icon={ListTodo} label="Tasks" />
-           <MobileNavLink href="/dashboard/library" icon={GraduationCap} label="Library" />
-           <MobileNavLink href="/dashboard/ledger" icon={User} label="Points" />
+          <MobileNavLink href="/dashboard" icon={Home} label="Home" />
+          <MobileNavLink
+            href="/dashboard/housing"
+            icon={ListTodo}
+            label="Tasks"
+          />
+          <MobileNavLink
+            href="/dashboard/library"
+            icon={GraduationCap}
+            label="Library"
+          />
         </div>
       </nav>
     </div>
   );
 }
 
-function NavLink({ href, icon: Icon, label }: any) {
-    return (
-        <Link href={href} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 text-stone-300 hover:text-white transition-colors">
-            <Icon className="w-5 h-5" />
-            <span className="font-medium">{label}</span>
-        </Link>
-    )
+function NavLink({
+  href,
+  icon: Icon,
+  label,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 text-stone-300 hover:text-white transition-colors"
+    >
+      <Icon className="w-5 h-5" />
+      <span className="font-medium">{label}</span>
+    </Link>
+  );
 }
 
-function MobileNavLink({ href, icon: Icon, label }: any) {
-    return (
-        <Link href={href} className="flex flex-col items-center justify-center w-full h-full text-stone-500 hover:text-fiji-purple">
-            <Icon className="w-6 h-6" />
-            <span className="text-[10px] uppercase font-bold mt-1 tracking-wider">{label}</span>
-        </Link>
-    )
+function MobileNavLink({
+  href,
+  icon: Icon,
+  label,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex flex-col items-center justify-center w-full h-full text-stone-500 hover:text-fiji-purple"
+    >
+      <Icon className="w-6 h-6" />
+      <span className="text-[10px] uppercase font-bold mt-1 tracking-wider">
+        {label}
+      </span>
+    </Link>
+  );
 }

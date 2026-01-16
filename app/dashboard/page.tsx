@@ -6,26 +6,27 @@ import HousingWidget from "@/components/dashboard/HousingWidget";
 import LibraryWidget from "@/components/dashboard/LibraryWidget";
 import LeaderboardWidget from "@/components/dashboard/LeaderboardWidget";
 import { getDashboardStatsAction } from "@/lib/actions/dashboard.actions";
+import PointsHistory from "@/components/dashboard/PointsHistory";
 
 export default function DashboardHome() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-      points: 0,
-      activeTasks: 0,
-      pendingReviews: 0,
-      fullName: "",
+    points: 0,
+    activeTasks: 0,
+    pendingReviews: 0,
+    fullName: "",
   });
 
   // Fetch Stats
   useEffect(() => {
-      async function load() {
-          if (!user) return;
-          const data = await getDashboardStatsAction(user.$id);
-          setStats(data);
-          setLoading(false);
-      }
-      load();
+    async function load() {
+      if (!user) return;
+      const data = await getDashboardStatsAction(user.$id);
+      setStats(data);
+      setLoading(false);
+    }
+    load();
   }, [user?.$id]);
 
   // Dynamic Greeting Logic
@@ -35,26 +36,26 @@ export default function DashboardHome() {
 
   // Name Logic: Smart Last Name Extractor
   const getLastName = (nameProp: string) => {
-     if (!nameProp || nameProp === "Brother") return ""; // Return empty to avoid "Brother Brother"
-     
-     const clean = nameProp.trim();
-     
-     // Case 1: "Pierce Carlson" -> "Carlson"
-     if (clean.includes(" ")) {
-         const parts = clean.split(" ");
-         return parts[parts.length - 1];
-     }
-     
-     // Case 2: "p.carlson" -> "Carlson" (Handle/Email format)
-     if (clean.includes(".")) {
-         const parts = clean.split(".");
-         const last = parts[parts.length - 1];
-         // Ensure capitalization
-         return last.charAt(0).toUpperCase() + last.slice(1);
-     }
+    if (!nameProp || nameProp === "Brother") return ""; // Return empty to avoid "Brother Brother"
 
-     // Case 3: "Pierce" -> "Pierce"
-     return clean;
+    const clean = nameProp.trim();
+
+    // Case 1: "Pierce Carlson" -> "Carlson"
+    if (clean.includes(" ")) {
+      const parts = clean.split(" ");
+      return parts[parts.length - 1];
+    }
+
+    // Case 2: "p.carlson" -> "Carlson" (Handle/Email format)
+    if (clean.includes(".")) {
+      const parts = clean.split(".");
+      const last = parts[parts.length - 1];
+      // Ensure capitalization
+      return last.charAt(0).toUpperCase() + last.slice(1);
+    }
+
+    // Case 3: "Pierce" -> "Pierce"
+    return clean;
   };
 
   const lastName = getLastName(loading ? "" : stats.fullName);
@@ -73,9 +74,9 @@ export default function DashboardHome() {
           </h1>
           <div className="max-w-2xl">
             <p className="text-stone-400 font-serif italic text-lg leading-relaxed border-l-4 border-fiji-purple pl-4 my-6">
-              &quot;Nothing in the world can take the place of persistence. Talent
-              will not... Genius will not... Education will not... Persistence
-              and determination alone are omnipotent.&quot;
+              &quot;Nothing in the world can take the place of persistence.
+              Talent will not... Genius will not... Education will not...
+              Persistence and determination alone are omnipotent.&quot;
             </p>
             <p className="text-sm text-stone-500 font-bold uppercase tracking-widest">
               — Calvin Coolidge (Gamma Omicron, 1895)
@@ -84,17 +85,18 @@ export default function DashboardHome() {
         </div>
       </div>
 
-       {/* WIDGET GRID */}
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-           {/* 1. Housing */}
-           <HousingWidget stats={stats} loading={loading} />
+      {/* WIDGET GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* 1. Housing */}
+        <HousingWidget stats={stats} loading={loading} />
+        {/* 2. Library (Static) */}
+        <LibraryWidget />
+        {/* 3. Leaderboard */}
+        <LeaderboardWidget />
+      </div>
 
-           {/* 2. Library (Static) */}
-           <LibraryWidget />
-
-           {/* 3. Leaderboard */}
-           <LeaderboardWidget />
-       </div>
+      {/* HISTORY SECTION */}
+      <PointsHistory />
     </div>
   );
 }

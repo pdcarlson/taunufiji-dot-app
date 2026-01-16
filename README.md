@@ -37,10 +37,12 @@ The secure internal dashboard for the Tau Nu Chapter of Phi Gamma Delta. Built w
   2.  Library -> Upload -> Redact -> Submit (+Points).
 - **Files:** `app/dashboard/library/page.tsx`, `lib/actions/library.actions.ts`.
 
-### 📊 Points Ledger
+### 📊 Points System (Unified)
 
 - **Goal:** Track lifetime and current points for housing picks.
 - **How it Works:** Real-time sync with Appwrite `users` collection.
+- **Location:** Integrated directly into the Dashboard Home (`/dashboard`) via `PointsHistory` component.
+- **Files:** `components/dashboard/PointsHistory.tsx`, `lib/actions/ledger.actions.ts`.
 
 ---
 

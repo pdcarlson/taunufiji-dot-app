@@ -3,13 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Home, CheckSquare, Library, LogOut, Globe, DollarSign, Calendar } from "lucide-react";
+import {
+  Home,
+  ListTodo,
+  GraduationCap,
+  User,
+  LogOut,
+  Globe,
+} from "lucide-react";
 
 // Nav Items Definition
 const NAV_ITEMS = [
   { name: "Home", href: "/dashboard", icon: Home },
-  { name: "Housing Tasks", href: "/dashboard/housing", icon: CheckSquare },
-  { name: "Scholarship", href: "/dashboard/library", icon: Library },
+  { name: "Tasks", href: "/dashboard/housing", icon: ListTodo },
+  { name: "Library", href: "/dashboard/library", icon: GraduationCap },
 ];
 
 export default function Sidebar() {
@@ -24,7 +31,7 @@ export default function Sidebar() {
   // Let's assume false or check user.position (if we kept it? No we deleted it).
   // We need to expose roles in useAuth/User object.
   // For now, let's just render standard links or check a "roles" array if we add it to Session/User.
-  const isWebmaster = false; 
+  const isWebmaster = false;
 
   return (
     <aside className="hidden md:flex w-64 flex-col bg-stone-900 text-white h-screen fixed left-0 top-0 border-r border-white/10 z-50 font-sans">
@@ -74,7 +81,7 @@ export default function Sidebar() {
                 Webmaster Hub
               </span>
             </div>
-            
+
             <Link
               href="/dashboard/webmaster/site"
               className={`flex items-center gap-3 px-4 py-3 rounded-md transition-all group ${
@@ -84,7 +91,9 @@ export default function Sidebar() {
               }`}
             >
               <Globe className="w-5 h-5 text-stone-500 group-hover:text-fiji-gold" />
-              <span className="font-bebas tracking-wide text-lg">Site Content</span>
+              <span className="font-bebas tracking-wide text-lg">
+                Site Content
+              </span>
             </Link>
           </>
         )}

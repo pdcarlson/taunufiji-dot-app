@@ -1,6 +1,6 @@
-
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TasksService } from './tasks.service';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { TasksService } from "./tasks.service";
+import { HousingTask } from "@/lib/types/models";
 
 const mocks = vi.hoisted(() => ({
   mockUpdateDocument: vi.fn(),
@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   mockGetDocument: vi.fn(),
 }));
 
-vi.mock('node-appwrite', () => {
+vi.mock("node-appwrite", () => {
   return {
     Client: class {
       setEndpoint = vi.fn().mockReturnThis();
@@ -23,54 +23,56 @@ vi.mock('node-appwrite', () => {
       getDocument = mocks.mockGetDocument;
     },
     Query: {
-        equal: vi.fn(),
-        orderDesc: vi.fn(),
-        lessThanEqual: vi.fn()
+      equal: vi.fn(),
+      orderDesc: vi.fn(),
+      lessThanEqual: vi.fn(),
     },
     ID: {
-        unique: vi.fn().mockReturnValue("unique_id")
-    }
+      unique: vi.fn().mockReturnValue("unique_id"),
+    },
   };
 });
 
-describe('TasksService Recurrence', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
+describe("TasksService Recurrence", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should calculate next instance correctly (On Time)", async () => {
+    // Mock Schedule: 7 days
+    mocks.mockGetDocument.mockResolvedValue({
+      $id: "sched1",
+      active: true,
+      recurrence_rule: "7",
+      title: "Clean",
+      points_value: 10,
     });
 
-    it('should calculate next instance correctly (On Time)', async () => {
-        // Mock Schedule: 7 days
-        mocks.mockGetDocument.mockResolvedValue({
-            $id: 'sched1',
-            active: true,
-            recurrence_rule: '7',
-            title: 'Clean',
-            points_value: 10
-        });
+    const now = new Date();
+    const dueAt = new Date(now.getTime() - 1000 * 60 * 60); // Due 1 hour ago
+    // Completed NOW.
 
-        const now = new Date();
-        const dueAt = new Date(now.getTime() - (1000 * 60 * 60)); // Due 1 hour ago
-        // Completed NOW.
+    // ...
 
-        await TasksService.triggerNextInstance('sched1', {
-            $updatedAt: now.toISOString(),
-            due_at: dueAt.toISOString(),
-            assigned_to: 'user1'
-        });
+    await TasksService.triggerNextInstance("sched1", {
+      $updatedAt: now.toISOString(),
+      due_at: dueAt.toISOString(),
+      assigned_to: "user1",
+    } as unknown as HousingTask);
 
-        // Current Due: T. Next Due: T+7.
-        // Completed: T (+1hr).
-        // Unlock: MAX(T+7 - 7, T(+1hr) + 3.5).
-        // Unlock: MAX(T, T+3.5) -> T+3.5.
-        // Expect Status: LOCKED.
+    // Current Due: T. Next Due: T+7.
+    // Completed: T (+1hr).
+    // Unlock: MAX(T+7 - 7, T(+1hr) + 3.5).
+    // Unlock: MAX(T, T+3.5) -> T+3.5.
+    // Expect Status: LOCKED.
 
-        expect(mocks.mockCreateDocument).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.any(String),
-            expect.any(String),
-            expect.objectContaining({
-                status: 'locked'
-            })
-        );
-    });
+    expect(mocks.mockCreateDocument).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({
+        status: "locked",
+      })
+    );
+  });
 });

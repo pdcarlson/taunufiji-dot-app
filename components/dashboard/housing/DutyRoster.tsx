@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { createTaskAction, reassignTaskAction } from "@/lib/actions/housing.actions";
+import {
+  createTaskAction,
+  reassignTaskAction,
+} from "@/lib/actions/housing.actions";
 import { account } from "@/lib/client/appwrite";
 import {
   CheckCircle,
@@ -13,9 +16,13 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
+import { HousingTask, Member } from "@/lib/types/models";
+
+// ...
+
 interface DutyRosterProps {
-  tasks: any[];
-  members: any[]; // Need to fetch members
+  tasks: HousingTask[];
+  members: Member[]; // Need to fetch members
   isAdmin: boolean;
   userId: string;
   onRefresh: () => void;
@@ -35,8 +42,9 @@ export default function DutyRoster({
   const handleReassign = async (taskId: string, newId: string) => {
     // const assignee = members.find((m) => m.user_id === newId);
     // Needed for name.
-    const assigneeName = members.find(m => m.$id === newId)?.full_name || "Unknown";
-    
+    const assigneeName =
+      members.find((m) => m.$id === newId)?.full_name || "Unknown";
+
     try {
       const { jwt } = await account.createJWT();
       await reassignTaskAction(taskId, newId || "", assigneeName, jwt);
@@ -49,8 +57,6 @@ export default function DutyRoster({
 
   return (
     <div className="space-y-8">
-
-
       {/* 2. MASTER ROSTER TABLE */}
       <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
         <div className="p-6 border-b border-stone-100 bg-stone-50">
@@ -76,10 +82,10 @@ export default function DutyRoster({
               const isOverdue =
                 task.due_at &&
                 new Date() > new Date(task.due_at) &&
-                task.status === "claimed";
+                task.status === "pending";
               const isDone =
-                task.status === "completed" ||
-                (task.status === "claimed" && task.next_available_at);
+                task.status === "approved" ||
+                (task.status === "pending" && task.unlock_at);
 
               return (
                 <tr
@@ -107,7 +113,8 @@ export default function DutyRoster({
                       </select>
                     ) : (
                       <span className="text-stone-600 font-medium">
-                        {task.assignee_name || "Unassigned"}
+                        {members.find((m) => m.$id === task.assigned_to)
+                          ?.full_name || "Unassigned"}
                       </span>
                     )}
                   </td>

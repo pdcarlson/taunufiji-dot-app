@@ -2,6 +2,7 @@ import { Client, Databases, Query, ID, Models } from "node-appwrite";
 import { env } from "../config/env";
 import { DB_ID, COLLECTIONS } from "../types/schema";
 import { PointsService } from "./points.service";
+import { Member, HousingTask } from "@/lib/types/models";
 
 // Server-side Admin Client
 const client = new Client()
@@ -15,7 +16,7 @@ export interface CreateAssignmentDTO {
   title: string;
   description: string;
   points_value: number;
-  type: "duty" | "bounty" | "project";
+  type: "duty" | "bounty" | "project" | "one_off";
   schedule_id?: string;
   initial_image_s3_key?: string;
   assigned_to?: string;
@@ -124,7 +125,7 @@ export const TasksService = {
 
     // 2. Reassign
     const task = await this.getTask(taskId);
-    const updates: any = {
+    const updates: Partial<CreateAssignmentDTO> = {
       status: "open", // Reset status to open (if it was pending/rejected)
       assigned_to: profileId,
     };
@@ -185,7 +186,10 @@ export const TasksService = {
     // 2. Check for Recurrence
     if (task.schedule_id) {
       try {
-        await this.triggerNextInstance(task.schedule_id, task);
+        await this.triggerNextInstance(
+          task.schedule_id,
+          task as unknown as HousingTask
+        );
       } catch (e) {
         console.error("Failed to trigger next instance", e);
         // Don't fail the verification just because recurrence failed
@@ -198,7 +202,7 @@ export const TasksService = {
   /**
    * Generates the next instance of a recurring task
    */
-  async triggerNextInstance(scheduleId: string, previousTask: Models.Document) {
+  async triggerNextInstance(scheduleId: string, previousTask: HousingTask) {
     const schedule = await db.getDocument(
       DB_ID,
       COLLECTIONS.SCHEDULES,
@@ -240,7 +244,7 @@ export const TasksService = {
     const cooldownEnd = new Date(completedAt.getTime() + halfIntervalMs);
 
     // Unlock at the LATER of the two
-    let unlockAt =
+    const unlockAt =
       cycleStart.getTime() > cooldownEnd.getTime() ? cycleStart : cooldownEnd;
 
     // If we are ALREADY past the unlock time (e.g. verifying late), unlock immediately
@@ -374,7 +378,10 @@ export const TasksService = {
       // C. Trigger Next Instance (if recurring)
       if (doc.schedule_id) {
         try {
-          await this.triggerNextInstance(doc.schedule_id, doc);
+          await this.triggerNextInstance(
+            doc.schedule_id,
+            doc as unknown as HousingTask
+          );
         } catch (e) {
           console.error("Recurrence failed for fined task", e);
         }
@@ -421,17 +428,13 @@ export const TasksService = {
     ]);
   },
 
-  async getMembers() {
-    // Fetch all users with minimal fields
+  async getMembers(): Promise<Member[]> {
+    // Fetch all users
     const users = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
       Query.limit(100),
+      Query.orderAsc("full_name"),
     ]);
-    return users.documents.map((d) => ({
-      $id: d.$id,
-      auth_id: d.auth_id,
-      name: d.full_name || d.name || "Unknown", // Handle missing full_name
-      full_name: d.full_name, // Keep original key just in case
-    }));
+    return users.documents as unknown as Member[];
   },
 
   async getUserProfile(profileId: string) {

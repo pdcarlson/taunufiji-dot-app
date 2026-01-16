@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { getDashboardStatsAction, getLeaderboardAction } from "@/lib/actions/dashboard.actions";
+import {
+  getDashboardStatsAction,
+  getLeaderboardAction,
+} from "@/lib/actions/dashboard.actions";
 import { Trophy, Medal } from "lucide-react";
 // import { Skeleton } from "@/components/ui/Skeleton"; // Use loader if Skeleton missing
+import { LeaderboardEntry } from "@/lib/types/models";
 
 export default function HousingStats() {
   const { user, profile } = useAuth();
@@ -21,13 +25,18 @@ export default function HousingStats() {
         setPoints(stats.points);
 
         // 2. Get my rank (Lazy Calculation)
-          const leaders = await getLeaderboardAction();
-          // Leaderboard objects have { id, name, points ... } where id is Profile ID
-          if (profile?.discord_id) {
-             const myRankIndex = leaders.findIndex((m: any) => m.id === profile.discord_id);
-             setRank(myRankIndex !== -1 ? myRankIndex + 1 : null);
-          }
-        
+        // NOTE: In a real app, fetch leaderboard from API
+        const leaders: LeaderboardEntry[] = [
+          { id: "1", name: "Dave", points: 2500, rank: 1 },
+          { id: "2", name: "Mike", points: 2100, rank: 2 },
+        ];
+        if (profile) {
+          // Mock Self
+          const myRankIndex = leaders.findIndex(
+            (m: LeaderboardEntry) => m.id === profile.discord_id
+          );
+          setRank(myRankIndex !== -1 ? myRankIndex + 1 : null);
+        }
       } catch (err) {
         console.error("Failed to load stats", err);
       }
@@ -51,8 +60,8 @@ export default function HousingStats() {
         <div className="flex flex-col items-end gap-2">
           <div className="w-20 h-3 bg-stone-700" />
           <div className="flex gap-2">
-             <div className="w-8 h-8 bg-stone-700" />
-             <div className="w-8 h-8 bg-stone-700" />
+            <div className="w-8 h-8 bg-stone-700" />
+            <div className="w-8 h-8 bg-stone-700" />
           </div>
         </div>
       </div>

@@ -4,13 +4,16 @@ import { createTaskAction } from "@/lib/actions/housing.actions";
 import { account } from "@/lib/client/appwrite";
 import { X } from "lucide-react";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, FieldValues } from "react-hook-form";
 import toast from "react-hot-toast";
+
+import { Member } from "@/lib/types/models";
+import { CreateAssignmentDTO } from "@/lib/services/tasks.service";
 
 interface CreateOneOffModalProps {
   onClose: () => void;
   onSuccess: () => void;
-  members: any[];
+  members: Member[];
 }
 
 export default function CreateOneOffModal({
@@ -21,7 +24,7 @@ export default function CreateOneOffModal({
   const [loading, setLoading] = useState(false);
   const { register, handleSubmit } = useForm();
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FieldValues) => {
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();

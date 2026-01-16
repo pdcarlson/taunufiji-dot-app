@@ -1,13 +1,21 @@
 "use client";
 
-import { approveTaskAction, rejectTaskAction, getReviewDetailsAction } from "@/lib/actions/housing.actions";
+import {
+  approveTaskAction,
+  rejectTaskAction,
+  getReviewDetailsAction,
+} from "@/lib/actions/housing.actions";
 import { account } from "@/lib/client/appwrite";
 import { X, Check, AlertTriangle, ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
+import { HousingTask } from "@/lib/types/models";
+
+// ...
+
 interface ProofReviewModalProps {
-  task: any | null;
+  task: HousingTask | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -18,32 +26,40 @@ export default function ProofReviewModal({
   onSuccess,
 }: ProofReviewModalProps) {
   const [loading, setLoading] = useState(false);
-  const [details, setDetails] = useState<{ name: string; url: string; loading: boolean }>({
+  const [details, setDetails] = useState<{
+    name: string;
+    url: string;
+    loading: boolean;
+  }>({
     name: "Loading...",
     url: "",
-    loading: true
+    loading: true,
   });
 
   useEffect(() => {
     if (!task) return;
 
     const fetchDetails = async () => {
-        try {
-            const { jwt } = await account.createJWT();
-            const res = await getReviewDetailsAction(task.$id, jwt);
-            if (res.success) {
-                setDetails({
-                    name: res.submitterName || "Brother",
-                    url: res.proofUrl || "",
-                    loading: false
-                });
-            } else {
-                setDetails(prev => ({ ...prev, loading: false, name: "Error fetching" }));
-            }
-        } catch (e) {
-            console.error(e);
-            setDetails(prev => ({ ...prev, loading: false }));
+      try {
+        const { jwt } = await account.createJWT();
+        const res = await getReviewDetailsAction(task.$id, jwt);
+        if (res.success) {
+          setDetails({
+            name: res.submitterName || "Brother",
+            url: res.proofUrl || "",
+            loading: false,
+          });
+        } else {
+          setDetails((prev) => ({
+            ...prev,
+            loading: false,
+            name: "Error fetching",
+          }));
         }
+      } catch (e) {
+        console.error(e);
+        setDetails((prev) => ({ ...prev, loading: false }));
+      }
     };
 
     fetchDetails();
@@ -55,7 +71,7 @@ export default function ProofReviewModal({
 
   const handleApprove = async () => {
     // Confirmation Removed per request
-    
+
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
@@ -160,7 +176,7 @@ export default function ProofReviewModal({
                 Reward
               </label>
               <p className="font-bebas text-2xl text-fiji-gold-dark">
-                {task.points_value || task.points} PTS
+                {task.points_value} PTS
               </p>
             </div>
           </div>
