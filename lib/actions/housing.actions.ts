@@ -158,9 +158,10 @@ export async function approveTaskAction(taskId: string, jwt?: string) {
     await TasksService.verifyTask(taskId);
     revalidatePath("/dashboard/housing");
     return { success: true };
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("approveTaskAction failed", e);
-    return { success: false, error: e.message };
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    return { success: false, error: msg };
   }
 }
 

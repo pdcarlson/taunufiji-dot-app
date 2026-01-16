@@ -1,13 +1,28 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { claimTaskAction, unclaimTaskAction, submitProofAction } from "@/lib/actions/housing.actions"; 
+import {
+  claimTaskAction,
+  unclaimTaskAction,
+  submitProofAction,
+} from "@/lib/actions/housing.actions";
 import { account } from "@/lib/client/appwrite";
-import { Clock, UploadCloud, RefreshCw, Zap, XCircle, Lock, Briefcase } from "lucide-react";
+import { Loader } from "@/components/ui/Loader";
+import {
+  Clock,
+  UploadCloud,
+  RefreshCw,
+  Zap,
+  XCircle,
+  Lock,
+  Briefcase,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
+import { HousingTask } from "@/lib/types/models";
+
 // Types (Ideally move to shared types file)
-type Task = any; // Placeholder, better to import from Types
+type Task = HousingTask;
 
 // --- TIMER ---
 function TimeDisplay({
@@ -93,13 +108,13 @@ export default function TaskCard({
   const [loading, setLoading] = useState(false);
 
   // VALUES
-  const isMyTask = task.assigned_to === profileId; 
-  // Public Site used 'assignee_id'. Internal Schema used 'assigned_to'. 
+  const isMyTask = task.assigned_to === profileId;
+  // Public Site used 'assignee_id'. Internal Schema used 'assigned_to'.
   // TasksService.claimTask sets 'assigned_to'.
   // I should check `schema.ts`. `assignments` has `assigned_to`.
   // So `task.assigned_to` is correct for internal.
-  
-  const isDuty = task.type === "duty" || task.type === "one_off"; 
+
+  const isDuty = task.type === "duty" || task.type === "one_off";
   const isOneOff = task.type === "one_off";
   const isLocked = task.status === "locked";
   const isPending = task.status === "pending"; // Claimed / In Progress
@@ -108,12 +123,12 @@ export default function TaskCard({
   // ACTIONS
   const handleClaim = async () => {
     // Duties cannot be claimed by users, only assigned by admins.
-    if (isDuty) return; 
+    if (isDuty) return;
 
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
-      await claimTaskAction(task.$id, userId, jwt); 
+      await claimTaskAction(task.$id, userId, jwt);
       toast.success("Bounty Claimed!");
       onRefresh();
     } catch {
@@ -139,58 +154,65 @@ export default function TaskCard({
     if (!e.target.files?.[0]) return;
     setLoading(true);
     try {
-        // Need to upload file then submit proof.
-        // Or action handles both?
-        // Server Action `submitProofAction` might expect FormData.
-        const formData = new FormData();
-        formData.append("file", e.target.files[0]);
-        formData.append("taskId", task.$id);
-        
-        const { jwt } = await account.createJWT();
-        await submitProofAction(formData, jwt);
-        
-        toast.success("Uploaded!");
-        onRefresh();
+      // Need to upload file then submit proof.
+      // Or action handles both?
+      // Server Action `submitProofAction` might expect FormData.
+      const formData = new FormData();
+      formData.append("file", e.target.files[0]);
+      formData.append("taskId", task.$id);
+
+      const { jwt } = await account.createJWT();
+      await submitProofAction(formData, jwt);
+
+      toast.success("Uploaded!");
+      onRefresh();
     } catch {
-        toast.error("Error");
+      toast.error("Error");
     }
     setLoading(false);
   };
 
-
   // 1. LOCKED / COOLDOWN CARD
   if (isLocked) {
-     return (
-        <div className="bg-stone-50 border border-stone-200 rounded-xl p-5 flex flex-col h-full opacity-60">
-            <div className="flex justify-between items-start mb-2">
-                <span className="text-[10px] tracking-widest font-bold text-stone-400 uppercase flex items-center gap-1">
-                    <Lock className="w-3 h-3" /> {isDuty ? "Cooldown" : "Locked"}
-                </span>
-                {task.unlock_at && <TimeDisplay target={task.unlock_at} mode="unlock" />}
-            </div>
-            <h3 className="font-bebas text-xl text-stone-500 mb-1">{task.title}</h3>
-            <p className="text-sm text-stone-400 mb-4">{task.description}</p>
+    return (
+      <div className="bg-stone-50 border border-stone-200 rounded-xl p-5 flex flex-col h-full opacity-60">
+        <div className="flex justify-between items-start mb-2">
+          <span className="text-[10px] tracking-widest font-bold text-stone-400 uppercase flex items-center gap-1">
+            <Lock className="w-3 h-3" /> {isDuty ? "Cooldown" : "Locked"}
+          </span>
+          {task.unlock_at && (
+            <TimeDisplay target={task.unlock_at} mode="unlock" />
+          )}
         </div>
-     )
+        <h3 className="font-bebas text-xl text-stone-500 mb-1">{task.title}</h3>
+        <p className="text-sm text-stone-400 mb-4">{task.description}</p>
+      </div>
+    );
   }
-
-
 
   // 2. ACTIVE CARD
   return (
     <div
       className={`relative bg-white border rounded-xl p-5 transition-all shadow-sm hover:shadow-md flex flex-col h-full ${
-        isMyTask && task.status === "pending" && !isReview 
+        isMyTask && task.status === "pending" && !isReview
           ? "border-fiji-purple ring-1 ring-fiji-purple/20"
           : "border-stone-200"
-      } ${isReview && viewMode !== "review" ? "opacity-60 grayscale-[80%] bg-stone-50" : ""}`}
+      } ${
+        isReview && viewMode !== "review"
+          ? "opacity-60 grayscale-[80%] bg-stone-50"
+          : ""
+      }`}
     >
       {/* HEADER */}
       <div className="flex justify-between items-start mb-3">
         <div>
           {isDuty ? (
             <span className="text-[10px] tracking-widest font-bold text-red-500 uppercase flex items-center gap-1 mb-1">
-              {isOneOff ? <Briefcase className="w-3 h-3" /> : <RefreshCw className="w-3 h-3" />} 
+              {isOneOff ? (
+                <Briefcase className="w-3 h-3" />
+              ) : (
+                <RefreshCw className="w-3 h-3" />
+              )}
               {isOneOff ? "Assigned Duty" : "Recurring Duty"}
             </span>
           ) : (
@@ -233,47 +255,50 @@ export default function TaskCard({
                 Claim Bounty
               </button>
             )}
-            {isMyTask && (task.status === "pending" || (isDuty && task.status === "open")) && !isReview && (
-              <div className="flex gap-2">
-                <label className="flex-1 bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2">
-                  {loading ? (
-                    "..."
-                  ) : (
-                    <>
-                      <UploadCloud className="w-4 h-4" /> Upload Proof
-                    </>
+            {isMyTask &&
+              (task.status === "pending" ||
+                (isDuty && task.status === "open")) &&
+              !isReview && (
+                <div className="flex gap-2">
+                  <label className="flex-1 bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2">
+                    {loading ? (
+                      <Loader className="w-4 h-4 text-white" />
+                    ) : (
+                      <>
+                        <UploadCloud className="w-4 h-4" /> Upload Proof
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleUpload}
+                      disabled={loading}
+                    />
+                  </label>
+                  {!isDuty && (
+                    <button
+                      onClick={handleUnclaim}
+                      disabled={loading}
+                      className="px-3 text-red-400 hover:bg-red-50 rounded"
+                    >
+                      <XCircle className="w-5 h-5" />
+                    </button>
                   )}
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleUpload}
-                    disabled={loading}
-                  />
-                </label>
-                {!isDuty && (
-                  <button
-                    onClick={handleUnclaim}
-                    disabled={loading}
-                    className="px-3 text-red-400 hover:bg-red-50 rounded"
-                  >
-                    <XCircle className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-            )}
+                </div>
+              )}
             {/* PENDING STATE (VISUAL ONLY) */}
             {/* If Proof exists, show Under Review. task.proof_s3_key? */}
-            {(task.proof_s3_key) && (
+            {task.proof_s3_key && (
               <div className="text-center text-xs text-stone-500 font-bold py-2 flex items-center justify-center gap-2">
-                 <Clock className="w-3 h-3" /> Under Review
+                <Clock className="w-3 h-3" /> Under Review
               </div>
             )}
           </>
         )}
 
         {/* VIEW B: REVIEW (Admin Queue) */}
-        {viewMode === "review" && (task.proof_s3_key) && isAdmin && onReview && (
+        {viewMode === "review" && task.proof_s3_key && isAdmin && onReview && (
           <button
             onClick={() => onReview(task)}
             className="w-full bg-stone-800 hover:bg-black text-white font-bold py-2 rounded text-sm shadow-sm"
