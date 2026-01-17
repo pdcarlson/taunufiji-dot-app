@@ -65,6 +65,9 @@ export async function claimTaskAction(
   }
 }
 
+// @ts-ignore
+const heicConvert = require("heic-convert");
+
 export async function submitProofAction(formData: FormData, jwt?: string) {
   try {
     const account = await getAuthAccount(jwt);
@@ -77,12 +80,40 @@ export async function submitProofAction(formData: FormData, jwt?: string) {
 
     if (!file || !taskId) throw new Error("Missing fields");
 
-    // 1. Upload to S3
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const key = `proofs/${taskId}-${Date.now()}-${file.name}`;
+    let buffer = Buffer.from(await file.arrayBuffer());
+    let contentType = file.type;
+    let fileName = file.name;
 
-    await StorageService.uploadFile(buffer, key, file.type);
+    // Server-Side HEIC Conversion
+    const isHeic =
+      file.name.toLowerCase().endsWith(".heic") ||
+      file.name.toLowerCase().endsWith(".heif") ||
+      file.type.includes("heic") ||
+      file.type.includes("heif");
+
+    if (isHeic) {
+      console.log(`Converting HEIC on server: ${fileName}`);
+      try {
+        const outputBuffer = await heicConvert({
+          buffer: buffer, // the HEIC file buffer
+          format: "JPEG", // output format
+          quality: 0.8, // jpeg compression quality
+        });
+
+        buffer = Buffer.from(outputBuffer);
+        contentType = "image/jpeg";
+        fileName = fileName.replace(/\.(heic|heif)$/i, ".jpg");
+        console.log(`Conversion successful: ${fileName}`);
+      } catch (conversionError) {
+        console.error("Server-side HEIC conversion failed", conversionError);
+        throw new Error("Failed to process iPhone photo on server.");
+      }
+    }
+
+    // 1. Upload to S3
+    const key = `proofs/${taskId}-${Date.now()}-${fileName}`;
+
+    await StorageService.uploadFile(buffer, key, contentType);
 
     // 2. Update DB
     await TasksService.submitProof(taskId, key);
@@ -91,7 +122,10 @@ export async function submitProofAction(formData: FormData, jwt?: string) {
     return { success: true };
   } catch (e) {
     console.error("Upload failed", e);
-    return { success: false, error: "Upload failed" };
+    return {
+      success: false,
+      error: e instanceof Error ? e.message : "Upload failed",
+    };
   }
 }
 

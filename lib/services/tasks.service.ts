@@ -397,10 +397,55 @@ export const TasksService = {
   },
 
   async rejectTask(taskId: string) {
-    // Rejection sends it back to OPEN so user can retry IF time remains.
-    // If time has passed, the next CRON will expire and fine them.
+    const task = (await db.getDocument(
+      DB_ID,
+      COLLECTIONS.ASSIGNMENTS,
+      taskId
+    )) as HousingTask;
+
+    const now = new Date();
+    const dueAt = task.due_at ? new Date(task.due_at) : null;
+    const isExpired = dueAt && now > dueAt;
+
+    // Case 1: Deadline Passed
+    if (isExpired) {
+      // 1A: Recurrring Duty or One-off -> Penalty & Delete
+      if (task.type === "duty" || task.type === "one_off") {
+        // Penalty
+        if (task.assigned_to) {
+          const PointsService = (await import("@/lib/services/points.service"))
+            .PointsService;
+          await PointsService.deduct(
+            task.assigned_to,
+            50,
+            "Missed deadline (rejected)"
+          );
+        }
+
+        // Trigger Next Instance (if recurring)
+        if (task.schedule_id) {
+          await this.triggerNextInstance(task);
+        }
+
+        // Delete failed task
+        return await db.deleteDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, taskId);
+      }
+
+      // 1B: Bounty -> Return to Pool
+      if (task.type === "bounty") {
+        return await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, taskId, {
+          status: "open",
+          assigned_to: null,
+          proof_s3_key: null,
+          claimed_at: null, // assuming we track this, if not ignore
+        });
+      }
+    }
+
+    // Case 2: Deadline NOT Passed -> Allow Retry
     return await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, taskId, {
-      status: "open",
+      status: "rejected",
+      proof_s3_key: null,
     });
   },
 

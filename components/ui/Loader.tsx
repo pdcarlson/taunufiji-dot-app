@@ -14,8 +14,10 @@ export function Loader({
   };
 
   return (
-    <div className={`flex justify-center items-center p-4 ${className}`}>
-      <Loader2 className={`${sizeClasses[size]} animate-spin text-fiji-gold`} />
-    </div>
+    <Loader2
+      className={`${sizeClasses[size]} animate-spin text-fiji-gold ${
+        className || ""
+      }`}
+    />
   );
 }

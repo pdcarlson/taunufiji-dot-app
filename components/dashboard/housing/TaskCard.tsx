@@ -151,25 +151,31 @@ export default function TaskCard({
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0]) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     setLoading(true);
+
     try {
-      // Need to upload file then submit proof.
-      // Or action handles both?
-      // Server Action `submitProofAction` might expect FormData.
       const formData = new FormData();
-      formData.append("file", e.target.files[0]);
+      formData.append("file", file);
       formData.append("taskId", task.$id);
 
       const { jwt } = await account.createJWT();
-      await submitProofAction(formData, jwt);
+      const result = await submitProofAction(formData, jwt);
 
-      toast.success("Uploaded!");
+      if (!result.success) throw new Error(result.error);
+
+      toast.success("Proof uploaded!");
       onRefresh();
-    } catch {
-      toast.error("Error");
+    } catch (err: unknown) {
+      console.error("Upload error:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Upload failed. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // 1. LOCKED / COOLDOWN CARD
@@ -257,12 +263,19 @@ export default function TaskCard({
             )}
             {isMyTask &&
               (task.status === "pending" ||
+                task.status === "rejected" ||
                 (isDuty && task.status === "open")) &&
               !isReview && (
                 <div className="flex gap-2">
-                  <label className="flex-1 bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2">
+                  <label
+                    className={`flex-1 bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2 ${
+                      loading
+                        ? "opacity-80 cursor-wait pointer-events-none"
+                        : ""
+                    }`}
+                  >
                     {loading ? (
-                      <Loader className="w-4 h-4 text-white" />
+                      <Loader size="sm" className="text-white" />
                     ) : (
                       <>
                         <UploadCloud className="w-4 h-4" /> Upload Proof
@@ -287,11 +300,15 @@ export default function TaskCard({
                   )}
                 </div>
               )}
-            {/* PENDING STATE (VISUAL ONLY) */}
-            {/* If Proof exists, show Under Review. task.proof_s3_key? */}
+            {/* STATUS STATES */}
             {task.proof_s3_key && (
               <div className="text-center text-xs text-stone-500 font-bold py-2 flex items-center justify-center gap-2">
                 <Clock className="w-3 h-3" /> Under Review
+              </div>
+            )}
+            {!task.proof_s3_key && task.status === "rejected" && (
+              <div className="text-center text-xs text-red-500 font-bold py-2 flex items-center justify-center gap-2">
+                <XCircle className="w-3 h-3" /> Rejected - Please Resubmit
               </div>
             )}
           </>

@@ -94,3 +94,5 @@
   - **UI/UX Polish**: Renamed Sidebar items to "Tasks" and "Library" for simplicity. Standardized Housing Dashboard to have consistent "Loading" spinners and "Boxed/Dashed" empty states for both "My Responsibilities" and "Bounties". Verified Mobile consistency.
   - **Leaderboard Logic**: Implemented `getMyRankAction` to fix "Your Rank: #-" issue. Component now fetches personal rank in parallel with Top 5.
   - **Critical ID Correction**: Fixed `HousingStats` and `LeaderboardWidget` using Auth ID instead of Discord ID for database lookups. Updated `README.md` with explicit Data Architecture usage guide. Removed hardcoded Mock Data from Housing Widget.
+  - **Upload Hardening**: Increased Limit to 10MB. Rebuilt HEIC support using **Server-Side Conversion** (via `heic-convert`) to eliminate browser compatibility issues. Added `Loader` UI.
+  - **Rejection Flow**: Enhanced `rejectTask` logic. Deadline passed = Delete & Penalty (-50pts). Time remaining = "Rejected" status & allow resubmit. UI updated to show red "Rejected" status.
