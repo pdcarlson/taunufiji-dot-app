@@ -1,4 +1,4 @@
-import { getLeaderboardAction } from "@/lib/actions/housing.actions";
+import { getLeaderboardAction } from "@/lib/actions/dashboard.actions";
 import { Medal, Trophy } from "lucide-react";
 
 import { LeaderboardEntry } from "@/lib/types/models";
