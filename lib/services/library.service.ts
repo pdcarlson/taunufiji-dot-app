@@ -1,4 +1,4 @@
-import { Client, Databases, Query } from "node-appwrite";
+import { Client, Databases, Query, Models } from "node-appwrite";
 import { env } from "../config/env";
 import { DB_ID, COLLECTIONS } from "../types/schema";
 import { StorageService } from "./s3.service";
@@ -15,6 +15,29 @@ export interface LibrarySearchFilters {
   course_number?: string;
   professor?: string;
   year?: number;
+}
+
+interface Course extends Models.Document {
+  department: string;
+  course_number: string;
+  course_name: string;
+  abbreviation: string;
+}
+
+interface Professor extends Models.Document {
+  name: string;
+}
+
+export interface CreateResourceDTO {
+  title: string;
+  course_id: string;
+  professor_id: string;
+  semester: string;
+  year: number;
+  type: "exam" | "notes" | "syllabus" | "other";
+  file_s3_key: string;
+  uploaded_by: string;
+  status: "pending" | "approved";
 }
 
 export const LibraryService = {
@@ -59,7 +82,7 @@ export const LibraryService = {
     // Pass filename to force "Save As" behavior with correct name
     const url = await StorageService.getReadUrl(
       doc.file_s3_key,
-      doc.original_filename
+      doc.original_filename,
     );
     return { url, filename: doc.original_filename };
   },
@@ -105,34 +128,11 @@ export const LibraryService = {
       const professorsRes = await db.listDocuments(
         DB_ID,
         COLLECTIONS.PROFESSORS,
-        [Query.limit(100)]
+        [Query.limit(100)],
       );
 
       // Group courses by Dept
       const courses: Record<string, { number: string; name: string }[]> = {};
-
-      interface Course extends Models.Document {
-        department: string;
-        course_number: string;
-        course_name: string;
-        abbreviation: string;
-      }
-
-      interface Professor extends Models.Document {
-        name: string;
-      }
-
-      interface CreateResourceDTO {
-        title: string;
-        course_id: string;
-        professor_id: string;
-        semester: string;
-        year: number;
-        type: "exam" | "notes" | "syllabus" | "other";
-        file_s3_key: string;
-        uploaded_by: string;
-        status: "pending" | "approved";
-      }
 
       // ...
 
@@ -166,7 +166,7 @@ export const LibraryService = {
       DB_ID,
       COLLECTIONS.LIBRARY,
       "unique()",
-      data
+      data,
     );
   },
 
