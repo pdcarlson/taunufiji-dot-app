@@ -35,7 +35,10 @@ export async function getDashboardStatsAction(userId: string) {
     const profile = await AuthService.getProfile(userId);
     const activeCount = profile
       ? (await TasksService.getMyTasks(profile.$id)).documents.filter(
-          (d) => d.status === "pending" || d.status === "open"
+          (d) =>
+            d.status === "pending" ||
+            d.status === "open" ||
+            d.status === "rejected"
         ).length
       : 0;
 

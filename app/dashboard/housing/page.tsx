@@ -105,33 +105,36 @@ export default function HousingPage() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row gap-6 justify-between items-end">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6 justify-between items-center md:items-end text-center md:text-left">
         <div>
-          <h1 className="font-bebas text-4xl text-fiji-dark">
+          <h1 className="font-bebas text-3xl md:text-4xl text-fiji-dark leading-none">
             Housing Operations
           </h1>
-          <p className="text-stone-500 text-sm">
+          <p className="text-stone-500 text-xs md:text-sm">
             Tau Nu Chapter Housing Dashboard.
           </p>
         </div>
-        <div className="flex bg-stone-100 p-1 rounded-lg">
+
+        {/* TABS */}
+        <div className="flex bg-stone-100 p-1 rounded-lg w-full md:w-auto overflow-x-auto justify-center">
           <button
             onClick={() => setActiveTab("board")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${
+            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-all whitespace-nowrap ${
               activeTab === "board"
                 ? "bg-white text-fiji-dark shadow-sm"
-                : "text-stone-500"
+                : "text-stone-500 hover:text-stone-700"
             }`}
           >
             <ListTodo className="w-4 h-4" /> Work Board
           </button>
           <button
             onClick={() => setActiveTab("roster")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${
+            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-all whitespace-nowrap ${
               activeTab === "roster"
                 ? "bg-white text-fiji-dark shadow-sm"
-                : "text-stone-500"
+                : "text-stone-500 hover:text-stone-700"
             }`}
           >
             <Users className="w-4 h-4" /> Master Roster
@@ -146,24 +149,24 @@ export default function HousingPage() {
         <div className="space-y-8">
           {/* ADMIN ACTION BAR (Main Page) */}
           {isAdmin && (
-            <div className="flex flex-wrap gap-2 mb-6 p-4 bg-stone-100 rounded-xl border border-stone-200">
+            <div className="flex flex-wrap gap-2 mb-6 p-3 md:p-4 bg-stone-100 rounded-xl border border-stone-200 justify-center md:justify-start">
               <button
                 onClick={() => setShowBountyModal(true)}
-                className="flex items-center gap-2 bg-stone-800 hover:bg-black text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors"
+                className="flex items-center gap-2 bg-stone-800 hover:bg-black text-white text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors flex-grow md:flex-grow-0 justify-center"
               >
-                <Plus size={16} /> Post Bounty
+                <Plus className="w-4 h-4" /> Post Bounty
               </button>
               <button
                 onClick={() => setShowOneOffModal(true)}
-                className="flex items-center gap-2 bg-stone-800 hover:bg-black text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors"
+                className="flex items-center gap-2 bg-stone-800 hover:bg-black text-white text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors flex-grow md:flex-grow-0 justify-center"
               >
-                <Plus size={16} /> Assign Duty
+                <Plus className="w-4 h-4" /> Assign Duty
               </button>
               <button
                 onClick={() => setShowScheduleModal(true)}
-                className="flex items-center gap-2 bg-white hover:bg-stone-50 text-stone-700 text-sm font-bold px-4 py-2 rounded-lg transition-colors border border-stone-300"
+                className="flex items-center gap-2 bg-white hover:bg-stone-50 text-stone-700 text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors border border-stone-300 flex-grow md:flex-grow-0 justify-center"
               >
-                <CalendarClock size={16} /> Create Schedule
+                <CalendarClock className="w-4 h-4" /> Create Schedule
               </button>
             </div>
           )}

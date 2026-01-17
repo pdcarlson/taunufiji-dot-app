@@ -101,7 +101,7 @@ export default function LeaderboardWidget() {
       <div className="p-6 pb-2 relative z-10 flex items-center justify-between border-b border-white/5">
         <div className="flex items-center gap-2">
           <Trophy className="h-5 w-5 text-fiji-gold" />
-          <h3 className="font-langdon text-xl text-fiji-gold tracking-wide pt-1">
+          <h3 className="font-bebas text-2xl text-fiji-gold tracking-wide pt-1 uppercase">
             Rankings
           </h3>
         </div>

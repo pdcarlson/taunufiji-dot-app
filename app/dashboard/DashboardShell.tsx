@@ -52,7 +52,7 @@ export default function DashboardShell({
       </main>
 
       {/* Mobile Bottom Nav (Visible on Mobile) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 z-50 pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-stone-950 border-t border-stone-800 z-50 pb-safe">
         <div className="flex justify-around items-center h-16">
           <MobileNavLink href="/dashboard" icon={Home} label="Home" />
           <MobileNavLink
@@ -103,7 +103,7 @@ function MobileNavLink({
   return (
     <Link
       href={href}
-      className="flex flex-col items-center justify-center w-full h-full text-stone-500 hover:text-fiji-purple"
+      className="flex flex-col items-center justify-center w-full h-full text-stone-500 hover:text-white transition-colors"
     >
       <Icon className="w-6 h-6" />
       <span className="text-[10px] uppercase font-bold mt-1 tracking-wider">

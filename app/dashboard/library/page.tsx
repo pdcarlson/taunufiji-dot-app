@@ -38,20 +38,20 @@ export default function LibraryPage() {
   // --- 1. LOAD GLOBAL & USER STATS ---
   useEffect(() => {
     const initData = async () => {
-      if(!user) return;
+      if (!user) return;
       try {
         const { jwt } = await account.createJWT();
-        
-        const res = await fetch('/api/library/stats', {
-            headers: {
-                'Authorization': `Bearer ${jwt}`
-            }
+
+        const res = await fetch("/api/library/stats", {
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+          },
         });
-        
+
         if (res.ok) {
-            const data = await res.json();
-            setTotalArchiveCount(data.totalFiles);
-            setMyUploadCount(data.userFiles);
+          const data = await res.json();
+          setTotalArchiveCount(data.totalFiles);
+          setMyUploadCount(data.userFiles);
         }
       } catch (e) {
         console.error("Initialization Failed", e);
@@ -68,35 +68,34 @@ export default function LibraryPage() {
         // Construct filter object for API
         const apiFilters: any = {};
         Object.keys(debouncedFilters).forEach((key) => {
-             // @ts-ignore
-             const value = debouncedFilters[key];
-             if (value && value !== "All") {
-                 apiFilters[key] = value;
-             }
+          // @ts-ignore
+          const value = debouncedFilters[key];
+          if (value && value !== "All") {
+            apiFilters[key] = value;
+          }
         });
-        
+
         // Pass year as number if simple string
         if (apiFilters.year && !isNaN(parseInt(apiFilters.year))) {
-            apiFilters.year = parseInt(apiFilters.year);
+          apiFilters.year = parseInt(apiFilters.year);
         }
 
         const { jwt } = await account.createJWT();
 
-        const res = await fetch('/api/library/search', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwt}`
-            },
-            body: JSON.stringify({ filters: apiFilters })
+        const res = await fetch("/api/library/search", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${jwt}`,
+          },
+          body: JSON.stringify({ filters: apiFilters }),
         });
-        
+
         if (!res.ok) throw new Error("Search Failure");
-        
+
         const data = await res.json();
         setResults(data.documents);
         setSearchTotal(data.total);
-
       } catch (err) {
         console.error("Search failed:", err);
         toast.error("Failed to load library");
@@ -111,12 +110,12 @@ export default function LibraryPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-center md:text-left">
         <div>
-          <h1 className="font-bebas text-4xl text-fiji-dark">
+          <h1 className="font-bebas text-3xl md:text-4xl text-fiji-dark leading-none">
             Scholarship Library
           </h1>
-          <p className="text-stone-500 text-sm">
+          <p className="text-stone-500 text-xs md:text-sm">
             {loading ? "Searching..." : `${searchTotal} files found`}
           </p>
         </div>
@@ -142,7 +141,7 @@ export default function LibraryPage() {
         {loading && (
           <div className="space-y-4">
             {[1, 2, 3, 4, 5].map((i) => (
-                <LibrarySkeleton key={i} />
+              <LibrarySkeleton key={i} />
             ))}
           </div>
         )}
