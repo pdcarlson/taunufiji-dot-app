@@ -48,7 +48,7 @@ export const TasksService = {
       {
         ...data,
         status: data.status || "open",
-      }
+      },
     );
   },
 
@@ -90,7 +90,7 @@ export const TasksService = {
       DB_ID,
       COLLECTIONS.ASSIGNMENTS,
       taskId,
-      updates
+      updates,
     );
   },
 
@@ -136,7 +136,7 @@ export const TasksService = {
         const schedule = await db.getDocument(
           DB_ID,
           COLLECTIONS.SCHEDULES,
-          task.schedule_id
+          task.schedule_id,
         );
         const intervalDays = parseInt(schedule.recurrence_rule);
 
@@ -154,7 +154,7 @@ export const TasksService = {
       DB_ID,
       COLLECTIONS.ASSIGNMENTS,
       taskId,
-      updates
+      updates,
     );
   },
 
@@ -166,7 +166,7 @@ export const TasksService = {
       taskId,
       {
         status: "approved",
-      }
+      },
     );
 
     // 1a. Award Points
@@ -188,7 +188,7 @@ export const TasksService = {
       try {
         await this.triggerNextInstance(
           task.schedule_id,
-          task as unknown as HousingTask
+          task as unknown as HousingTask,
         );
       } catch (e) {
         console.error("Failed to trigger next instance", e);
@@ -206,7 +206,7 @@ export const TasksService = {
     const schedule = await db.getDocument(
       DB_ID,
       COLLECTIONS.SCHEDULES,
-      scheduleId
+      scheduleId,
     );
 
     if (!schedule.active) return;
@@ -226,7 +226,7 @@ export const TasksService = {
 
     // Next Due = Previous Due + Interval (Keep the cycle)
     const nextDue = new Date(
-      prevDue.getTime() + intervalDays * 24 * 60 * 60 * 1000
+      prevDue.getTime() + intervalDays * 24 * 60 * 60 * 1000,
     );
 
     // Unlock Time = MAX(Start of Next Cycle, Completed + Half Interval)
@@ -277,7 +277,7 @@ export const TasksService = {
         ...data,
         active: true,
         last_generated_at: new Date().toISOString(),
-      }
+      },
     );
 
     // Spawn First Instance Immediately (Open)
@@ -291,7 +291,7 @@ export const TasksService = {
       // due_at: now + interval? Or just Open?
       // Usually "Due in X days".
       due_at: new Date(
-        Date.now() + parseInt(schedule.recurrence_rule) * 24 * 60 * 60 * 1000
+        Date.now() + parseInt(schedule.recurrence_rule) * 24 * 60 * 60 * 1000,
       ).toISOString(),
       status: "open",
     });
@@ -323,7 +323,7 @@ export const TasksService = {
     const unlockPromises = lockedTasks.documents.map((doc) =>
       db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
         status: "open",
-      })
+      }),
     );
 
     // 2. Expire Bounties
@@ -335,13 +335,13 @@ export const TasksService = {
         Query.equal("status", "open"),
         Query.equal("type", "bounty"),
         Query.lessThanEqual("expires_at", now.toISOString()),
-      ]
+      ],
     );
 
     const expirePromises = expiredBounties.documents.map((doc) =>
       db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
         status: "expired",
-      })
+      }),
     );
 
     await Promise.all([...unlockPromises, ...expirePromises]);
@@ -355,7 +355,7 @@ export const TasksService = {
       [
         Query.equal("status", "open"),
         Query.lessThanEqual("due_at", now.toISOString()),
-      ]
+      ],
     );
 
     const finePromises = overdueDuties.documents.map(async (doc) => {
@@ -380,7 +380,7 @@ export const TasksService = {
         try {
           await this.triggerNextInstance(
             doc.schedule_id,
-            doc as unknown as HousingTask
+            doc as unknown as HousingTask,
           );
         } catch (e) {
           console.error("Recurrence failed for fined task", e);
@@ -400,7 +400,7 @@ export const TasksService = {
     const task = (await db.getDocument(
       DB_ID,
       COLLECTIONS.ASSIGNMENTS,
-      taskId
+      taskId,
     )) as HousingTask;
 
     const now = new Date();
@@ -415,16 +415,16 @@ export const TasksService = {
         if (task.assigned_to) {
           const PointsService = (await import("@/lib/services/points.service"))
             .PointsService;
-          await PointsService.deduct(
-            task.assigned_to,
-            50,
-            "Missed deadline (rejected)"
-          );
+          await PointsService.awardPoints(task.assigned_to, {
+            amount: -50,
+            reason: "Missed deadline (rejected)",
+            category: "fine",
+          });
         }
 
         // Trigger Next Instance (if recurring)
         if (task.schedule_id) {
-          await this.triggerNextInstance(task);
+          await this.triggerNextInstance(task.schedule_id, task);
         }
 
         // Delete failed task

@@ -29,15 +29,17 @@ interface Professor extends Models.Document {
 }
 
 export interface CreateResourceDTO {
-  title: string;
-  course_id: string;
-  professor_id: string;
+  department: string;
+  course_number: string;
+  course_name: string;
+  professor: string;
   semester: string;
   year: number;
-  type: "exam" | "notes" | "syllabus" | "other";
+  type: string;
+  version: string;
+  original_filename: string;
   file_s3_key: string;
   uploaded_by: string;
-  status: "pending" | "approved";
 }
 
 export const LibraryService = {
