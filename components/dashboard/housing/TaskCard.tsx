@@ -48,7 +48,7 @@ function TimeDisplay({
 
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor(
-        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
       );
       const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
@@ -171,7 +171,7 @@ export default function TaskCard({
     } catch (err: unknown) {
       console.error("Upload error:", err);
       toast.error(
-        err instanceof Error ? err.message : "Upload failed. Please try again."
+        err instanceof Error ? err.message : "Upload failed. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -233,7 +233,7 @@ export default function TaskCard({
         <div className="flex flex-col items-end">
           {!isDuty && (
             <span className="bg-fiji-gold/20 text-fiji-gold-dark text-xs font-bold px-2 py-1 rounded">
-              {task.points_value || task.points} PTS
+              {task.points_value} PTS
             </span>
           )}
           {isDuty && task.due_at && (
