@@ -16,11 +16,24 @@ export async function syncUserAction(authId: string) {
 
 export async function getProfileAction(authId: string) {
   try {
-    const profile = await AuthService.getProfile(authId);
-    // Serialize to plain JSON
+    // Attempt to Sync (Create/Update) User
+    // ALERTS: This performs a write operation and hits the Discord API.
+    const profile = await AuthService.syncUser(authId);
     return JSON.parse(JSON.stringify(profile));
   } catch (e) {
-    console.error("Failed to get profile", e);
+    logger.error(`Sync User Failed for ${authId}`, e);
+
+    // Fallback: Try to just READ the profile if it exists
+    // This handles cases where Discord API is down but user exists in DB
+    try {
+      const profile = await AuthService.getProfile(authId);
+      if (profile) {
+        return JSON.parse(JSON.stringify(profile));
+      }
+    } catch (readError) {
+      logger.error(`Fallback GetProfile Failed for ${authId}`, readError);
+    }
+
     return null;
   }
 }

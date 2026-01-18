@@ -60,7 +60,6 @@
   - **Login Loop Fix**: Updated `.env.local` to use the new First-Party Endpoint.
   - **New User Safety**: Patched `AuthService.syncUser` to include default `position_key: "none"` to prevent silent failures during account creation.
 - **Build Stability**:
-
   - **Typos & Types**: Fixed `getDashboardStatsAction` return type (missing `fullName`) and `TaskCard` status colors (missing `expired`/`locked`) to pass `npm run build` with Exit Code 0.
 
   - Removed Point Inputs for Duties (defaulting to 0) to streamline Admin workflow.
@@ -78,7 +77,6 @@
   - **LibraryService**: Fixed existing tests and added `search` coverage.
   - **PointsService**: Fixed logger mock to pass tests.
 - **Cleanup**:
-
   - Deleted `logs/` directory.
   - Archived old migration scripts in `scripts/archive/`.
   - Audit passed with **0 TODOs**.
@@ -97,3 +95,9 @@
   - **Upload Hardening**: Increased Limit to 10MB. Rebuilt HEIC support using **Server-Side Conversion** (via `heic-convert`) to eliminate browser compatibility issues. Added `Loader` UI.
   - **Rejection Flow**: Enhanced `rejectTask` logic. Deadline passed = Delete & Penalty (-50pts). Time remaining = "Rejected" status & allow resubmit. UI updated to show red "Rejected" status.
   - **Mobile UI Polish**: Overhauled mobile layout for Housing and Library dashboards. Implemented dark-mode navigation bar (`bg-stone-950`), centered headers, compact stats cards, and responsive button groups for native-app feel.
+
+## 2026-01-18: User Sync Logic Repair
+
+- **Bug Fix**:
+  - **New User Sync**: Corrected `getProfileAction` in `lib/actions/auth.actions.ts` to call `AuthService.syncUser` (create/update) instead of `AuthService.getProfile` (read-only). This ensures new Discord users are properly added to the `users` collection upon their first session check.
+  - **Resilience**: Added a Fallback mechanism. If `syncUser` fails (e.g., Discord API 429/500), the system gracefully degrades to reading the existing profile, preventing login blocking for returning users during API outages.

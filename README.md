@@ -117,3 +117,7 @@ Required in `.env.local`:
 - `NEXT_PUBLIC_APPWRITE_PROJECT_ID`
 - `APPWRITE_API_KEY` (Server-side admin)
 - `NEXT_PUBLIC_APPWRITE_DATABASE_ID`
+
+<!-- TODO -->
+<!-- add date validation on assigned tasks -->
+<!-- add ability to edit assigned task due date and assignee -->
