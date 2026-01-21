@@ -43,6 +43,14 @@ This application uses **Random Strings (`ID.unique()`)** as the Primary Keys (Do
 - **Incorrect:** `db.getDocument(DB_ID, COLLECTIONS.USERS, discordId)` (Will 404)
 - **Correct:** `db.listDocuments(..., [Query.equal("discord_id", discordId)])`
 
+### 🔔 Notifications & Cron
+
+- **Notification Service**: Centralized service for sending Discord DMs and Channel Pings.
+- **Cron Jobs**: Powered by **GitHub Actions** (`.github/workflows/cron.yml`). Runs hourly.
+  - **Reminders**: DMs users if task due in <12h.
+  - **Fines**: Penalizes overdue Duties (-50 pts) and notifies `DISCORD_HOUSING_CHANNEL_ID`.
+  - **Maintenance**: Unlocks recurring tasks and cleans up expired bounties.
+
 ### 🏠 Housing Dashboard (v2)
 
 - **Goal:** Manage house chores, recurring schedules, and ad-hoc bounties.
@@ -63,7 +71,7 @@ This application uses **Random Strings (`ID.unique()`)** as the Primary Keys (Do
   2.  **Duties:** Assigned users see tasks in "My Responsibilities". (0 Pts, -50 Pts optional fine).
   3.  **Bounties:** Open to all in "Available Bounties". (+Pts).
   4.  **Admin:** Create Schedule (Recurring) or Assign Duty (One-Off).
-- **Files:** `app/dashboard/housing`, `lib/services/tasks.service.ts`.
+- **Files:** `app/dashboard/housing`, `lib/services/tasks.service.ts`, `lib/actions/housing.actions.ts`.
 
 ### 📚 Scholarship Library
 

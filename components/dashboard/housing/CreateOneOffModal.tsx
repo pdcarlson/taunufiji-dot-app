@@ -115,7 +115,7 @@ export default function CreateOneOffModal({
             >
               <option value="">-- Select Member --</option>
               {members.map((m) => (
-                <option key={m.$id} value={m.$id}>
+                <option key={m.$id} value={m.discord_id}>
                   {m.full_name}
                 </option>
               ))}

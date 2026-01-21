@@ -267,14 +267,14 @@ export const AuthService = {
   },
 
   /**
-   * Get Internal User Profile from Auth ID
+   * Helper to get User Profile by Auth ID (Delegates to UserService)
    */
   async getProfile(authId: string) {
-    // Query USERS collection by auth_id attribute
-    const list = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
-      Query.equal("auth_id", authId),
-      Query.limit(1),
-    ]);
-    return list.documents[0] || null;
+    const { UserService } = await import("./user.service");
+    try {
+      return await UserService.getByAuthId(authId);
+    } catch (e) {
+      return null;
+    }
   },
 };

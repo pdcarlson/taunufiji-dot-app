@@ -57,7 +57,9 @@ export default function UnifiedUploadPage() {
     const load = async () => {
       try {
         // Use Server Action instead of API Route
-        const data = await getMetadataAction();
+        // Generate JWT for stateless auth
+        const { jwt } = await account.createJWT();
+        const data = await getMetadataAction(jwt);
         if (data) {
           setCourseData(data.courses);
           setProfessors(data.professors);
@@ -80,19 +82,19 @@ export default function UnifiedUploadPage() {
       setIsDragging(false);
       if (e.dataTransfer.files) {
         const pdfs = Array.from(e.dataTransfer.files).filter(
-          (f) => f.type === "application/pdf"
+          (f) => f.type === "application/pdf",
         );
         if (pdfs.length > 0) addFilesToQueue(pdfs);
         else toast.error("Only PDF files are allowed.");
       }
     },
-    [addFilesToQueue]
+    [addFilesToQueue],
   );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const pdfs = Array.from(e.target.files).filter(
-        (f) => f.type === "application/pdf"
+        (f) => f.type === "application/pdf",
       );
       if (pdfs.length > 0) addFilesToQueue(pdfs);
     }
@@ -199,7 +201,7 @@ export default function UnifiedUploadPage() {
 
       const currentDeptCourses = courseData[stickyMetadata.department] || [];
       const matchedCourse = currentDeptCourses.find(
-        (c) => c.number === stickyMetadata.courseNumber
+        (c) => c.number === stickyMetadata.courseNumber,
       );
       const courseName = matchedCourse
         ? matchedCourse.name
@@ -308,8 +310,8 @@ export default function UnifiedUploadPage() {
             {dataLoading
               ? "Syncing course data..."
               : queueLength > 0
-              ? `${queueLength} file(s) in queue`
-              : "Waiting for files..."}
+                ? `${queueLength} file(s) in queue`
+                : "Waiting for files..."}
           </p>
         </div>
 

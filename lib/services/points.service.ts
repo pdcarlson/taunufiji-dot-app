@@ -22,20 +22,11 @@ export const PointsService = {
    * 1. Updates User Profile (current + lifetime).
    * 2. Creates a Ledger Record.
    */
-  async awardPoints(userId: string, tx: PointsTransaction) {
+  async awardPoints(discordUserId: string, tx: PointsTransaction) {
     try {
-      // 1. Fetch User to get current totals
-      // Note: In high concurrency, this could be race-condition prone.
-      // Appwrite Function is safer, but for internal OS (~50 users), this is acceptable.
-      let user;
-      try {
-        user = await db.getDocument(DB_ID, COLLECTIONS.USERS, userId);
-      } catch (e) {
-        logger.error(
-          `PointsService: User ${userId} not found for point award.`
-        );
-        throw new Error(`User ${userId} not found`);
-      }
+      // 1. Resolve User via Central Service
+      const UserService = (await import("./user.service")).UserService;
+      const user = await UserService.getByDiscordId(discordUserId);
 
       const currentPoints = user.details_points_current || 0;
       const lifetimePoints = user.details_points_lifetime || 0;
@@ -45,22 +36,24 @@ export const PointsService = {
       const newLifetime =
         tx.amount > 0 ? lifetimePoints + tx.amount : lifetimePoints;
 
-      // 3. Update User
-      await db.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
+      // 3. Update User (Must use Internal $id)
+      await db.updateDocument(DB_ID, COLLECTIONS.USERS, user.$id, {
         details_points_current: newCurrent,
         details_points_lifetime: newLifetime,
       });
 
-      // 4. Create Ledger Record
+      // 4. Create Ledger Record (Store Discord ID reference)
       await db.createDocument(DB_ID, COLLECTIONS.LEDGER, ID.unique(), {
-        user_id: userId,
+        user_id: discordUserId,
         amount: tx.amount,
         reason: tx.reason,
         category: tx.category,
         timestamp: new Date().toISOString(),
       });
 
-      logger.log(`Points Awarded: ${userId} +${tx.amount} (${tx.reason})`);
+      logger.log(
+        `Points Awarded: ${discordUserId} +${tx.amount} (${tx.reason})`,
+      );
       return true;
     } catch (e) {
       logger.error("PointsService Award Failed", e);

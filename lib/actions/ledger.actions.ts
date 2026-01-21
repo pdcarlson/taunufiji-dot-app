@@ -14,7 +14,7 @@ async function getAuthAccount(jwt?: string) {
 
 export async function getTransactionHistoryAction(
   userId: string,
-  jwt?: string
+  jwt?: string,
 ) {
   try {
     const account = await getAuthAccount(jwt);
@@ -30,7 +30,7 @@ export async function getTransactionHistoryAction(
     const profile = await AuthService.getProfile(userId);
     if (!profile) return [];
 
-    const res = await PointsService.getHistory(profile.$id);
+    const res = await PointsService.getHistory(profile.discord_id);
     return JSON.parse(JSON.stringify(res.documents));
   } catch (error) {
     console.error("Failed to fetch history", error);

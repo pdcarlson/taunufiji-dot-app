@@ -33,6 +33,22 @@ vi.mock("node-appwrite", () => {
   };
 });
 
+// Mock Dynamic Service Imports
+vi.mock("./user.service", () => ({
+  UserService: {
+    getByDiscordId: vi
+      .fn()
+      .mockResolvedValue({ discord_id: "u1", $id: "doc_1" }),
+  },
+}));
+
+vi.mock("./notification.service", () => ({
+  NotificationService: {
+    notifyUser: vi.fn().mockResolvedValue(true),
+    notifyChannel: vi.fn().mockResolvedValue(true),
+  },
+}));
+
 describe("TasksService Recurrence", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -72,7 +88,7 @@ describe("TasksService Recurrence", () => {
       expect.any(String),
       expect.objectContaining({
         status: "locked",
-      })
+      }),
     );
   });
 });

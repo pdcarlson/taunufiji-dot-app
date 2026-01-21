@@ -114,3 +114,20 @@
   - Updated `dashboard.actions.ts` (`getMyRankAction`) to support looking up users by either Document ID or Discord ID.
   - Updated `LeaderboardWidget` to respect the new ID structure.
 - **Status**: Login, Signup, and Leaderboards are fully functional. No more 409 loops.
+
+## 2026-01-21: Final Infrastructure Audit & Hardening
+
+- **Notifications & Cron**:
+  - Implemented `NotificationService` for Discord DMs and Admin Channel pings.
+  - Created `/api/cron` endpoint protected by `CRON_SECRET`.
+  - Configured **GitHub Actions** (`.github/workflows/cron.yml`) to trigger the cron job hourly.
+- **ID Strategy Enforcement ("Under No Circumstances")**:
+  - **Audit**: Comprehensive scan of `housing.actions.ts`, `ledger.actions.ts`, and `library.actions.ts`.
+  - **Backend Fixes**: Patched `claimTaskAction`, `reassignTaskAction`, `createTaskAction`, `getHistory`, `getMyTasks` to **strictly** use `profile.discord_id`.
+  - **Frontend Fixes**: Updated `DutyRoster` and `CreateOneOffModal` to ensure they submit `discord_id` (not Doc ID) during assignment.
+  - **Verification**: `npm test` and `tsc` passed with 0 errors.
+
+- **Bug Fix (Library Upload)**:
+  - **Issue**: "No Session" error during file upload even with JWT support enabled.
+  - **Cause**: The Client Component (`app/dashboard/library/upload/page.tsx`) was calling `getMetadataAction()` without passing the JWT, causing the server to fall back to (missing) cookies.
+  - **Fix**: Updated `page.tsx` to explicitly generate a JWT via `account.createJWT()` and pass it to the Server Action.

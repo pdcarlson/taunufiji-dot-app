@@ -138,14 +138,14 @@ describe("AuthService", () => {
       expect(mocks.mockCreateDocument).toHaveBeenCalledWith(
         expect.any(String), // DB_ID
         expect.any(String), // COLLECTIONS.USERS
-        "discord_new",
+        expect.any(String), // <--- CHANGE: Standard Random ID (ID.unique)
         expect.objectContaining({
           auth_id: "auth_new",
           discord_id: "discord_new",
           // Validate our Safety Fix
           position_key: "none",
           status: "active",
-        })
+        }),
       );
     });
 
@@ -184,7 +184,7 @@ describe("AuthService", () => {
         expect.objectContaining({
           discord_handle: "new_handle",
           full_name: "New Name",
-        })
+        }),
       );
     });
   });

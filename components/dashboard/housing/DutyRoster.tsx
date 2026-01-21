@@ -110,7 +110,7 @@ export default function DutyRoster({
                         >
                           <option value="">-- Unassigned --</option>
                           {members.map((m) => (
-                            <option key={m.$id} value={m.$id}>
+                            <option key={m.$id} value={m.discord_id}>
                               {m.full_name}
                             </option>
                           ))}
@@ -118,7 +118,7 @@ export default function DutyRoster({
                       )
                     ) : (
                       <span className="text-stone-600 font-medium">
-                        {members.find((m) => m.$id === task.assigned_to)
+                        {members.find((m) => m.discord_id === task.assigned_to)
                           ?.full_name || "Unassigned"}
                       </span>
                     )}

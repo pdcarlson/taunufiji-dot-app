@@ -1,47 +1,51 @@
+import { NextResponse } from "next/server";
+import {
+  verifyInteractionSignature,
+  createResponse,
+} from "@/lib/discord/utils";
+import { dispatchCommand } from "@/lib/discord/registry";
+import { InteractionType, InteractionResponseType } from "@/lib/discord/types";
 
-import { NextResponse } from 'next/server';
-import nacl from 'tweetnacl';
+export const maxDuration = 60; // Allow longer execution if needed (vercel)
 
 export async function POST(req: Request) {
-  const { env } = await import('@/lib/config/env');
-  
-  // 1. Validate Signature
-  const signature = req.headers.get('x-signature-ed25519');
-  const timestamp = req.headers.get('x-signature-timestamp');
-  const body = await req.text(); // Raw body needed for verification
-
-  if (!signature || !timestamp || !validateSignature(body, signature, timestamp, env.DISCORD_PUBLIC_KEY)) {
-    return NextResponse.json({ error: 'Invalid request signature' }, { status: 401 });
-  }
-
-  // 2. Parse Body
-  const interaction = JSON.parse(body);
-
-  // 3. Handle PING (Type 1)
-  if (interaction.type === 1) {
-    return NextResponse.json({ type: 1 });
-  }
-
-  // 4. Handle COMMAND (Type 2)
-  if (interaction.type === 2) {
-      const { name, options } = interaction.data;
-      const { handleCommand } = await import('@/lib/discord/commands');
-      const response = await handleCommand(name, options);
-      return NextResponse.json(response);
-  }
-
-  return NextResponse.json({ error: 'Unknown Type' }, { status: 400 });
-}
-
-function validateSignature(body: string, signature: string, timestamp: string, publicKey: string): boolean {
   try {
-    const isVerified = nacl.sign.detached.verify(
-      Buffer.from(timestamp + body),
-      Buffer.from(signature, 'hex'),
-      Buffer.from(publicKey, 'hex')
+    const bodyText = await req.text();
+
+    // 1. Verify Signature
+    if (!verifyInteractionSignature(req, bodyText)) {
+      return NextResponse.json(
+        { error: "Invalid request signature" },
+        { status: 401 },
+      );
+    }
+
+    const interaction = JSON.parse(bodyText);
+
+    // 2. Handle PING
+    if (interaction.type === InteractionType.PING) {
+      return NextResponse.json({ type: InteractionResponseType.PONG });
+    }
+
+    // 3. Handle Application Commands
+    if (interaction.type === InteractionType.APPLICATION_COMMAND) {
+      const response = await dispatchCommand(interaction);
+      return NextResponse.json(response);
+    }
+
+    // 4. Handle Unknown Type
+    return NextResponse.json(
+      { error: "Unknown Interaction Type" },
+      { status: 400 },
     );
-    return isVerified;
   } catch (e) {
-    return false;
+    console.error("Interaction Error", e);
+    // Return Generic Error Response handled by Discord
+    return NextResponse.json(
+      createResponse({
+        content: "🚨 An internal server error occurred.",
+        flags: 64, // Ephemeral
+      }),
+    );
   }
 }

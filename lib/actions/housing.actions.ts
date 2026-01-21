@@ -56,7 +56,7 @@ export async function claimTaskAction(
     const profile = await AuthService.getProfile(user.$id);
     if (!profile) throw new Error("Profile not found");
 
-    await TasksService.claimTask(taskId, profile.$id);
+    await TasksService.claimTask(taskId, profile.discord_id);
     revalidatePath("/dashboard/housing");
     return { success: true };
   } catch (error) {
@@ -115,8 +115,12 @@ export async function submitProofAction(formData: FormData, jwt?: string) {
 
     await StorageService.uploadFile(buffer, key, contentType);
 
+    // 1.5 Get Profile ID
+    const profile = await AuthService.getProfile(user.$id);
+    if (!profile) throw new Error("Profile not found");
+
     // 2. Update DB
-    await TasksService.submitProof(taskId, key);
+    await TasksService.submitProof(taskId, profile.discord_id, key);
 
     revalidatePath("/dashboard/housing");
     return { success: true };
@@ -140,7 +144,7 @@ export async function getMyTasksAction(userId: string, jwt?: string) {
   const profile = await AuthService.getProfile(user.$id);
   if (!profile) return [];
 
-  const res = await TasksService.getMyTasks(profile.$id);
+  const res = await TasksService.getMyTasks(profile.discord_id);
   return JSON.parse(JSON.stringify(res.documents));
 }
 
@@ -393,8 +397,10 @@ export async function getReviewDetailsAction(taskId: string, jwt?: string) {
       // So we can just `db.getDocument`.
       try {
         const submitter = await TasksService.getUserProfile(task.assigned_to);
-        submitterName =
-          submitter.full_name || submitter.discord_handle || "Brother";
+        if (submitter) {
+          submitterName =
+            submitter.full_name || submitter.discord_handle || "Brother";
+        }
       } catch (e) {
         console.warn("Failed to fetch submitter profile", e);
       }

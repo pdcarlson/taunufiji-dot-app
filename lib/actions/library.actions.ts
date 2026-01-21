@@ -87,7 +87,12 @@ export async function createLibraryResourceAction(
     if (!isAuthorized) throw new Error("Unauthorized Access");
 
     // 3. Ensure User Profile (Discord ID)
-    const profile = await AuthService.getProfile(user.$id);
+    const UserService = (await import("@/lib/services/user.service"))
+      .UserService;
+    // We get auth user ID -> Sync calls syncUser -> creates/updates doc.
+    // AuthService.getProfile uses "auth_id" attribute. UserService has getByAuthId.
+    // Let's use UserService.getByAuthId(auth_id) to be consistent.
+    const profile = await UserService.getByAuthId(user.$id);
     if (!profile) throw new Error("Profile not found");
 
     // 4. Ensure Dependents (Course/Professor) exist
@@ -113,12 +118,12 @@ export async function createLibraryResourceAction(
       version: data.metadata.version,
       original_filename: data.metadata.standardizedFilename,
       file_s3_key: data.fileId, // This is the Key from uploadFileAction
-      uploaded_by: profile.$id,
+      uploaded_by: profile.discord_id, // FIX: Use Discord ID (Stable Attribute)
     });
 
     // 3. Award Points
     try {
-      await PointsService.awardPoints(profile.$id, {
+      await PointsService.awardPoints(profile.discord_id, {
         amount: 10,
         reason: "Uploaded Exam/Note",
         category: "event",
@@ -141,16 +146,15 @@ export async function createLibraryResourceAction(
 export async function getMetadataAction(jwt?: string) {
   try {
     // Security Guard
-    // We need JWT from client to verify session/role
-    // If not provided (old usage), we might need to fail or update client
-    // Metadata pages usually load in Client Component, passing JWT is possible or use SessionClient
-    // Using SessionClient (Cookies) since this is likely called from Client Component
+    let user;
 
-    // NOTE: If this is called from Server Component, it might not have JWT...
-    // But verifyBrother needs Auth ID.
-
-    const { account } = await createSessionClient();
-    const user = await account.get();
+    if (jwt) {
+      const { account } = createJWTClient(jwt);
+      user = await account.get();
+    } else {
+      const { account } = await createSessionClient();
+      user = await account.get();
+    }
 
     if (!(await AuthService.verifyBrother(user.$id))) {
       return { courses: {}, professors: [] };
