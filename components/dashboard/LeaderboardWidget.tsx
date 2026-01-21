@@ -32,10 +32,8 @@ export default function LeaderboardWidget() {
     try {
       // Use Server Action
       const [data, myData] = await Promise.all([
-        getLeaderboardAction(),
-        profile?.discord_id
-          ? getMyRankAction(profile.discord_id)
-          : Promise.resolve(null),
+        getLeaderboardAction(user?.$id),
+        profile?.$id ? getMyRankAction(profile.$id) : Promise.resolve(null),
       ]);
 
       if (Array.isArray(data)) {
@@ -125,7 +123,7 @@ export default function LeaderboardWidget() {
                 // Styling for #1 vs others
                 index === 0
                   ? "bg-gradient-to-r from-fiji-gold/10 to-transparent border border-fiji-gold/20"
-                  : "hover:bg-white/5 border border-transparent"
+                  : "hover:bg-white/5 border border-transparent",
               )}
             >
               <div className="flex items-center gap-3">
@@ -148,7 +146,7 @@ export default function LeaderboardWidget() {
                 <span
                   className={clsx(
                     "font-bebas tracking-wide text-lg",
-                    index === 0 ? "text-fiji-gold" : "text-stone-300"
+                    index === 0 ? "text-fiji-gold" : "text-stone-300",
                   )}
                 >
                   {formatName(member.name)}

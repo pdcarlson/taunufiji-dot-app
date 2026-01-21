@@ -101,3 +101,16 @@
 - **Bug Fix**:
   - **New User Sync**: Corrected `getProfileAction` in `lib/actions/auth.actions.ts` to call `AuthService.syncUser` (create/update) instead of `AuthService.getProfile` (read-only). This ensures new Discord users are properly added to the `users` collection upon their first session check.
   - **Resilience**: Added a Fallback mechanism. If `syncUser` fails (e.g., Discord API 429/500), the system gracefully degrades to reading the existing profile, preventing login blocking for returning users during API outages.
+
+## 2026-01-21: ID Strategy Refactor & "Ghost ID" Fix
+
+- **Problem**: Persistent `409 Conflict` errors during new user creation, caused by a corrupt Appwrite Unique Index on `discord_id` (a "Ghost Document" existed in the index but not the collection).
+- **Fix (Database)**:
+  - Wiped and Recreated the `users` collection (`scripts/recreate-collection.ts`).
+  - Restored users with **Random Document IDs** (`ID.unique()`).
+  - Re-indexed `discord_id` as a Unique Attribute.
+- **Fix (Codebase)**:
+  - Refactored `AuthService.syncUser` to use `ID.unique()`.
+  - Updated `dashboard.actions.ts` (`getMyRankAction`) to support looking up users by either Document ID or Discord ID.
+  - Updated `LeaderboardWidget` to respect the new ID structure.
+- **Status**: Login, Signup, and Leaderboards are fully functional. No more 409 loops.

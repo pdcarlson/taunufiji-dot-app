@@ -1,4 +1,3 @@
-
 export const DB_ID = "v2_internal_ops";
 
 export const COLLECTIONS = {
@@ -12,14 +11,14 @@ export const COLLECTIONS = {
 } as const;
 
 export interface UserSchema {
-  discord_id: string; // Index Unique
+  discord_id: string; // Attribute (Unique Index) - Stable ID
   discord_handle: string;
   full_name: string;
-  position_key: string; // Discord Role ID (Snowflake)
+  position_key: string;
   details_points_current: number;
   details_points_lifetime: number;
   status: "active" | "alumni";
-  auth_id: string; // Link to Auth
+  auth_id: string; // Link to Auth (Unique Index)
 }
 
 export interface LibraryResourceSchema {

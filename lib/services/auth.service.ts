@@ -1,13 +1,20 @@
-import { Client, Account, Users, Databases, Query } from "node-appwrite";
+import { Client, Account, Users, Databases, Query, ID } from "node-appwrite";
 import { env } from "../config/env";
 import { DB_ID, COLLECTIONS } from "../types/schema";
 import { ROLES, LIBRARY_ACCESS_ROLES } from "../config/roles";
 
 // Server-side Client (Admin)
+if (!env.APPWRITE_API_KEY) {
+  console.error(
+    "CRITICAL: APPWRITE_API_KEY is missing. AuthService will fail.",
+  );
+  // We don't throw immediately to allow build time, but runtime will crash on first call
+}
+
 const client = new Client()
   .setEndpoint(env.NEXT_PUBLIC_APPWRITE_ENDPOINT)
   .setProject(env.NEXT_PUBLIC_APPWRITE_PROJECT_ID)
-  .setKey(env.APPWRITE_API_KEY!);
+  .setKey(env.APPWRITE_API_KEY || ""); // Fallback to empty string if missing (will cause 401)
 
 const usersArgs = new Users(client);
 const db = new Databases(client);
@@ -41,7 +48,7 @@ async function getDiscordMember(discordUserId: string) {
       {
         headers: { Authorization: `Bot ${BOT_TOKEN}` },
         next: { revalidate: 60 }, // Next.js Cache (Backup)
-      }
+      },
     );
 
     if (res.status === 429) {
@@ -75,6 +82,10 @@ export const AuthService = {
    * Syncs Discord Identity to Internal User Profile.
    */
   async syncUser(authId: string) {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[AuthService] Starting syncUser for ${authId}`);
+    }
+
     // 1. Get Auth Account
     const identities = await usersArgs.listIdentities([
       Query.equal("userId", authId),
@@ -106,30 +117,87 @@ export const AuthService = {
     ]);
 
     if (list.documents.length === 0) {
-      // Create Profile
-      return await db.createDocument(
-        DB_ID,
-        COLLECTIONS.USERS,
-        discord.providerUid,
-        {
-          auth_id: authId,
-          discord_id: discord.providerUid,
-          discord_handle: discordHandle,
-          full_name: fullName,
-          position_key: "none", // Default for new users
-          status: "active",
-          details_points_current: 0,
-          details_points_lifetime: 0,
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          `[AuthService] User not found (by Discord ID). Creating new profile...`,
+        );
+      }
+
+      // Standard Creation Flow: Use Random ID and store Discord ID as attribute
+      try {
+        return await db.createDocument(
+          DB_ID,
+          COLLECTIONS.USERS,
+          ID.unique(), // <--- KEY CHANGE: Standard Random ID
+          {
+            auth_id: authId,
+            discord_id: discord.providerUid,
+            discord_handle: discordHandle,
+            full_name: fullName,
+            // position_key: "none",
+            status: "active",
+            details_points_current: 0,
+            details_points_lifetime: 0,
+          },
+        );
+      } catch (createError: any) {
+        // Double Check: Did we conflict on a Unique Attribute (discord_id)?
+        if (createError?.code === 409) {
+          console.warn(
+            "[AuthService] Creation Conflict (409). Checking if user exists...",
+          );
+
+          // 1. Check by Discord ID Attribute (The likely conflict)
+          const existingByDiscord = await db.listDocuments(
+            DB_ID,
+            COLLECTIONS.USERS,
+            [Query.equal("discord_id", discord.providerUid)],
+          );
+          if (existingByDiscord.total > 0) {
+            console.log("[AuthService] Recovered existing user by Discord ID.");
+            return existingByDiscord.documents[0];
+          }
+
+          // 2. Check by Auth ID
+          const existingByAuth = await db.listDocuments(
+            DB_ID,
+            COLLECTIONS.USERS,
+            [Query.equal("auth_id", authId)],
+          );
+          if (existingByAuth.total > 0) {
+            console.log("[AuthService] Recovered existing user by Auth ID.");
+            return existingByAuth.documents[0];
+          }
         }
-      );
+
+        // If we are here, it's a real mystery error or persistent unique index corruption
+        console.error("[AuthService] Sync Failed completely.", createError);
+        throw createError;
+      }
     } else {
-      // Update Metadata on Login
+      // Update Metadata on Login (Existing User)
       const doc = list.documents[0];
+      const updates: any = {};
+
       if (doc.discord_handle !== discordHandle || doc.full_name !== fullName) {
-        await db.updateDocument(DB_ID, COLLECTIONS.USERS, doc.$id, {
-          discord_handle: discordHandle,
-          full_name: fullName,
-        });
+        updates.discord_handle = discordHandle;
+        updates.full_name = fullName;
+      }
+
+      // SELF-REPAIR: Fix Auth ID Mismatch
+      // If the stored auth_id doesn't match the current one (e.g. fresh login/account switch), update it.
+      if (doc.auth_id !== authId) {
+        console.warn(
+          `[AuthService] Repairing Auth ID for ${doc.discord_handle}. Old: ${doc.auth_id}, New: ${authId}`,
+        );
+        updates.auth_id = authId;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        if (process.env.NODE_ENV === "development") {
+          console.log(`[AuthService] Updating user metadata:`, updates);
+        }
+        await db.updateDocument(DB_ID, COLLECTIONS.USERS, doc.$id, updates);
       }
       return doc;
     }
@@ -141,7 +209,7 @@ export const AuthService = {
   async verifyBrother(authId: string): Promise<boolean> {
     return this.verifyRole(
       authId,
-      LIBRARY_ACCESS_ROLES.map((r) => r as string)
+      LIBRARY_ACCESS_ROLES.map((r) => r as string),
     );
   },
 
@@ -155,7 +223,7 @@ export const AuthService = {
         Query.equal("userId", authId),
       ]);
       const discord = identities.identities.find(
-        (i) => i.provider === "discord"
+        (i) => i.provider === "discord",
       );
 
       if (!discord) {
@@ -167,7 +235,7 @@ export const AuthService = {
       const member = await getDiscordMember(discord.providerUid);
       if (!member || !member.roles) {
         console.warn(
-          `[AuthService] Could not fetch Discord Member for ${discord.providerUid}`
+          `[AuthService] Could not fetch Discord Member for ${discord.providerUid}`,
         );
         return false;
       }
@@ -183,11 +251,11 @@ export const AuthService = {
             discord.providerUid
           } has roles [${userRoles.length}]. Needed: One of [${allowedRoles
             .map((r) => r.slice(-4))
-            .join(", ")}...]`
+            .join(", ")}...]`,
         );
       } else {
         console.log(
-          `[AuthService] verifyRole PASS: User ${discord.providerUid}`
+          `[AuthService] verifyRole PASS: User ${discord.providerUid}`,
         );
       }
 

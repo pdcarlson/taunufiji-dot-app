@@ -12,7 +12,7 @@ import { env } from "@/lib/config/env";
  * Uploads a file to S3 and returns the Key/ID
  */
 // server-only import to avoid client bundle issues
-import { createJWTClient } from "@/lib/server/appwrite";
+import { createJWTClient, createSessionClient } from "@/lib/server/appwrite";
 
 export async function uploadFileAction(formData: FormData) {
   try {
@@ -68,7 +68,7 @@ interface CreateResourceDTO {
  */
 export async function createLibraryResourceAction(
   data: CreateResourceDTO,
-  jwt: string
+  jwt: string,
 ) {
   try {
     // 1. Verify Authentication via JWT
@@ -138,8 +138,24 @@ export async function createLibraryResourceAction(
 /**
  * Fetches Metadata for dropdowns
  */
-export async function getMetadataAction() {
+export async function getMetadataAction(jwt?: string) {
   try {
+    // Security Guard
+    // We need JWT from client to verify session/role
+    // If not provided (old usage), we might need to fail or update client
+    // Metadata pages usually load in Client Component, passing JWT is possible or use SessionClient
+    // Using SessionClient (Cookies) since this is likely called from Client Component
+
+    // NOTE: If this is called from Server Component, it might not have JWT...
+    // But verifyBrother needs Auth ID.
+
+    const { account } = await createSessionClient();
+    const user = await account.get();
+
+    if (!(await AuthService.verifyBrother(user.$id))) {
+      return { courses: {}, professors: [] };
+    }
+
     return await LibraryService.getSearchMetadata();
   } catch (e) {
     logger.error("Get Metadata Failed", e);

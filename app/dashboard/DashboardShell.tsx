@@ -20,17 +20,24 @@ export default function DashboardShell({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, logout } = useAuth();
+  const { user, profile, loading, error, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    } else if (user) {
-      // Trigger Sync
-      syncUserAction(user.$id);
+    if (!loading) {
+      if (!user) {
+        router.push("/login");
+      } else if (user) {
+        // Trigger Sync (Idempotent)
+        syncUserAction(user.$id);
+
+        // Security Check: Redirect if unauthorized
+        if (profile && profile.isAuthorized === false) {
+          router.push("/unauthorized");
+        }
+      }
     }
-  }, [user, loading, router]);
+  }, [user, profile, loading, router]);
 
   if (loading || !user) {
     return (

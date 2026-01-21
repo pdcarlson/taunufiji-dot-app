@@ -41,7 +41,7 @@ export async function getOpenTasksAction(jwt?: string) {
 export async function claimTaskAction(
   taskId: string,
   authId: string,
-  jwt?: string
+  jwt?: string,
 ) {
   try {
     const account = await getAuthAccount(jwt);
@@ -134,6 +134,9 @@ export async function getMyTasksAction(userId: string, jwt?: string) {
   const user = await account.get();
   if (!user || user.$id !== userId) return []; // strict ownership
 
+  // Security Guard
+  if (!(await AuthService.verifyBrother(user.$id))) return [];
+
   const profile = await AuthService.getProfile(user.$id);
   if (!profile) return [];
 
@@ -145,6 +148,9 @@ export async function getHistoryAction(userId: string) {
   const { account } = await createSessionClient();
   const user = await account.get();
   if (!user || user.$id !== userId) return [];
+
+  // Security Guard
+  if (!(await AuthService.verifyBrother(user.$id))) return [];
 
   const profile = await AuthService.getProfile(user.$id);
   if (!profile) return [];
@@ -185,7 +191,7 @@ export async function approveTaskAction(taskId: string, jwt?: string) {
     // RBAC: Must be Admin
     const isAdmin = await AuthService.verifyRole(
       user.$id,
-      HOUSING_ADMIN_ROLES as string[]
+      HOUSING_ADMIN_ROLES as string[],
     );
     if (!isAdmin) throw new Error("Unauthorized (Admin Only)");
 
@@ -202,14 +208,14 @@ export async function approveTaskAction(taskId: string, jwt?: string) {
 export async function rejectTaskAction(
   taskId: string,
   reason: string | null,
-  jwt?: string
+  jwt?: string,
 ) {
   try {
     const account = await getAuthAccount(jwt);
     const user = await account.get();
     const isAdmin = await AuthService.verifyRole(
       user.$id,
-      HOUSING_ADMIN_ROLES as string[]
+      HOUSING_ADMIN_ROLES as string[],
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
@@ -224,7 +230,7 @@ export async function rejectTaskAction(
 
 export async function createTaskAction(
   data: CreateAssignmentDTO,
-  jwt?: string
+  jwt?: string,
 ) {
   try {
     const account = await getAuthAccount(jwt);
@@ -232,7 +238,7 @@ export async function createTaskAction(
     // Only Admins can CREATE/ASSIGN tasks arbitrarily
     const isAdmin = await AuthService.verifyRole(
       user.$id,
-      HOUSING_ADMIN_ROLES as string[]
+      HOUSING_ADMIN_ROLES as string[],
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
@@ -249,14 +255,14 @@ export async function reassignTaskAction(
   taskId: string,
   userId: string,
   userName: string,
-  jwt?: string
+  jwt?: string,
 ) {
   try {
     const account = await getAuthAccount(jwt);
     const user = await account.get();
     const isAdmin = await AuthService.verifyRole(
       user.$id,
-      HOUSING_ADMIN_ROLES as string[]
+      HOUSING_ADMIN_ROLES as string[],
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
@@ -279,7 +285,7 @@ export async function getSchedulesAction(jwt?: string) {
     const user = await account.get();
     const isAdmin = await AuthService.verifyRole(
       user.$id,
-      HOUSING_ADMIN_ROLES as string[]
+      HOUSING_ADMIN_ROLES as string[],
     );
     if (!isAdmin) return [];
 
@@ -301,14 +307,14 @@ export async function getSchedulesAction(jwt?: string) {
 
 export async function createScheduleAction(
   data: CreateScheduleDTO,
-  jwt?: string
+  jwt?: string,
 ) {
   try {
     const account = await getAuthAccount(jwt);
     const user = await account.get();
     const isAdmin = await AuthService.verifyRole(
       user.$id,
-      HOUSING_ADMIN_ROLES as string[]
+      HOUSING_ADMIN_ROLES as string[],
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
@@ -327,7 +333,7 @@ export async function checkHousingAdminAction(jwt?: string) {
     const user = await account.get();
     return await AuthService.verifyRole(
       user.$id,
-      HOUSING_ADMIN_ROLES as string[]
+      HOUSING_ADMIN_ROLES as string[],
     );
   } catch {
     return false;
@@ -338,7 +344,10 @@ export async function getAllMembersAction(jwt?: string) {
   try {
     // Authenticate as at least a logged in user
     const account = await getAuthAccount(jwt);
-    await account.get();
+    const user = await account.get();
+
+    // Security Guard
+    if (!(await AuthService.verifyBrother(user.$id))) return [];
 
     const members = await TasksService.getMembers();
 
@@ -355,7 +364,7 @@ export async function getReviewDetailsAction(taskId: string, jwt?: string) {
     const user = await account.get();
     const isAdmin = await AuthService.verifyRole(
       user.$id,
-      HOUSING_ADMIN_ROLES as string[]
+      HOUSING_ADMIN_ROLES as string[],
     );
     if (!isAdmin) throw new Error("Unauthorized");
 

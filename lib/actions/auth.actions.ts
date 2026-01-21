@@ -19,7 +19,19 @@ export async function getProfileAction(authId: string) {
     // Attempt to Sync (Create/Update) User
     // ALERTS: This performs a write operation and hits the Discord API.
     const profile = await AuthService.syncUser(authId);
-    return JSON.parse(JSON.stringify(profile));
+
+    // Check Authorization (Brother Role)
+    const isAuthorized = await AuthService.verifyBrother(authId);
+
+    if (process.env.NODE_ENV === "development") {
+      logger.log(`[getProfileAction] ${authId} -> Authorized: ${isAuthorized}`);
+    }
+
+    // Return Profile + Auth Status
+    return {
+      ...JSON.parse(JSON.stringify(profile)),
+      isAuthorized,
+    };
   } catch (e) {
     logger.error(`Sync User Failed for ${authId}`, e);
 
@@ -28,7 +40,24 @@ export async function getProfileAction(authId: string) {
     try {
       const profile = await AuthService.getProfile(authId);
       if (profile) {
-        return JSON.parse(JSON.stringify(profile));
+        // If we fallback, we still need to verify authorization if possible.
+        // However, verifyBrother also hits Discord API.
+        // If syncUser failed due to Discord API, verifyBrother likely will too.
+        // We'll default to FALSE if we can't verify, or try one more time.
+        let isAuthorized = false;
+        try {
+          isAuthorized = await AuthService.verifyBrother(authId);
+        } catch (verifyError) {
+          logger.error(
+            `Fallback VerifyBrother Failed for ${authId}`,
+            verifyError,
+          );
+        }
+
+        return {
+          ...JSON.parse(JSON.stringify(profile)),
+          isAuthorized,
+        };
       }
     } catch (readError) {
       logger.error(`Fallback GetProfile Failed for ${authId}`, readError);

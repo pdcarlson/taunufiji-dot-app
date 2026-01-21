@@ -1,5 +1,7 @@
 "use server";
 
+import { createSessionClient } from "@/lib/server/appwrite";
+
 import { TasksService } from "@/lib/services/tasks.service";
 import { AuthService } from "@/lib/services/auth.service";
 import { LibraryService } from "@/lib/services/library.service";
@@ -33,12 +35,14 @@ export async function getDashboardStatsAction(userId: string) {
     // 2. Get My Tasks (active)
     // Ensure we query by Profile ID, not Auth ID
     const profile = await AuthService.getProfile(userId);
+
+    // <--- KEY FIX: Use discord_id (Stable) instead of $id (Random after migration)
     const activeCount = profile
-      ? (await TasksService.getMyTasks(profile.$id)).documents.filter(
+      ? (await TasksService.getMyTasks(profile.discord_id)).documents.filter(
           (d) =>
             d.status === "pending" ||
             d.status === "open" ||
-            d.status === "rejected"
+            d.status === "rejected",
         ).length
       : 0;
 
@@ -97,21 +101,32 @@ export async function getDashboardStatsAction(userId: string) {
   }
 }
 
-export async function getLeaderboardAction() {
-  // Note: We can't verify brother w/o userId. Leaderboard is public-ish but should be guarded.
-  // However, this action is called by a client component which might not have the user's ID readily available to pass safely.
-  // Ideally, we should verify the SESSION here. But we don't have headers.
-  // We will assume the PAGE already verified access (which it does not do server-side yet).
-  // Let's rely on the layout/middleware for now, OR accept userId.
-  // Since UI calls this without args, let's leave it open but return strict minimal data.
-  // Actually, user concern is validity. Let's just wrap it.
-
-  // Better: We are inside a server action. We can't get headers easily without `headers()`.
-  // Let's assume protection is upstream or acceptable risk for leaderboard (names/points).
-  // BUT the user explicitly asked for security.
-
-  // Changing signature break things? No, simplistic call.
+export async function getLeaderboardAction(userId?: string) {
   try {
+    // Session Verification is flaky on some setups (Cookie issues).
+    // Failing gracefully or using Admin Client logic if userId is provided.
+
+    // If we have a userId, verify role using Admin Client
+    if (userId) {
+      const isAuthorized = await AuthService.verifyBrother(userId);
+      if (!isAuthorized) {
+        return [];
+      }
+    } else {
+      // Fallback: Try Session Client (Strict mode)
+      // If this fails (No session), we return empty to be safe
+      try {
+        const { account } = await createSessionClient();
+        const user = await account.get();
+        if (!(await AuthService.verifyBrother(user.$id))) {
+          return [];
+        }
+      } catch (sessionError) {
+        console.warn("Leaderboard: No session and no userId provided.");
+        return [];
+      }
+    }
+
     const res = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
       Query.orderDesc("details_points_current"),
       Query.limit(5),
@@ -132,17 +147,50 @@ export async function getLeaderboardAction() {
 
 export async function getMyRankAction(userId: string) {
   try {
-    const user = await db.getDocument(DB_ID, COLLECTIONS.USERS, userId);
-    const myPoints = user.details_points_current || 0;
+    // Use Admin Client (db) directly since we verify authorization manually below.
+    // This avoids "No session" errors if cookies are flaky.
+
+    // 1. Authorization Guard
+    // Note: userId here might be Document ID (Random) OR Discord ID (Legacy/Client logic).
+    // We need to fetch the document either way.
+
+    let userDoc;
+    try {
+      // Try as Document ID first
+      userDoc = await db.getDocument(DB_ID, COLLECTIONS.USERS, userId);
+    } catch {
+      // Try as Discord ID (Attribute)
+      // This handles cases where the client passes profile.discord_id or thinks ID is Discord ID
+      const list = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
+        Query.equal("discord_id", userId),
+        Query.limit(1),
+      ]);
+      userDoc = list.documents[0];
+    }
+
+    if (!userDoc) {
+      console.warn(`[getMyRank] User not found for ID: ${userId}`);
+      return null;
+    }
+
+    // Verify using Auth ID attached to the profile
+    const isAuthorized = await AuthService.verifyBrother(userDoc.auth_id);
+    if (!isAuthorized) {
+      return null;
+    }
+
+    const myPoints = userDoc.details_points_current || 0;
 
     // Count users with strictly more points
     const betterPlayers = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
       Query.greaterThan("details_points_current", myPoints),
-      Query.limit(1), // Optimization: We want COUNT, not docs. But Appwrite < 1.4 doesn't have count-only efficiently?
-      // Actually listDocuments returns .total. So we can use limit(1) (or 0 if supported) to get total count.
+      Query.limit(1), // We only need count, but 'total' is what matters
     ]);
 
-    // Note: If limit(0) is not supported, limit(1) still gives total in response.total
+    // Query.limit(1) with total gives us the count of matches?
+    // Wait, createSessionClient was doing 'account.get()' which returns the Auth User.
+    // If we use Admin, we trust 'userId' (Profile ID).
+
     const rank = betterPlayers.total + 1;
 
     return {
