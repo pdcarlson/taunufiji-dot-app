@@ -11,7 +11,7 @@ export const duty: CommandHandler = async (interaction, options) => {
   const userId = options.assigned_to;
   const title = options.title;
   const dueDateInput = options.due_at; // MM-DD format
-  const description = options.description || "Assigned via Discord";
+  const description = options.description; // required field
 
   // Parse MM-DD and apply smart year logic
   let dueAt: Date;
@@ -81,7 +81,7 @@ export const duty: CommandHandler = async (interaction, options) => {
 export const schedule: CommandHandler = async (interaction, options) => {
   const title = options.title;
   const day = options.day; // "MO", "TU", etc.
-  const description = options.description || "Created via Discord";
+  const description = options.description; // required field
   const userId = options.assigned_to || undefined;
   const leadTime = options.lead_time_hours || 24;
 
@@ -125,7 +125,7 @@ export const schedule: CommandHandler = async (interaction, options) => {
 export const bounty: CommandHandler = async (interaction, options) => {
   const title = options.title;
   const points = options.points_value;
-  const description = options.description || "No description provided.";
+  const description = options.description; // required field
 
   if (!points || points <= 0) {
     return createEphemeralResponse("❌ Points must be a positive number.");

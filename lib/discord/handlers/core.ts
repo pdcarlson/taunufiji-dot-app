@@ -14,12 +14,19 @@ const db = new Databases(client);
 
 export const leaderboard: CommandHandler = async () => {
   try {
+    console.log("🏆 Leaderboard command triggered");
+    console.log("DB_ID:", DB_ID);
+    console.log("COLLECTION:", COLLECTIONS.USERS);
+
     const list = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
       Query.orderDesc("details_points_current"),
       Query.limit(10),
     ]);
 
+    console.log(`✅ Query successful. Found ${list.total} users`);
+
     if (list.total === 0) {
+      console.log("⚠️ No users in database");
       return createResponse({ content: "No users found." });
     }
 
@@ -28,6 +35,8 @@ export const leaderboard: CommandHandler = async () => {
         i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
       return `${medal} **${u.full_name}** — ${u.details_points_current || 0} pts`;
     });
+
+    console.log("✅ Formatted leaderboard:", lines);
 
     return createResponse({
       embeds: [
@@ -38,8 +47,13 @@ export const leaderboard: CommandHandler = async () => {
         },
       ],
     });
-  } catch (e) {
-    console.error("Leaderboard Error", e);
-    return createEphemeralResponse("Failed to fetch leaderboard.");
+  } catch (e: any) {
+    console.error("❌ Leaderboard Error Details:", {
+      message: e.message,
+      code: e.code,
+      type: e.type,
+      stack: e.stack,
+    });
+    return createEphemeralResponse(`Failed to fetch leaderboard: ${e.message}`);
   }
 };

@@ -34,7 +34,7 @@ export const COMMANDS = [
         name: "description",
         description: "Instructions / details",
         type: 3,
-        required: false,
+        required: true, // NOW REQUIRED
       },
     ],
   },
@@ -68,7 +68,7 @@ export const COMMANDS = [
         name: "description",
         description: "Description of the task",
         type: 3, // STRING
-        required: false,
+        required: true, // NOW REQUIRED
       },
       {
         name: "assigned_to",
@@ -105,7 +105,7 @@ export const COMMANDS = [
         name: "description",
         description: "Description of the bounty",
         type: 3,
-        required: false,
+        required: true, // NOW REQUIRED
       },
     ],
   },
