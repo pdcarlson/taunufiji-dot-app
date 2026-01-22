@@ -29,11 +29,23 @@ export default function CreateBountyModal({ onClose, onSuccess }: Props) {
       // No expiry for the offer itself (stays open until claimed)
       // Set execution_limit for the deadline calculation upon claim
       const days = parseInt(data.days);
+      const points = parseInt(data.points);
+
+      if (isNaN(days) || days < 1) {
+        toast.error("Time to complete must be at least 1 day");
+        setLoading(false);
+        return;
+      }
+      if (isNaN(points) || points < 1) {
+        toast.error("Points must be at least 1");
+        setLoading(false);
+        return;
+      }
 
       const payload: CreateAssignmentDTO = {
         title: data.title,
         description: data.description,
-        points_value: parseInt(data.points),
+        points_value: points,
         type: "bounty",
         status: "open",
         execution_limit: days,

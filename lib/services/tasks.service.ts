@@ -81,6 +81,16 @@ export const TasksService = {
   },
 
   /**
+   * Get all pending tasks (for Admin Review)
+   */
+  async getPendingReviews() {
+    return await db.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [
+      Query.equal("status", "pending"),
+      Query.orderDesc("$updatedAt"),
+    ]);
+  },
+
+  /**
    * Claim a task
    * @param profileId - The Database Profile ID (Discord ID)
    */
@@ -671,11 +681,23 @@ export const TasksService = {
    * @param profileId - The Database Profile ID (Discord ID)
    */
   async getMyTasks(profileId: string) {
-    return await db.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [
+    // 1. Get ALL assigned tasks (including approved)
+    const allAssigned = await db.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [
       Query.equal("assigned_to", profileId),
-      Query.notEqual("status", "approved"),
       Query.orderDesc("$createdAt"),
     ]);
+
+    // 2. Filter in memory: Keep Active OR (Approved AND Recent)
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+    const filtered = allAssigned.documents.filter((task) => {
+      if (task.status !== "approved") return true; // Keep all open/pending/rejected
+      const completedAt = new Date(task.$updatedAt);
+      return completedAt > oneDayAgo; // Keep approved only if < 24h old
+    });
+
+    return { documents: filtered, total: filtered.length };
   },
 
   /**

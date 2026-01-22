@@ -16,6 +16,7 @@ import {
   XCircle,
   Lock,
   Briefcase,
+  CheckCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -170,6 +171,12 @@ export default function TaskCard({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size exceeds 10MB limit.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -254,12 +261,16 @@ export default function TaskCard({
               {task.points_value} PTS
             </span>
           )}
-          {isDuty && task.due_at && (
-            <TimeDisplay target={task.due_at} mode="deadline" />
-          )}
-          {!isDuty && task.type === "bounty" && task.expires_at && (
-            <TimeDisplay target={task.expires_at} mode="expiry" />
-          )}
+
+          {/* Always show Due Date if present */}
+          {task.due_at && <TimeDisplay target={task.due_at} mode="deadline" />}
+          {/* Only show Expiry for open bounties (irrelevant once claimed) */}
+          {!isDuty &&
+            task.type === "bounty" &&
+            task.expires_at &&
+            task.status === "open" && (
+              <TimeDisplay target={task.expires_at} mode="expiry" />
+            )}
         </div>
       </div>
 
@@ -322,7 +333,12 @@ export default function TaskCard({
                 </div>
               )}
             {/* STATUS STATES */}
-            {task.proof_s3_key && (
+            {task.status === "approved" && (
+              <div className="text-center text-xs text-green-600 font-bold py-2 flex items-center justify-center gap-2 bg-green-50 rounded border border-green-100">
+                <CheckCircle className="w-3 h-3" /> Completed
+              </div>
+            )}
+            {task.proof_s3_key && task.status === "pending" && (
               <div className="text-center text-xs text-stone-500 font-bold py-2 flex items-center justify-center gap-2 bg-stone-50 rounded">
                 <Clock className="w-3 h-3" /> Under Review
               </div>

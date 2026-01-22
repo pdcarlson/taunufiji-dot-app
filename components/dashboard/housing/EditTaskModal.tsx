@@ -40,6 +40,21 @@ export default function EditTaskModal({
     try {
       const { jwt } = await account.createJWT();
 
+      // Validations
+      if (Number(formData.points_value) < 0) {
+        toast.error("Points cannot be negative");
+        setLoading(false);
+        return;
+      }
+
+      if (formData.due_at && formData.unlock_at) {
+        if (new Date(formData.unlock_at) > new Date(formData.due_at)) {
+          toast.error("Unlock time cannot be after Due Date");
+          setLoading(false);
+          return;
+        }
+      }
+
       // Clean up data
       const payload: any = {
         title: formData.title,
@@ -133,6 +148,7 @@ export default function EditTaskModal({
               <input
                 type="number"
                 min="0"
+                required
                 className="w-full text-base font-mono text-stone-800 border border-stone-200 rounded-lg p-2 focus:border-fiji-purple outline-none"
                 value={formData.points_value}
                 onChange={(e) =>
@@ -171,9 +187,14 @@ export default function EditTaskModal({
             <div>
               <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
                 <Calendar className="w-3 h-3" /> Due Date
+                {task.type !== "bounty" && (
+                  <span className="text-red-500">*</span>
+                )}
               </label>
               <input
                 type="datetime-local"
+                required={task.type !== "bounty"}
+                min={new Date().toISOString().slice(0, 16)}
                 className="w-full text-sm text-stone-600 border border-stone-200 rounded-lg p-2 outline-none"
                 value={formData.due_at}
                 onChange={(e) =>

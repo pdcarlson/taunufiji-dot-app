@@ -28,10 +28,15 @@ export const NotificationService = {
       reason?: string;
     },
   ) {
-    const { message, link } = this.formatMessage(type, payload);
-    const finalContent = link ? `${message} \n[View Task](${link})` : message;
-
-    return await this.notifyUser(userId, finalContent);
+    try {
+      const { message, link } = this.formatMessage(type, payload);
+      const finalContent = link ? `${message} \n[View Task](${link})` : message;
+      return await this.notifyUser(userId, finalContent);
+    } catch (e) {
+      // Fail Safe: Don't block business logic if Discord is down
+      console.error("Notification Failed silently:", e);
+      return false;
+    }
   },
 
   /**
