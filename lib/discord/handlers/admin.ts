@@ -14,7 +14,7 @@ export const duty: CommandHandler = async (interaction, options) => {
   const description = options.description; // required field
 
   // Parse MM-DD and apply smart year logic
-  let dueAtISO: string;
+  let dueAt: Date;
   try {
     // validate format
     const datePattern = /^(\d{2})-(\d{2})$/;
@@ -30,14 +30,12 @@ export const duty: CommandHandler = async (interaction, options) => {
     const day = match[2];
     const currentYear = new Date().getFullYear();
 
-    // construct ISO string for noon Eastern Time (EST)
-    // EST is UTC-5, so noon EST = 17:00 UTC
-    // Store as 17:00 UTC so it displays as noon in Eastern Time
-    let candidateISO = `${currentYear}-${month}-${day}T17:00:00.000Z`;
+    // Match the working EditTaskModal pattern exactly
+    const dateString = `${currentYear}-${month}-${day}T12:00:00`;
+    dueAt = new Date(dateString);
 
-    // validate date is real (e.g., not 02-30)
-    const testDate = new Date(candidateISO);
-    if (isNaN(testDate.getTime())) {
+    // validate date is real
+    if (isNaN(dueAt.getTime())) {
       return createEphemeralResponse(
         `❌ Invalid date: "${dueDateInput}". Check month/day values.`,
       );
@@ -45,11 +43,10 @@ export const duty: CommandHandler = async (interaction, options) => {
 
     // if date is in the past, assume next year
     const now = new Date();
-    if (testDate < now) {
-      candidateISO = `${currentYear + 1}-${month}-${day}T17:00:00.000Z`;
+    if (dueAt < now) {
+      const nextYearString = `${currentYear + 1}-${month}-${day}T12:00:00`;
+      dueAt = new Date(nextYearString);
     }
-
-    dueAtISO = candidateISO;
   } catch {
     return createEphemeralResponse(
       `❌ Failed to parse date: "${dueDateInput}". Use MM-DD format.`,
@@ -63,12 +60,12 @@ export const duty: CommandHandler = async (interaction, options) => {
       points_value: 0, // duties = 0 pts, fined if missed
       type: "one_off",
       assigned_to: userId,
-      due_at: dueAtISO,
+      due_at: dueAt.toISOString(),
       status: "open",
     });
 
     return createEphemeralResponse(
-      `✅ Duty assigned: **${title}** to <@${userId}>.\nDue: ${new Date(dueAtISO).toLocaleDateString()} (Noon EST)`,
+      `✅ Duty assigned: **${title}** to <@${userId}>.\nDue: ${dueAt.toLocaleDateString()} (Noon)`,
     );
   } catch (e) {
     console.error("Duty Error", e);
