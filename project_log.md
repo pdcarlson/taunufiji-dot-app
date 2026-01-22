@@ -191,3 +191,4 @@
   - **Discord UX**: Added `description` field to `current_schedule` command and clarified date formats in tooltips.
   - **Bounty Logic**: Refactored `unclaimTask` and `rejectTask` to explicitly clear `due_at` dates. This ensures available bounties never show a deadline until claimed.
   - **Feedback**: Added Loading Spinner to "Claim Bounty" button.
+  - **Admin Controls**: Implemented Hybrid Editing for Bounties (Restricted fields, Safe Delete) to prevent misalignment. Added `deleteTaskAction`.

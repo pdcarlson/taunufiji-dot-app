@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { updateTaskAction } from "@/lib/actions/housing.actions";
+import {
+  updateTaskAction,
+  deleteTaskAction,
+} from "@/lib/actions/housing.actions";
 import { account } from "@/lib/client/appwrite";
 import { Member, HousingTask } from "@/lib/types/models";
 import { Loader } from "@/components/ui/Loader";
-import { X, Calendar, Edit2, Users } from "lucide-react";
+import { X, Calendar, Edit2, Users, Clock, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface EditTaskModalProps {
@@ -30,7 +33,12 @@ export default function EditTaskModal({
     // Extract YYYY-MM-DD from ISO string
     due_at: task.due_at ? task.due_at.split("T")[0] : "",
     unlock_at: task.unlock_at ? task.unlock_at.split("T")[0] : "",
+    execution_limit: task.execution_limit || undefined,
   });
+
+  const isBounty = task.type === "bounty";
+  const isAssigned = !!task.assigned_to;
+  const canDelete = isBounty ? !isAssigned : true; // Duties can always be deleted (or maybe we assume so)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +54,7 @@ export default function EditTaskModal({
         return;
       }
 
-      if (formData.due_at && formData.unlock_at) {
+      if (!isBounty && formData.due_at && formData.unlock_at) {
         if (new Date(formData.unlock_at) > new Date(formData.due_at)) {
           toast.error("Unlock time cannot be after Due Date");
           setLoading(false);
@@ -59,15 +67,25 @@ export default function EditTaskModal({
         title: formData.title,
         description: formData.description,
         points_value: Number(formData.points_value),
-        assigned_to: formData.assigned_to || null, // Handle unassign
       };
 
-      if (formData.due_at)
-        payload.due_at = new Date(`${formData.due_at}T12:00:00`).toISOString();
-      if (formData.unlock_at)
-        payload.unlock_at = new Date(
-          `${formData.unlock_at}T12:00:00`,
-        ).toISOString();
+      if (isBounty) {
+        // Bounty Specific
+        if (formData.execution_limit) {
+          payload.execution_limit = Number(formData.execution_limit);
+        }
+      } else {
+        // Duty Specific
+        payload.assigned_to = formData.assigned_to || null;
+        if (formData.due_at)
+          payload.due_at = new Date(
+            `${formData.due_at}T12:00:00`,
+          ).toISOString();
+        if (formData.unlock_at)
+          payload.unlock_at = new Date(
+            `${formData.unlock_at}T12:00:00`,
+          ).toISOString();
+      }
 
       const result = await updateTaskAction(task.$id, payload, jwt);
 
@@ -85,6 +103,28 @@ export default function EditTaskModal({
     }
   };
 
+  const handleDelete = async () => {
+    if (!canDelete) return;
+    if (!confirm("Are you sure you want to delete this task?")) return;
+
+    setLoading(true);
+    try {
+      const { jwt } = await account.createJWT();
+      const result = await deleteTaskAction(task.$id, jwt);
+      if (result.success) {
+        toast.success("Task deleted");
+        onRefresh();
+        onClose();
+      } else {
+        toast.error(result.error || "Delete failed");
+      }
+    } catch {
+      toast.error("Failed to delete");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -92,7 +132,8 @@ export default function EditTaskModal({
         <div className="flex justify-between items-center p-6 border-b border-stone-100 bg-stone-50">
           <div>
             <h2 className="text-xl font-bebas text-stone-800 flex items-center gap-2">
-              <Edit2 className="w-5 h-5 text-stone-400" /> Edit Task
+              <Edit2 className="w-5 h-5 text-stone-400" /> Edit{" "}
+              {isBounty ? "Bounty" : "Task"}
             </h2>
             <p className="text-xs text-stone-500 font-mono">{task.$id}</p>
           </div>
@@ -161,84 +202,127 @@ export default function EditTaskModal({
               />
             </div>
 
-            {/* Assignee */}
-            <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
-                <Users className="w-3 h-3" /> Assignee
-              </label>
-              <select
-                className="w-full text-sm text-stone-700 border border-stone-200 rounded-lg p-2 focus:border-fiji-purple outline-none"
-                value={formData.assigned_to}
-                onChange={(e) =>
-                  setFormData({ ...formData, assigned_to: e.target.value })
-                }
-              >
-                <option value="">-- Unassigned --</option>
-                {members.map((m) => (
-                  <option key={m.$id} value={m.discord_id}>
-                    {m.full_name || m.discord_handle}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Bounty: Execution Limit | Duty: Assignee */}
+            {isBounty ? (
+              <div>
+                <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> Time to Complete (Days)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  className="w-full text-sm text-stone-700 border border-stone-200 rounded-lg p-2 focus:border-fiji-purple outline-none"
+                  value={formData.execution_limit || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      execution_limit: Number(e.target.value),
+                    })
+                  }
+                  placeholder="3"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
+                  <Users className="w-3 h-3" /> Assignee
+                </label>
+                <select
+                  className="w-full text-sm text-stone-700 border border-stone-200 rounded-lg p-2 focus:border-fiji-purple outline-none"
+                  value={formData.assigned_to}
+                  onChange={(e) =>
+                    setFormData({ ...formData, assigned_to: e.target.value })
+                  }
+                >
+                  <option value="">-- Unassigned --</option>
+                  {members.map((m) => (
+                    <option key={m.$id} value={m.discord_id}>
+                      {m.full_name || m.discord_handle}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Due Date */}
-            <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> Due Date
-                {task.type !== "bounty" && (
+          {/* DATES (Duty Only) */}
+          {!isBounty && (
+            <div className="grid grid-cols-2 gap-4">
+              {/* Due Date */}
+              <div>
+                <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
+                  <Calendar className="w-3 h-3" /> Due Date
                   <span className="text-red-500">*</span>
-                )}
-              </label>
-              <input
-                type="date"
-                required={task.type !== "bounty"}
-                min={new Date().toISOString().split("T")[0]}
-                className="w-full text-sm text-stone-600 border border-stone-200 rounded-lg p-2 outline-none"
-                value={formData.due_at}
-                onChange={(e) =>
-                  setFormData({ ...formData, due_at: e.target.value })
-                }
-              />
-              <p className="text-[10px] text-stone-400 mt-1">12:00 PM</p>
-            </div>
+                </label>
+                <input
+                  type="date"
+                  required
+                  min={new Date().toISOString().split("T")[0]}
+                  className="w-full text-sm text-stone-600 border border-stone-200 rounded-lg p-2 outline-none"
+                  value={formData.due_at}
+                  onChange={(e) =>
+                    setFormData({ ...formData, due_at: e.target.value })
+                  }
+                />
+                <p className="text-[10px] text-stone-400 mt-1">12:00 PM</p>
+              </div>
 
-            {/* Unlock Date */}
-            <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> Unlocks At
-              </label>
-              <input
-                type="date"
-                className="w-full text-sm text-stone-600 border border-stone-200 rounded-lg p-2 outline-none"
-                value={formData.unlock_at}
-                onChange={(e) =>
-                  setFormData({ ...formData, unlock_at: e.target.value })
-                }
-              />
-              <p className="text-[10px] text-stone-400 mt-1">12:00 PM</p>
+              {/* Unlock Date */}
+              <div>
+                <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
+                  <Calendar className="w-3 h-3" /> Unlocks At
+                </label>
+                <input
+                  type="date"
+                  className="w-full text-sm text-stone-600 border border-stone-200 rounded-lg p-2 outline-none"
+                  value={formData.unlock_at}
+                  onChange={(e) =>
+                    setFormData({ ...formData, unlock_at: e.target.value })
+                  }
+                />
+                <p className="text-[10px] text-stone-400 mt-1">12:00 PM</p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Footer Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-stone-100 mt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-bold text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-stone-800 hover:bg-black text-white text-sm font-bold rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {loading && <Loader size="sm" className="text-white" />}
-              Save Changes
-            </button>
+          <div className="flex justify-between gap-3 pt-4 border-t border-stone-100 mt-2">
+            <div>
+              {/* DELETE BUTTON */}
+              {isBounty && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={!canDelete || loading}
+                  className="px-4 py-2 text-sm font-bold text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  title={
+                    !canDelete
+                      ? "Cannot delete claimed bounty"
+                      : "Delete Bounty"
+                  }
+                >
+                  <Trash2 size={16} /> Delete
+                </button>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-bold text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-2 bg-stone-800 hover:bg-black text-white text-sm font-bold rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {loading && <Loader size="sm" className="text-white" />}
+                Save Changes
+              </button>
+            </div>
           </div>
         </form>
       </div>

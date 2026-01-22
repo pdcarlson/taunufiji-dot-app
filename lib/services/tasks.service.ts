@@ -601,6 +601,10 @@ export const TasksService = {
     };
   },
 
+  async deleteTask(taskId: string) {
+    return await db.deleteDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, taskId);
+  },
+
   async rejectTask(taskId: string) {
     const task = (await db.getDocument(
       DB_ID,
