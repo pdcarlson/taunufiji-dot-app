@@ -1,30 +1,8 @@
 export const COMMANDS = [
   // --- Core (Public) ---
   {
-    name: "ping",
-    description: "Health check",
-    type: 1,
-  },
-  {
-    name: "profile",
-    description: "View your points and server status",
-    type: 1,
-  },
-  {
     name: "leaderboard",
     description: "View the points leaderboard",
-    type: 1,
-  },
-
-  // --- Housing (Brothers) ---
-  {
-    name: "duties",
-    description: "View your currently assigned duties",
-    type: 1,
-  },
-  {
-    name: "bounties",
-    description: "View available bounties to claim",
     type: 1,
   },
 
@@ -35,7 +13,7 @@ export const COMMANDS = [
     type: 1,
     options: [
       {
-        name: "user",
+        name: "assigned_to",
         description: "The brother to assign to",
         type: 6, // USER
         required: true,
@@ -47,8 +25,8 @@ export const COMMANDS = [
         required: true,
       },
       {
-        name: "due_date",
-        description: "Due date (YYYY-MM-DD)",
+        name: "due_at",
+        description: "Due date (MM-DD, auto-fills year)",
         type: 3, // STRING
         required: true,
       },
@@ -93,13 +71,13 @@ export const COMMANDS = [
         required: false,
       },
       {
-        name: "user",
+        name: "assigned_to",
         description: "Default assignee (optional, leave blank for floating)",
         type: 6, // USER
         required: false,
       },
       {
-        name: "lead_time",
+        name: "lead_time_hours",
         description: "Hours before deadline to unlock (default: 24)",
         type: 4, // INTEGER
         required: false,
@@ -118,7 +96,7 @@ export const COMMANDS = [
         required: true,
       },
       {
-        name: "points",
+        name: "points_value",
         description: "Points reward",
         type: 4, // INTEGER
         required: true,

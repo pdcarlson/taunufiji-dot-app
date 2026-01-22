@@ -2,14 +2,34 @@ name: Trigger Cron Job
 
 on:
   schedule:
-    # Runs at minute 0 past every hour
+    # runs at minute 0 past every hour
     - cron: '0 * * * *'
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch: # allows manual trigger
 
 jobs:
   cron:
     runs-on: ubuntu-latest
     steps:
       - name: Call Cron API
+        id: cron
         run: |
-          curl -X GET "https://taunufiji.app/api/cron?key=${{ secrets.CRON_SECRET }}"
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://taunufiji.app/api/cron?key=${{ secrets.CRON_SECRET }}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          echo "response=$BODY" >> $GITHUB_OUTPUT
+          echo "status=$HTTP_CODE" >> $GITHUB_OUTPUT
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Cron job failed with status $HTTP_CODE"
+            exit 1
+          fi
+      
+      - name: Notify Discord on Failure
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d "{\"content\":\"🚨 **CRON JOB FAILED** 🚨\n\`\`\`\nTime: $(date -u)\nStatus: ${{ steps.cron.outputs.status }}\nResponse: ${{ steps.cron.outputs.response }}\n\`\`\`\n[View Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
+            ${{ secrets.DISCORD_MONITORING_WEBHOOK }}

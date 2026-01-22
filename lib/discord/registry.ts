@@ -1,30 +1,25 @@
 import { SlashCommand, DiscordInteraction } from "./types";
 import { COMMANDS } from "./commands";
 import * as core from "./handlers/core";
-import * as duties from "./handlers/duties";
 import * as admin from "./handlers/admin";
 import { HOUSING_ADMIN_ROLES } from "../config/roles";
-import { createEphemeralResponse, getOptionValue } from "./utils";
+import { createEphemeralResponse } from "./utils";
 
-// Map handler functions to command names
+// map handler functions to command names
 const HANDLERS: Record<string, Function> = {
-  ping: core.ping,
-  profile: core.profile,
   leaderboard: core.leaderboard,
-  duties: duties.duties,
-  bounties: duties.bounties,
-  // Admin Commands
+  // admin commands
   duty: admin.duty,
   schedule: admin.schedule,
   bounty: admin.bounty,
 };
 
-// Map Permissions
+// map permissions
 const ADMIN_COMMANDS = new Set(["duty", "schedule", "bounty"]);
 
 export const REGISTRY: Record<string, SlashCommand> = {};
 
-// Initialize Registry based on COMMANDS definition
+// initialize registry based on COMMANDS definition
 COMMANDS.forEach((def) => {
   const handler = HANDLERS[def.name];
   if (handler) {
@@ -35,12 +30,12 @@ COMMANDS.forEach((def) => {
       requiresAdmin: ADMIN_COMMANDS.has(def.name),
     };
   } else {
-    console.warn(`⚠️ No handler found for Valid Command: ${def.name}`);
+    console.warn(`⚠️ No handler found for command: ${def.name}`);
   }
 });
 
 /**
- * Main Entry Point for Dispatching Commands
+ * main entry point for dispatching commands
  */
 export async function dispatchCommand(interaction: DiscordInteraction) {
   const { name, options } = interaction.data || { name: "", options: [] };
@@ -50,7 +45,7 @@ export async function dispatchCommand(interaction: DiscordInteraction) {
     return createEphemeralResponse(`Unknown command: ${name}`);
   }
 
-  // Permission Check
+  // permission check
   if (command.requiresAdmin) {
     const roles = interaction.member?.roles || [];
     const isAdmin = roles.some((r) =>
@@ -58,14 +53,13 @@ export async function dispatchCommand(interaction: DiscordInteraction) {
     );
 
     if (!isAdmin) {
-      // Also check if user is the specific "DEV" user if needed, but roles cover it.
       return createEphemeralResponse(
         "⛔ You do not have permission to use this command.",
       );
     }
   }
 
-  // Parse Options into key-value map for easier handling
+  // parse options into key-value map for easier handling
   const args: Record<string, any> = {};
   if (options) {
     options.forEach((o) => {

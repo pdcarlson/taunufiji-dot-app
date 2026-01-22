@@ -4,25 +4,52 @@ import { CommandHandler } from "../types";
 
 /**
  * /duty - Assign a one-off duty (mirrors CreateOneOffModal)
- * Fields: user, title, due_date, description
- * Logic: points_value = 0, type = "one_off"
+ * Fields: assigned_to (user), title, due_at (MM-DD), description
+ * Logic: points_value = 0, type = "one_off", smart date parsing
  */
 export const duty: CommandHandler = async (interaction, options) => {
-  const userId = options.user;
+  const userId = options.assigned_to;
   const title = options.title;
-  const dueDateInput = options.due_date;
+  const dueDateInput = options.due_at; // MM-DD format
   const description = options.description || "Assigned via Discord";
 
-  // Parse due_date (Expects YYYY-MM-DD)
+  // Parse MM-DD and apply smart year logic
   let dueAt: Date;
   try {
-    // Append T12:00:00 to force Noon
-    const isoString = `${dueDateInput}T12:00:00`;
+    // validate format
+    const datePattern = /^(\d{2})-(\d{2})$/;
+    const match = dueDateInput.match(datePattern);
+
+    if (!match) {
+      return createEphemeralResponse(
+        `❌ Invalid date format: "${dueDateInput}". Use MM-DD (e.g. 01-30).`,
+      );
+    }
+
+    const month = match[1];
+    const day = match[2];
+    const currentYear = new Date().getFullYear();
+
+    // try with current year first
+    const isoString = `${currentYear}-${month}-${day}T12:00:00`;
     dueAt = new Date(isoString);
-    if (isNaN(dueAt.getTime())) throw new Error("Invalid date format");
+
+    // validate date is real (e.g., not 02-30)
+    if (isNaN(dueAt.getTime())) {
+      return createEphemeralResponse(
+        `❌ Invalid date: "${dueDateInput}". Check month/day values.`,
+      );
+    }
+
+    // if date is in the past, assume next year
+    const now = new Date();
+    if (dueAt < now) {
+      const nextYearIso = `${currentYear + 1}-${month}-${day}T12:00:00`;
+      dueAt = new Date(nextYearIso);
+    }
   } catch {
     return createEphemeralResponse(
-      `❌ Invalid due date format: "${dueDateInput}". Use YYYY-MM-DD (e.g. 2026-01-30).`,
+      `❌ Failed to parse date: "${dueDateInput}". Use MM-DD format.`,
     );
   }
 
@@ -30,7 +57,7 @@ export const duty: CommandHandler = async (interaction, options) => {
     await TasksService.createTask({
       title,
       description,
-      points_value: 0, // Duties = 0 pts, Fined if missed
+      points_value: 0, // duties = 0 pts, fined if missed
       type: "one_off",
       assigned_to: userId,
       due_at: dueAt.toISOString(),
@@ -48,17 +75,17 @@ export const duty: CommandHandler = async (interaction, options) => {
 
 /**
  * /schedule - Create a recurring task (mirrors CreateScheduleModal)
- * Fields: title, day, description, user (optional), lead_time
+ * Fields: title, day, description, assigned_to (optional), lead_time_hours
  * Logic: Builds RRULE (Noon), calls createSchedule
  */
 export const schedule: CommandHandler = async (interaction, options) => {
   const title = options.title;
   const day = options.day; // "MO", "TU", etc.
   const description = options.description || "Created via Discord";
-  const userId = options.user || undefined;
-  const leadTime = options.lead_time || 24;
+  const userId = options.assigned_to || undefined;
+  const leadTime = options.lead_time_hours || 24;
 
-  // Build RRULE (Always Noon)
+  // build RRULE (always Noon)
   const rrule = `FREQ=WEEKLY;BYDAY=${day};BYHOUR=12;BYMINUTE=0`;
 
   try {
@@ -67,7 +94,7 @@ export const schedule: CommandHandler = async (interaction, options) => {
       description,
       recurrence_rule: rrule,
       lead_time_hours: leadTime,
-      points_value: 0, // Duties = 0 pts
+      points_value: 0, // duties = 0 pts
       assigned_to: userId,
     });
 
@@ -92,12 +119,12 @@ export const schedule: CommandHandler = async (interaction, options) => {
 
 /**
  * /bounty - Create a new bounty (claimable by anyone)
- * Fields: title, points, description
- * Logic: points_value = user input, type = "bounty", no assignee
+ * Fields: title, points_value, description
+ * Logic: type = "bounty", no assignee
  */
 export const bounty: CommandHandler = async (interaction, options) => {
   const title = options.title;
-  const points = options.points;
+  const points = options.points_value;
   const description = options.description || "No description provided.";
 
   if (!points || points <= 0) {
