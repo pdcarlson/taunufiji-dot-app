@@ -22,7 +22,7 @@ export const PointsHandler = {
         );
         await PointsService.awardPoints(payload.userId, {
           amount: 10,
-          reason: "Uploaded Exam/Note",
+          reason: "Uploaded Exam",
           category: "event", // Keeping 'event' as per legacy, or could use 'task'
         });
       },

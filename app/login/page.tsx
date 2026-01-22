@@ -29,11 +29,11 @@ export default function LoginPage() {
         </div>
 
         {/* Text */}
-        <h1 className="font-langdon text-4xl text-white mb-2 tracking-wide">
-          Chapter OS
+        <h1 className="font-bebas text-4xl text-white mb-2 tracking-wide">
+          Tau Nu Fiji App
         </h1>
         <p className="text-stone-400 mb-8 font-sans">
-          Restricted Access. Active Brothers Only.
+          Restricted Access. Brothers Only.
         </p>
 
         {/* Login Button */}
