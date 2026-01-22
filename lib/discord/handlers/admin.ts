@@ -14,7 +14,7 @@ export const duty: CommandHandler = async (interaction, options) => {
   const description = options.description; // required field
 
   // Parse MM-DD and apply smart year logic
-  let dueAt: Date;
+  let dueAtISO: string;
   try {
     // validate format
     const datePattern = /^(\d{2})-(\d{2})$/;
@@ -30,12 +30,13 @@ export const duty: CommandHandler = async (interaction, options) => {
     const day = match[2];
     const currentYear = new Date().getFullYear();
 
-    // try with current year first
-    const isoString = `${currentYear}-${month}-${day}T12:00:00`;
-    dueAt = new Date(isoString);
+    // construct ISO string directly with noon UTC (Z timezone)
+    // this prevents local timezone conversion issues
+    let candidateISO = `${currentYear}-${month}-${day}T12:00:00.000Z`;
 
     // validate date is real (e.g., not 02-30)
-    if (isNaN(dueAt.getTime())) {
+    const testDate = new Date(candidateISO);
+    if (isNaN(testDate.getTime())) {
       return createEphemeralResponse(
         `❌ Invalid date: "${dueDateInput}". Check month/day values.`,
       );
@@ -43,10 +44,11 @@ export const duty: CommandHandler = async (interaction, options) => {
 
     // if date is in the past, assume next year
     const now = new Date();
-    if (dueAt < now) {
-      const nextYearIso = `${currentYear + 1}-${month}-${day}T12:00:00`;
-      dueAt = new Date(nextYearIso);
+    if (testDate < now) {
+      candidateISO = `${currentYear + 1}-${month}-${day}T12:00:00.000Z`;
     }
+
+    dueAtISO = candidateISO;
   } catch {
     return createEphemeralResponse(
       `❌ Failed to parse date: "${dueDateInput}". Use MM-DD format.`,
@@ -60,12 +62,12 @@ export const duty: CommandHandler = async (interaction, options) => {
       points_value: 0, // duties = 0 pts, fined if missed
       type: "one_off",
       assigned_to: userId,
-      due_at: dueAt.toISOString(),
+      due_at: dueAtISO,
       status: "open",
     });
 
     return createEphemeralResponse(
-      `✅ Duty assigned: **${title}** to <@${userId}>.\nDue: ${dueAt.toLocaleDateString()} (Noon)`,
+      `✅ Duty assigned: **${title}** to <@${userId}>.\nDue: ${new Date(dueAtISO).toLocaleDateString()} (Noon UTC)`,
     );
   } catch (e) {
     console.error("Duty Error", e);
