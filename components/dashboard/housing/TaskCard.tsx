@@ -307,13 +307,18 @@ export default function TaskCard({
                 <div className="flex gap-2">
                   <label
                     className={`flex-1 bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow hover:-translate-y-0.5 active:translate-y-0 ${
-                      loading
-                        ? "opacity-80 cursor-wait pointer-events-none"
+                      loading ||
+                      (task.due_at && new Date() > new Date(task.due_at))
+                        ? "opacity-50 pointer-events-none grayscale"
                         : ""
                     }`}
                   >
                     {loading ? (
                       <Loader size="sm" className="text-white" />
+                    ) : task.due_at && new Date() > new Date(task.due_at) ? (
+                      <>
+                        <Clock className="w-4 h-4" /> Expired
+                      </>
                     ) : (
                       <>
                         <UploadCloud className="w-4 h-4" /> Upload Proof
@@ -324,7 +329,10 @@ export default function TaskCard({
                       className="hidden"
                       accept="image/*"
                       onChange={handleUpload}
-                      disabled={loading}
+                      disabled={
+                        loading ||
+                        (!!task.due_at && new Date() > new Date(task.due_at))
+                      }
                     />
                   </label>
                   {!isDuty && (

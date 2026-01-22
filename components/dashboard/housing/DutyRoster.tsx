@@ -207,7 +207,7 @@ export default function DutyRoster({
 
                   {isAdmin && (
                     <td className="p-4">
-                      {onEdit && (
+                      {onEdit && task.status !== "approved" && (
                         <button
                           onClick={() => onEdit(task)}
                           className="text-stone-300 hover:text-fiji-purple transition-colors opacity-0 group-hover:opacity-100"

@@ -43,14 +43,18 @@ export async function getDashboardStatsAction(
     const profile = await AuthService.getProfile(userId);
 
     // <--- KEY FIX: Use discord_id (Stable) instead of $id (Random after migration)
-    const activeCount = profile
-      ? (await TasksService.getMyTasks(profile.discord_id)).documents.filter(
-          (d) =>
+    let activeCount = 0;
+    if (profile) {
+      const myTasksRes = await TasksService.getMyTasks(profile.discord_id);
+      if (myTasksRes && Array.isArray(myTasksRes.documents)) {
+        activeCount = myTasksRes.documents.filter(
+          (d: any) =>
             d.status === "pending" ||
             d.status === "open" ||
             d.status === "rejected",
-        ).length
-      : 0;
+        ).length;
+      }
+    }
 
     // const myTasks = await TasksService.getMyTasks(userId);
     // const activeCount = myTasks.documents.filter(d => d.status === "pending" || d.status === "open").length;

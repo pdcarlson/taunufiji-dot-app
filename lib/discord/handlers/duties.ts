@@ -14,7 +14,7 @@ export const duties: CommandHandler = async (interaction) => {
       return createResponse({ content: "✅ You have no pending duties." });
     }
 
-    const fields = tasks.documents.map((t) => ({
+    const fields = tasks.documents.map((t: any) => ({
       name: `${t.title} (${t.points_value} pts)`,
       value: `Due: ${t.due_at ? new Date(t.due_at).toLocaleDateString() : "No Deadline"}\nStatus: ${t.status}\nID: \`${t.$id}\``,
     }));
@@ -37,13 +37,13 @@ export const duties: CommandHandler = async (interaction) => {
 export const bounties: CommandHandler = async () => {
   try {
     const tasks = await TasksService.getOpenTasks();
-    const bountyList = tasks.documents.filter((t) => t.type === "bounty");
+    const bountyList = tasks.documents.filter((t: any) => t.type === "bounty");
 
     if (bountyList.length === 0) {
       return createResponse({ content: "😔 No bounties available right now." });
     }
 
-    const fields = bountyList.map((t) => ({
+    const fields = bountyList.map((t: any) => ({
       name: `${t.title} (${t.points_value} pts)`,
       value: `ID: \`${t.$id}\``,
     }));

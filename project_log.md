@@ -192,3 +192,6 @@
   - **Bounty Logic**: Refactored `unclaimTask` and `rejectTask` to explicitly clear `due_at` dates. This ensures available bounties never show a deadline until claimed.
   - **Feedback**: Added Loading Spinner to "Claim Bounty" button.
   - **Admin Controls**: Implemented Hybrid Editing for Bounties (Restricted fields, Safe Delete) to prevent misalignment. Added `deleteTaskAction`.
+  - **Master Roster**: Locked completed tasks (`status='approved'`) from being edited to preserve historical data.
+  - **Strict Expiry**: Implemented Cron Logic to fine/expire overdue duties and unclaim overdue bounties. submission is now strictly blocked after due date.
+  - **Lazy Consistency**: Implemented "Just-in-Time" processing in `getMyTasks` to immediately unlock ready tasks and expire overdue ones. **Added Filter** to hide expired tasks from user view.

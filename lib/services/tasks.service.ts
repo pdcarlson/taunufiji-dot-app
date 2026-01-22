@@ -74,10 +74,49 @@ export const TasksService = {
    * Get all open tasks
    */
   async getOpenTasks() {
-    return await db.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [
-      Query.equal("status", "open"),
-      Query.orderDesc("$createdAt"),
+    /*
+     * We want 'locked' tasks to auto-open if time passed.
+     * So we fetches both Open and Locked tasks.
+     * We split the query to ensure compatibility if array syntax causes issues.
+     */
+    const [openTasks, lockedTasks] = await Promise.all([
+      db.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [
+        Query.equal("status", "open"),
+        Query.orderDesc("$createdAt"),
+      ]),
+      db.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [
+        Query.equal("status", "locked"),
+        Query.orderDesc("$createdAt"),
+      ]),
     ]);
+
+    // Combine documents
+    const allDocs = [...openTasks.documents, ...lockedTasks.documents];
+    const now = new Date();
+    const cleanRows: Models.Document[] = [];
+
+    for (const doc of allDocs) {
+      const task = doc as unknown as HousingTask;
+      if (
+        task.status === "locked" &&
+        task.unlock_at &&
+        now >= new Date(task.unlock_at)
+      ) {
+        // Lazy Unlock
+        await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, task.$id, {
+          status: "open",
+          notification_level: "unlocked",
+        });
+        task.status = "open";
+      }
+
+      // If it's still locked (future), hide it?
+      // Or show it as Locked? The UI supports locked cards.
+      // But if it WAS locked and we just opened it, show it.
+      cleanRows.push(doc);
+    }
+
+    return { documents: cleanRows, total: cleanRows.length };
   },
 
   /**
@@ -147,6 +186,11 @@ export const TasksService = {
 
     if (task.assigned_to !== profileId) {
       throw new Error("You are not assigned to this task.");
+    }
+
+    // 1b. Check Expiry
+    if (task.due_at && new Date() > new Date(task.due_at)) {
+      throw new Error("Task is expired. You cannot submit late.");
     }
 
     const result = await db.updateDocument(
@@ -477,7 +521,6 @@ export const TasksService = {
     // 2. Halfway Notifications
     // Find 'open' tasks where now > halfway point AND notification_level == "unlocked" (or "none")
     // Note: Appwrite Math is limited. We fetch OPEN tasks with notification_level != 'halfway'
-    // Then filter in memory for simplicity (unless scale is huge).
     const openTasks = await db.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [
       Query.equal("status", "open"),
       Query.notEqual("notification_level", "halfway"), // Don't spam
@@ -488,7 +531,6 @@ export const TasksService = {
     const halfwayPromises = openTasks.documents.map(async (doc) => {
       if (!doc.assigned_to || !doc.due_at) return;
 
-      // Start time is CreatedAt (One-off) or UnlockAt (Recurring)
       const startTime = doc.unlock_at
         ? new Date(doc.unlock_at).getTime()
         : new Date(doc.$createdAt).getTime();
@@ -500,12 +542,10 @@ export const TasksService = {
       const halfwayPoint = startTime + duration / 2;
 
       if (now.getTime() > halfwayPoint) {
-        // Update Level
         await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
           notification_level: "halfway",
         });
 
-        // Notify User: "Halfway"
         await NotificationService.sendNotification(doc.assigned_to, "halfway", {
           title: doc.title,
           taskId: doc.$id,
@@ -513,43 +553,40 @@ export const TasksService = {
       }
     });
 
-    // 3. Expire Bounties
-    const expiredBounties = await db.listDocuments(
+    // 3. Expire Bounties (Claimed but Overdue)
+    const claimedBounties = await db.listDocuments(
       DB_ID,
       COLLECTIONS.ASSIGNMENTS,
       [
-        Query.equal("status", "open"),
         Query.equal("type", "bounty"),
-        Query.lessThanEqual("expires_at", now.toISOString()),
+        Query.notEqual("status", "open"),
+        Query.lessThanEqual("due_at", now.toISOString()),
+        Query.limit(100),
       ],
     );
 
-    const expirePromises = expiredBounties.documents.map((doc) =>
-      db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
-        status: "expired",
-      }),
+    const bountyPromises = claimedBounties.documents.map((doc) =>
+      this.unclaimTask(doc.$id),
     );
 
-    // 4. Fine Overdue Duties
-    // Duties that are Open and Due Date passed
+    // 4. Overdue Duties (Strict Expiry)
     const overdueDuties = await db.listDocuments(
       DB_ID,
       COLLECTIONS.ASSIGNMENTS,
       [
         Query.equal("status", "open"),
         Query.lessThanEqual("due_at", now.toISOString()),
+        Query.limit(100),
       ],
     );
 
     const finePromises = overdueDuties.documents.map(async (doc) => {
       if (doc.type === "bounty" || doc.type === "project") return;
 
-      // A. Mark as Expired
       await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
         status: "expired",
       });
 
-      // B. Fine User
       if (doc.assigned_to) {
         await PointsService.awardPoints(doc.assigned_to, {
           amount: -50,
@@ -557,22 +594,12 @@ export const TasksService = {
           category: "fine",
         });
 
-        // Notify User: "Rejected" (or similar Missed message)
-        // Using generic notifyUser for now as Matrix didn't specify "Missed" exactly but "Rejected" is close
-        // Or we can add "fine" type. Let's stick to standard message.
-        await NotificationService.notifyUser(
-          doc.assigned_to,
-          `❌ **Missed Task**: You missed **${doc.title}**! (-50 pts)`,
-        );
-
-        // Notify Admin
         await NotificationService.notifyAdmins(
-          `🚨 **MISSED TASK**: <@${doc.assigned_to}> missed **${doc.title}**.`,
+          `🚨 **MISSED TASK**: <@${doc.assigned_to}> failed to complete **${doc.title}**. Task expired.`,
           { taskId: doc.$id },
         );
       }
 
-      // C. Trigger Next Instance
       if (doc.schedule_id) {
         try {
           await this.triggerNextInstance(
@@ -588,16 +615,16 @@ export const TasksService = {
     await Promise.all([
       ...unlockPromises,
       ...halfwayPromises,
-      ...expirePromises,
+      ...bountyPromises,
       ...finePromises,
     ]);
 
+    // Simplified Return - NO FILTER
     return {
       unlocked: lockedTasks.total,
-      halfway: openTasks.documents.filter(
-        (d) => d.notification_level === "halfway",
-      ).length, // Approximate count from this run
-      expired: expiredBounties.total + overdueDuties.total,
+      halfway: openTasks.documents.length,
+      expired_bounties: claimedBounties.total,
+      expired_duties: overdueDuties.total,
     };
   },
 
@@ -693,15 +720,111 @@ export const TasksService = {
       Query.orderDesc("$createdAt"),
     ]);
 
-    // 2. Filter in memory: Keep Active OR (Approved AND Recent)
+    // 2. Iterate and Lazy Update (Fire & Forget Logic for Speed, or Await for Consistency?)
+    // We await critical changes to ensure the returned list is clean.
+    const now = new Date();
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
-    const filtered = allAssigned.documents.filter((task) => {
-      if (task.status !== "approved") return true; // Keep all open/pending/rejected
-      const completedAt = new Date(task.$updatedAt);
-      return completedAt > oneDayAgo; // Keep approved only if < 24h old
-    });
+    const filtered: Models.Document[] = [];
+
+    for (const task of allAssigned.documents) {
+      const taskDoc = task as unknown as HousingTask;
+
+      // Filter A: Approved (User requested these be hidden immediately)
+      if (taskDoc.status === "approved") {
+        continue;
+      }
+
+      // Filter B: Expired (Don't show)
+      if (taskDoc.status === "expired") {
+        continue;
+      }
+
+      // Lazy Check B: Stuck in "Locked" but Time Passed
+      if (
+        taskDoc.status === "locked" &&
+        taskDoc.unlock_at &&
+        now >= new Date(taskDoc.unlock_at)
+      ) {
+        // Fix it now
+        // Don't await strictly unless required, but we want to show it as OPEN.
+        // We will push a modified object to UI, update DB in background.
+        // ACTUALLY: Update DB immediately so next refresh is fast.
+        await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, taskDoc.$id, {
+          status: "open",
+          notification_level: "unlocked",
+        });
+        // Mutate local object to show correct state
+        taskDoc.status = "open";
+        filtered.push(taskDoc as unknown as Models.Document);
+        continue;
+      }
+
+      // Lazy Check C: Open/Pending but Expired (Duty)
+      // Logic mirrors runCron
+      // Note: We already filtered out 'approved' and 'expired' above.
+      // CRITICAL FIX: Do NOT expire tasks that have proof submitted (pending review)
+      if (
+        taskDoc.status !== "rejected" &&
+        taskDoc.type !== "bounty" &&
+        taskDoc.due_at &&
+        now > new Date(taskDoc.due_at) &&
+        !taskDoc.proof_s3_key // FIX: Only expire if NO PROOF
+      ) {
+        // IT IS EXPIRED
+        // 1. Mark Expired
+        await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, taskDoc.$id, {
+          status: "expired",
+        });
+
+        // 2. Fine User (if not already fined - difficult to track "already fined" without flag)
+        // Check notification_level or status history?
+        // Status changes to 'expired', so next load it falls into ignored category (unless we show expired).
+        // WE DO NOT SHOW EXPIRED TASKS in "My Tasks" (per user request to remove them).
+        // So we just perform the fine and DROP it.
+
+        await PointsService.awardPoints(profileId, {
+          amount: -50,
+          reason: `Missed Duty: ${taskDoc.title}`,
+          category: "fine",
+        });
+
+        await NotificationService.notifyAdmins(
+          `🚨 **MISSED TASK**: <@${profileId}> failed to complete **${taskDoc.title}**. Task expired.`,
+          { taskId: taskDoc.$id },
+        );
+
+        // 3. Recur
+        if (taskDoc.schedule_id) {
+          try {
+            await this.triggerNextInstance(taskDoc.schedule_id, taskDoc);
+          } catch (e) {
+            console.error("Lazy Recur failed", e);
+          }
+        }
+
+        // DROP from filtered list
+        continue;
+      }
+
+      // Lazy Check D: Open Bounty but Expired (Assigned)
+      if (
+        taskDoc.type === "bounty" &&
+        taskDoc.status !== "open" &&
+        // Already filtered "approved" and "expired" above
+        taskDoc.due_at &&
+        now > new Date(taskDoc.due_at)
+      ) {
+        // Expired Claim
+        await this.unclaimTask(taskDoc.$id);
+        // DROP from filtered list (no longer assigned to me)
+        continue;
+      }
+
+      // If we survived checks, keep it
+      filtered.push(task);
+    }
 
     return { documents: filtered, total: filtered.length };
   },
