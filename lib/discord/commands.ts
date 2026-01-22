@@ -1,5 +1,5 @@
 export const COMMANDS = [
-  // --- Core ---
+  // --- Core (Public) ---
   {
     name: "ping",
     description: "Health check",
@@ -8,6 +8,11 @@ export const COMMANDS = [
   {
     name: "profile",
     description: "View your points and server status",
+    type: 1,
+  },
+  {
+    name: "leaderboard",
+    description: "View the points leaderboard",
     type: 1,
   },
 
@@ -22,43 +27,11 @@ export const COMMANDS = [
     description: "View available bounties to claim",
     type: 1,
   },
-  {
-    name: "claim",
-    description: "Claim a bounty or open task",
-    type: 1,
-    options: [
-      {
-        name: "task_id",
-        description: "The ID of the task to claim",
-        type: 3, // STRING
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "submit",
-    description: "Submit proof for a task",
-    type: 1,
-    options: [
-      {
-        name: "task_id",
-        description: "The ID of the task you are submitting",
-        type: 3, // STRING
-        required: true,
-      },
-      {
-        name: "proof",
-        description: "Image or file proof of completion",
-        type: 11, // ATTACHMENT
-        required: true,
-      },
-    ],
-  },
 
   // --- Housing (Admin) ---
   {
-    name: "assign",
-    description: "[Admin] Create and assign a one-off duty",
+    name: "duty",
+    description: "[Admin] Assign a one-off duty to a brother",
     type: 1,
     options: [
       {
@@ -74,61 +47,87 @@ export const COMMANDS = [
         required: true,
       },
       {
-        name: "points",
-        description: "Points value (negative for fine, default 0)",
+        name: "due_date",
+        description: "Due date (e.g. '2026-01-25 17:00' or 'tomorrow 5pm')",
+        type: 3, // STRING
+        required: true,
+      },
+      {
+        name: "description",
+        description: "Instructions / details",
+        type: 3,
+        required: false,
+      },
+    ],
+  },
+  {
+    name: "schedule",
+    description: "[Admin] Create a recurring weekly task",
+    type: 1,
+    options: [
+      {
+        name: "title",
+        description: "Task title",
+        type: 3, // STRING
+        required: true,
+      },
+      {
+        name: "day",
+        description: "Day of week",
+        type: 3, // STRING
+        required: true,
+        choices: [
+          { name: "Monday", value: "MO" },
+          { name: "Tuesday", value: "TU" },
+          { name: "Wednesday", value: "WE" },
+          { name: "Thursday", value: "TH" },
+          { name: "Friday", value: "FR" },
+          { name: "Saturday", value: "SA" },
+          { name: "Sunday", value: "SU" },
+        ],
+      },
+      {
+        name: "time",
+        description: "Deadline time (e.g. 17:00)",
+        type: 3, // STRING
+        required: true,
+      },
+      {
+        name: "user",
+        description: "Default assignee (optional, leave blank for floating)",
+        type: 6, // USER
+        required: false,
+      },
+      {
+        name: "lead_time",
+        description: "Hours before deadline to unlock (default: 24)",
         type: 4, // INTEGER
         required: false,
       },
     ],
   },
   {
-    name: "approve",
-    description: "[Admin] Approve a submitted task",
+    name: "bounty",
+    description: "[Admin] Create a new bounty (claimable by anyone)",
     type: 1,
     options: [
       {
-        name: "task_id",
-        description: "The ID of the task to approve",
-        type: 3, // STRING
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "reject",
-    description: "[Admin] Reject a submitted task",
-    type: 1,
-    options: [
-      {
-        name: "task_id",
-        description: "The ID of the task to reject",
+        name: "title",
+        description: "Bounty title",
         type: 3, // STRING
         required: true,
       },
       {
-        name: "reason",
-        description: "Reason for rejection",
-        type: 3, // STRING
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "reassign",
-    description: "[Admin] Reassign a task to another brother",
-    type: 1,
-    options: [
-      {
-        name: "task_id",
-        description: "The ID of the task",
-        type: 3, // STRING
+        name: "points",
+        description: "Points reward",
+        type: 4, // INTEGER
         required: true,
       },
       {
-        name: "user",
-        description: "The new brother to assign to",
-        type: 6, // USER
-        required: true,
+        name: "description",
+        description: "Description of the bounty",
+        type: 3,
+        required: false,
       },
     ],
   },

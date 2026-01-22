@@ -6,16 +6,19 @@ import HousingWidget from "@/components/dashboard/HousingWidget";
 import LibraryWidget from "@/components/dashboard/LibraryWidget";
 import LeaderboardWidget from "@/components/dashboard/LeaderboardWidget";
 import { getDashboardStatsAction } from "@/lib/actions/dashboard.actions";
-import PointsHistory from "@/components/dashboard/PointsHistory";
+
+import { DashboardStats } from "@/lib/types/dashboard";
 
 export default function DashboardHome() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     points: 0,
     activeTasks: 0,
     pendingReviews: 0,
     fullName: "",
+    housingHistory: [],
+    libraryHistory: [],
   });
 
   // Fetch Stats
@@ -90,13 +93,10 @@ export default function DashboardHome() {
         {/* 1. Housing */}
         <HousingWidget stats={stats} loading={loading} />
         {/* 2. Library (Static) */}
-        <LibraryWidget />
+        <LibraryWidget stats={stats} />
         {/* 3. Leaderboard */}
         <LeaderboardWidget />
       </div>
-
-      {/* HISTORY SECTION */}
-      <PointsHistory />
     </div>
   );
 }

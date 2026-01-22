@@ -131,3 +131,42 @@
   - **Issue**: "No Session" error during file upload even with JWT support enabled.
   - **Cause**: The Client Component (`app/dashboard/library/upload/page.tsx`) was calling `getMetadataAction()` without passing the JWT, causing the server to fall back to (missing) cookies.
   - **Fix**: Updated `page.tsx` to explicitly generate a JWT via `account.createJWT()` and pass it to the Server Action.
+
+## 2026-01-21: Event-Driven Architecture & Distributed History
+
+- **Architecture Refactor**:
+  - Implemented **Domain Event Bus** (`lib/events/dispatcher.ts`) to decouple business logic.
+  - Moved Point Awarding logic out of Services into `PointsHandler` (`lib/events/handlers/points.handler.ts`).
+  - Services now emit events (`LIBRARY_UPLOADED`, `TASK_APPROVED`) instead of calling side-effects directly.
+- **UI Overhaul (Distributed History)**:
+  - Removed global `PointsHistory` component from Dashboard.
+  - **Housing Widget**: Now displays recent "Tasks & Fines" directly on the card.
+  - **Library Widget**: Now displays recent "Upload Contributions" directly on the card.
+  - **Backend**: Updated `getDashboardStatsAction` to perform parallel, categorized queries for efficient data loading.
+- **Scheduler Upgrade**:
+  - Replaced legacy simple interval with full **RRule Support** (`rrule` library).
+  - Added `lead_time_hours` configuration to Schedules.
+  - Tasks now "Unlock" at specific times before the RRule due date, enabling complex weekly schedules (e.g., "Fridays at 5 PM").
+- **Verification**:
+  - Validated Scheduler logic via `scripts/test-scheduler.ts`.
+  - Validated Event System via `npm test` and manual walkthrough.
+
+## 2026-01-21: Discord Refactor & UI Fixes
+
+- **Discord Notifications**:
+  - Introduced **Notification Matrix** with standardized messages: Unlock, Halfway, Assigned, Updated, Approved, Rejected, Unassigned.
+  - Replaced boolean `reminded` with enum `notification_level` (`none`, `unlocked`, `halfway`, `urgent`) in DB schema.
+  - Refactored `NotificationService` with `sendNotification(userId, type, payload)` helper that appends **Magic Links**.
+  - Updated `TasksService.runCron` to implement multi-stage notifications (Unlock at start, Halfway at 50% duration).
+- **Discord Commands**:
+  - **Added**: `/duty` (one-off with due date), `/schedule` (recurring with day/time), `/bounty`, `/leaderboard`.
+  - **Removed**: Legacy ID-based commands (`/claim`, `/submit`, `/approve`, `/reject`, `/reassign`).
+  - Commands use **ephemeral responses** (private to invoker) except `/leaderboard` (public).
+  - Updated `register-commands.ts` to support Guild-specific commands for instant visibility.
+- **Admin Edit Feature**:
+  - Implemented `updateTaskAction` for Admins to modify task title, description, points, assignee, and due date.
+  - Created `EditTaskModal` component with full form and validation.
+- **UI Fixes**:
+  - **Unclaim Bug**: Fixed silent failure caused by ID mismatch (`profile.$id` -> `profile.discord_id`).
+  - **TaskCard**: Removed misplaced Edit button from cards.
+  - **Master Task Roster Overhaul**: Now shows all task types (Bounty, Recurring, One-off), filters old tasks (>7 days), displays Type/Status/Due Date columns, and has edit button on hover for admins.

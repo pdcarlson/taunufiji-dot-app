@@ -3,6 +3,8 @@ import { env } from "../config/env";
 import { DB_ID, COLLECTIONS } from "../types/schema";
 import { PointsService } from "./points.service";
 import { Member, HousingTask } from "@/lib/types/models";
+import { calculateNextInstance } from "../utils/scheduler";
+import { NotificationService } from "@/lib/services/notification.service";
 
 // Server-side Admin Client
 const client = new Client()
@@ -34,6 +36,7 @@ export interface CreateScheduleDTO {
   points_value: number;
   recurrence_rule: string;
   assigned_to?: string;
+  lead_time_hours?: number;
 }
 
 export const TasksService = {
@@ -41,15 +44,26 @@ export const TasksService = {
    * Create a new task (One-off or Recurring)
    */
   async createTask(data: CreateAssignmentDTO) {
-    return await db.createDocument(
+    const task = await db.createDocument(
       DB_ID,
       COLLECTIONS.ASSIGNMENTS,
       ID.unique(),
       {
         ...data,
         status: data.status || "open",
+        notification_level: data.status === "locked" ? "none" : "unlocked", // Initial state
       },
     );
+
+    // Notify Assignee if set
+    if (data.assigned_to) {
+      await NotificationService.sendNotification(data.assigned_to, "assigned", {
+        title: task.title,
+        taskId: task.$id,
+      });
+    }
+
+    return task;
   },
 
   async getTask(taskId: string) {
@@ -105,10 +119,10 @@ export const TasksService = {
     );
 
     // Notify User
-    await this._notifyUser(
-      profileId,
-      `You have successfully claimed **${task.title}**.`,
-    );
+    await NotificationService.sendNotification(profileId, "assigned", {
+      title: task.title,
+      taskId: task.$id,
+    });
 
     return result;
   },
@@ -136,8 +150,9 @@ export const TasksService = {
     );
 
     // Notify Admin
-    await this._notifyAdmins(
+    await NotificationService.notifyAdmins(
       `📥 **SUBMISSION**: User <@${profileId}> submitted **${task.title}**.`,
+      { taskId: task.$id },
     );
 
     return result;
@@ -200,10 +215,60 @@ export const TasksService = {
     );
 
     // Notify New Assignee
-    await this._notifyUser(
-      profileId,
-      `🔔 You have been assigned to: **${task.title}**.`,
+    await NotificationService.sendNotification(profileId, "assigned", {
+      title: task.title,
+      taskId: task.$id,
+    });
+
+    return result;
+  },
+
+  /**
+   * Generic Admin Update
+   */
+  async updateTask(taskId: string, data: Partial<CreateAssignmentDTO>) {
+    // 1. Fetch original to check for Assignment Changes
+    const original = await this.getTask(taskId);
+    const oldAssignee = original.assigned_to;
+    const newAssignee = data.assigned_to;
+
+    // 2. Perform Update
+    const result = await db.updateDocument(
+      DB_ID,
+      COLLECTIONS.ASSIGNMENTS,
+      taskId,
+      {
+        ...data,
+      },
     );
+
+    // 3. Handle Assignment Notifications
+    if (newAssignee !== undefined && newAssignee !== oldAssignee) {
+      // A. Notify Old Assignee (Unassigned)
+      if (oldAssignee) {
+        await NotificationService.sendNotification(oldAssignee, "unassigned", {
+          title: original.title,
+          taskId: taskId,
+        });
+      }
+
+      // B. Notify New Assignee (Assigned)
+      if (newAssignee) {
+        await NotificationService.sendNotification(newAssignee, "assigned", {
+          title: data.title || original.title,
+          taskId: taskId,
+        });
+      }
+    } else {
+      // C. Notify Update (if assigned logic didn't fire)
+      // If assignee didn't change, but other details did, and it IS assigned
+      if (oldAssignee) {
+        await NotificationService.sendNotification(oldAssignee, "updated", {
+          title: data.title || original.title,
+          taskId: taskId,
+        });
+      }
+    }
 
     return result;
   },
@@ -226,18 +291,27 @@ export const TasksService = {
     const awardAmount = isDuty ? 0 : task.points_value || 0;
 
     if (task.assigned_to && awardAmount !== 0) {
-      await PointsService.awardPoints(task.assigned_to, {
-        amount: awardAmount,
-        reason: `Completed: ${task.title}`,
-        category: "task",
-      });
+      // Event-Driven: Dispatch TASK_APPROVED
+      try {
+        const { DomainEventBus, DomainEvents } =
+          await import("@/lib/events/dispatcher");
+        await DomainEventBus.publish(DomainEvents.TASK_APPROVED, {
+          userId: task.assigned_to,
+          taskId: taskId,
+          taskTitle: task.title,
+          points: awardAmount,
+        });
+      } catch (e) {
+        console.error("Failed to dispatch TASK_APPROVED event", e);
+      }
     }
 
     if (task.assigned_to) {
-      await this._notifyUser(
-        task.assigned_to,
-        `✅ **APPROVED**: Your task **${task.title}** was verified! (+${awardAmount} pts)`,
-      );
+      await NotificationService.sendNotification(task.assigned_to, "approved", {
+        title: task.title,
+        taskId: task.$id,
+        points: awardAmount,
+      });
     }
 
     // 2. Check for Recurrence
@@ -268,44 +342,29 @@ export const TasksService = {
 
     if (!schedule.active) return;
 
-    const intervalDays = parseInt(schedule.recurrence_rule); // Simple "Every X Days"
-    if (isNaN(intervalDays)) {
-      console.warn(`Unsupported recurrence rule: ${schedule.recurrence_rule}`);
-      return;
-    }
-
-    // Calculate Dates
-    const now = new Date();
-    const completedAt = new Date(previousTask.$updatedAt); // verification time
+    // Use previous due date as the anchor for the cycle
+    // If it was a legacy task without due date, use completedAt
+    const completedAt = new Date(previousTask.$updatedAt);
     const prevDue = previousTask.due_at
       ? new Date(previousTask.due_at)
       : completedAt;
 
-    // Next Due = Previous Due + Interval (Keep the cycle)
-    const nextDue = new Date(
-      prevDue.getTime() + intervalDays * 24 * 60 * 60 * 1000,
+    const nextInstance = calculateNextInstance(
+      schedule.recurrence_rule,
+      prevDue,
+      schedule.lead_time_hours || 24, // Use scheule setting or default 24h
     );
 
-    // Unlock Time = MAX(Start of Next Cycle, Completed + Half Interval)
-    // Start of Next Cycle = Next Due - Interval (which is prevDue? No, purely date based)
-    // If cycle is strict: Cycle Start = prevDue + 1ms?
-    // User Logic: "Time until next cycle" vs "50% of time cycle since last submitted".
-    // "Next Cycle" starts immediately after the previous one ends effectively.
-    // If due date is Day 7. Next cycle starts Day 7.
-    // So "Time until next cycle" means "Wait until Day 7".
-    // If completed on Day 2. wait until Day 7.
-    // If completed on Day 7. wait until Day 7 + (7/2) = Day 10.5.
+    if (!nextInstance) {
+      console.warn(
+        `Could not calculate next instance for schedule: ${schedule.$id}`,
+      );
+      return;
+    }
 
-    const cycleStart = new Date(prevDue.getTime()); // The scheduled start of the new period
-    const halfIntervalMs = (intervalDays * 24 * 60 * 60 * 1000) / 2;
-    const cooldownEnd = new Date(completedAt.getTime() + halfIntervalMs);
-
-    // Unlock at the LATER of the two
-    const unlockAt =
-      cycleStart.getTime() > cooldownEnd.getTime() ? cycleStart : cooldownEnd;
-
-    // If we are ALREADY past the unlock time (e.g. verifying late), unlock immediately
-    const isLocked = unlockAt.getTime() > now.getTime();
+    // Check if we are physically past the unlock time (e.g. late verification)
+    const now = new Date();
+    const isLocked = nextInstance.unlockAt.getTime() > now.getTime();
 
     await this.createTask({
       title: schedule.title,
@@ -313,9 +372,9 @@ export const TasksService = {
       points_value: schedule.points_value,
       type: "duty",
       schedule_id: schedule.$id,
-      assigned_to: schedule.assigned_to || previousTask.assigned_to, // Keep assignment? Use template default first
-      due_at: nextDue.toISOString(),
-      unlock_at: unlockAt.toISOString(),
+      assigned_to: schedule.assigned_to || previousTask.assigned_to,
+      due_at: nextInstance.dueAt.toISOString(),
+      unlock_at: nextInstance.unlockAt.toISOString(),
       status: isLocked ? "locked" : "open",
     });
 
@@ -337,21 +396,28 @@ export const TasksService = {
       },
     );
 
-    // Spawn First Instance Immediately (Open)
-    await this.createTask({
-      title: schedule.title,
-      description: schedule.description,
-      points_value: schedule.points_value,
-      type: "duty",
-      schedule_id: schedule.$id,
-      assigned_to: schedule.assigned_to,
-      // due_at: now + interval? Or just Open?
-      // Usually "Due in X days".
-      due_at: new Date(
-        Date.now() + parseInt(schedule.recurrence_rule) * 24 * 60 * 60 * 1000,
-      ).toISOString(),
-      status: "open",
-    });
+    // Spawn First Instance
+    // For first instance, we use NOW as the baseline
+    const nextInstance = calculateNextInstance(
+      schedule.recurrence_rule,
+      new Date(),
+      24, // Default lead time for first (or fetch if we had it in DTO, but usually default)
+    );
+
+    if (nextInstance) {
+      const isLocked = nextInstance.unlockAt.getTime() > Date.now();
+      await this.createTask({
+        title: schedule.title,
+        description: schedule.description,
+        points_value: schedule.points_value,
+        type: "duty",
+        schedule_id: schedule.$id,
+        assigned_to: schedule.assigned_to,
+        due_at: nextInstance.dueAt.toISOString(),
+        unlock_at: nextInstance.unlockAt.toISOString(),
+        status: isLocked ? "locked" : "open",
+      });
+    }
 
     return schedule;
   },
@@ -370,49 +436,73 @@ export const TasksService = {
   async runCron() {
     const now = new Date();
 
-    // 0. 12-Hour Reminders
-    // Query: status=open AND due_at < (now + 12h) AND reminded != true
-    // Note: Appwrite Query support for "between" or "math" is limited.
-    // We check due_at < Now+12h.
-    const twelveHoursLater = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-
-    const nearDueTasks = await db.listDocuments(
-      DB_ID,
-      COLLECTIONS.ASSIGNMENTS,
-      [
-        Query.equal("status", "open"),
-        Query.lessThan("due_at", twelveHoursLater.toISOString()),
-        Query.greaterThan("due_at", now.toISOString()), // Not yet overdue
-        Query.notEqual("reminded", true), // Avoid spam
-      ],
-    );
-
-    const reminderPromises = nearDueTasks.documents.map(async (doc) => {
-      await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
-        reminded: true,
-      });
-      if (doc.assigned_to) {
-        await this._notifyUser(
-          doc.assigned_to,
-          `⏰ Reminder: **${doc.title}** is due in less than 12 hours!`,
-        );
-      }
-    });
-
     // 1. Unlock Tasks
+    // Status 'locked' -> 'open' if now >= unlock_at
     const lockedTasks = await db.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [
       Query.equal("status", "locked"),
       Query.lessThanEqual("unlock_at", now.toISOString()),
     ]);
 
-    const unlockPromises = lockedTasks.documents.map((doc) => {
-      // Notify? Maybe not needed for unlock.
-      return db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
+    const unlockPromises = lockedTasks.documents.map(async (doc) => {
+      // Update status and notification level
+      await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
         status: "open",
+        notification_level: "unlocked",
       });
+
+      // Notify User: "Unlocked"
+      if (doc.assigned_to) {
+        await NotificationService.sendNotification(
+          doc.assigned_to,
+          "unlocked",
+          {
+            title: doc.title,
+            taskId: doc.$id,
+          },
+        );
+      }
     });
 
-    // 2. Expire Bounties
+    // 2. Halfway Notifications
+    // Find 'open' tasks where now > halfway point AND notification_level == "unlocked" (or "none")
+    // Note: Appwrite Math is limited. We fetch OPEN tasks with notification_level != 'halfway'
+    // Then filter in memory for simplicity (unless scale is huge).
+    const openTasks = await db.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [
+      Query.equal("status", "open"),
+      Query.notEqual("notification_level", "halfway"), // Don't spam
+      Query.notEqual("notification_level", "urgent"), // Don't regress
+      Query.limit(100), // Batch size
+    ]);
+
+    const halfwayPromises = openTasks.documents.map(async (doc) => {
+      if (!doc.assigned_to || !doc.due_at) return;
+
+      // Start time is CreatedAt (One-off) or UnlockAt (Recurring)
+      const startTime = doc.unlock_at
+        ? new Date(doc.unlock_at).getTime()
+        : new Date(doc.$createdAt).getTime();
+      const dueTime = new Date(doc.due_at).getTime();
+      const duration = dueTime - startTime;
+
+      if (duration <= 0) return; // Weird data
+
+      const halfwayPoint = startTime + duration / 2;
+
+      if (now.getTime() > halfwayPoint) {
+        // Update Level
+        await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
+          notification_level: "halfway",
+        });
+
+        // Notify User: "Halfway"
+        await NotificationService.sendNotification(doc.assigned_to, "halfway", {
+          title: doc.title,
+          taskId: doc.$id,
+        });
+      }
+    });
+
+    // 3. Expire Bounties
     const expiredBounties = await db.listDocuments(
       DB_ID,
       COLLECTIONS.ASSIGNMENTS,
@@ -429,48 +519,49 @@ export const TasksService = {
       }),
     );
 
-    // 3. Fine Overdue Duties
+    // 4. Fine Overdue Duties
+    // Duties that are Open and Due Date passed
     const overdueDuties = await db.listDocuments(
       DB_ID,
       COLLECTIONS.ASSIGNMENTS,
       [
         Query.equal("status", "open"),
-        // Query.notEqual("type", "bounty") is hard if "type" index not perfect, but we check logic below
         Query.lessThanEqual("due_at", now.toISOString()),
       ],
     );
 
     const finePromises = overdueDuties.documents.map(async (doc) => {
-      if (doc.type === "bounty" || doc.type === "project") return; // Skip non-fined types here (or handle above)
+      if (doc.type === "bounty" || doc.type === "project") return;
 
       // A. Mark as Expired
       await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
         status: "expired",
       });
 
-      // B. Deduct Points (Fine)
+      // B. Fine User
       if (doc.assigned_to) {
-        // Fine User
         await PointsService.awardPoints(doc.assigned_to, {
           amount: -50,
           reason: `Missed Duty: ${doc.title}`,
           category: "fine",
         });
 
-        // Notify User
-        await this._notifyUser(
+        // Notify User: "Rejected" (or similar Missed message)
+        // Using generic notifyUser for now as Matrix didn't specify "Missed" exactly but "Rejected" is close
+        // Or we can add "fine" type. Let's stick to standard message.
+        await NotificationService.notifyUser(
           doc.assigned_to,
-          `❌ You missed **${doc.title}**! (-50 pts)`,
+          `❌ **Missed Task**: You missed **${doc.title}**! (-50 pts)`,
         );
 
-        // Notify Admin (Private Ping via Channel?)
-        // "User X missed Task Y"
-        await this._notifyAdmins(
-          `🚨 **MISSED TASK**: User <@${doc.assigned_to}> missed **${doc.title}**.`,
+        // Notify Admin
+        await NotificationService.notifyAdmins(
+          `🚨 **MISSED TASK**: <@${doc.assigned_to}> missed **${doc.title}**.`,
+          { taskId: doc.$id },
         );
       }
 
-      // C. Trigger Next Instance (if recurring)
+      // C. Trigger Next Instance
       if (doc.schedule_id) {
         try {
           await this.triggerNextInstance(
@@ -484,15 +575,17 @@ export const TasksService = {
     });
 
     await Promise.all([
-      ...reminderPromises,
       ...unlockPromises,
+      ...halfwayPromises,
       ...expirePromises,
       ...finePromises,
     ]);
 
     return {
-      reminded: nearDueTasks.total,
       unlocked: lockedTasks.total,
+      halfway: openTasks.documents.filter(
+        (d) => d.notification_level === "halfway",
+      ).length, // Approximate count from this run
       expired: expiredBounties.total + overdueDuties.total,
     };
   },
@@ -520,9 +613,14 @@ export const TasksService = {
             category: "fine",
           });
 
-          await this._notifyUser(
+          await NotificationService.sendNotification(
             task.assigned_to,
-            `❌ **REJECTED**: You missed **${task.title}** and it is now expired. (-50 pts)`,
+            "rejected",
+            {
+              title: task.title,
+              taskId: task.$id,
+              reason: "Missed Deadline (Expired)",
+            },
           );
         }
 
@@ -558,10 +656,11 @@ export const TasksService = {
     );
 
     if (task.assigned_to) {
-      await this._notifyUser(
-        task.assigned_to,
-        `⚠️ **REJECTED**: Your submission for **${task.title}** was rejected. Please retry before the deadline.`,
-      );
+      await NotificationService.sendNotification(task.assigned_to, "rejected", {
+        title: task.title,
+        taskId: task.$id,
+        reason: "Please check feedback and retry.",
+      });
     }
 
     return result;
@@ -607,52 +706,6 @@ export const TasksService = {
     } catch (e) {
       console.warn(`TasksService: User ${profileId} not found.`);
       return null;
-    }
-  },
-
-  /**
-   * Helper to notify User safely
-   */
-  async _notifyUser(profileId: string, message: string) {
-    try {
-      if (!profileId) return;
-      const user = await this.getUserProfile(profileId);
-      if (user && user.discord_id) {
-        const { NotificationService } = await import("./notification.service");
-        await NotificationService.notifyUser(user.discord_id, message);
-      }
-    } catch (e) {
-      console.warn("Failed to notify user", e);
-    }
-  },
-
-  /**
-   * Helper to Notify Admins (e.g. Housing Chairs)
-   */
-  async _notifyAdmins(message: string) {
-    // Ideally fetch users with Housing Admin Roles.
-    // For MVP/Serverless efficiency, we might just ping the Chair if ID known, or iterate cached admins.
-    // Let's rely on ROLES constant.
-    const { ROLES } = await import("@/lib/config/roles");
-    // We can't query users by Role easily without Discord API call.
-    // Instead: Query Users who have position_key = 'housing_chair' or similar if we tracked it?
-    // Alternative: Just ping the Housing Chair specifically if ID is static?
-    // ROLES.HOUSING_CHAIR is a ROLE ID, not User ID.
-    // WE NEED A WAY TO FIND ADMINS.
-    // Fallback: Notify a specific channel?
-    // User asked for "Private Ping".
-    // Let's search DB for users with position_key if feasible, or just skip for now until we have "Admin Discovery".
-    // WAIT: User Service -> listAdmins?
-    // Let's implement a basic "Notify Channel" for Admins as fallback, or leave placeholder.
-    // Recommendation: Notify the HOUSING_CHANNEL but tag the Role?
-
-    // Actually, let's just use the NotificationService to msg the channel if defined.
-    const { NotificationService } = await import("./notification.service");
-    if (process.env.DISCORD_HOUSING_CHANNEL_ID) {
-      await NotificationService.notifyChannel(
-        process.env.DISCORD_HOUSING_CHANNEL_ID,
-        message,
-      );
     }
   },
 };

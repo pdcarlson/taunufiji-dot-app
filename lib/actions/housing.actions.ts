@@ -176,7 +176,7 @@ export async function unclaimTaskAction(taskId: string, jwt?: string) {
     // Verification that user OWNS the task they are unclaiming
     const task = await TasksService.getTask(taskId);
     // Schema uses 'assigned_to' as Profile ID (Discord ID)
-    if (task.assigned_to !== profile.$id) {
+    if (task.assigned_to !== profile.discord_id) {
       throw new Error("You do not own this task");
     }
 
@@ -413,7 +413,29 @@ export async function getReviewDetailsAction(taskId: string, jwt?: string) {
 
     return { success: true, submitterName, proofUrl };
   } catch (e) {
-    console.error("getReviewDetailsAction failed", e);
     return { success: false, error: "Failed to fetch details" };
+  }
+}
+
+export async function updateTaskAction(
+  taskId: string,
+  data: Partial<CreateAssignmentDTO>,
+  jwt?: string,
+) {
+  try {
+    const account = await getAuthAccount(jwt);
+    const user = await account.get();
+    const isAdmin = await AuthService.verifyRole(
+      user.$id,
+      HOUSING_ADMIN_ROLES as string[],
+    );
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    await TasksService.updateTask(taskId, data);
+    revalidatePath("/dashboard/housing");
+    return { success: true };
+  } catch (e) {
+    console.error("updateTaskAction failed", e);
+    return { success: false, error: (e as Error).message };
   }
 }

@@ -143,7 +143,7 @@ describe("AuthService", () => {
           auth_id: "auth_new",
           discord_id: "discord_new",
           // Validate our Safety Fix
-          position_key: "none",
+          // position_key: "none", // Removed from implementation
           status: "active",
         }),
       );

@@ -10,18 +10,17 @@ import { createEphemeralResponse, getOptionValue } from "./utils";
 const HANDLERS: Record<string, Function> = {
   ping: core.ping,
   profile: core.profile,
+  leaderboard: core.leaderboard,
   duties: duties.duties,
   bounties: duties.bounties,
-  claim: duties.claim,
-  submit: duties.submit,
-  assign: admin.assign,
-  approve: admin.approve,
-  reject: admin.reject,
-  reassign: admin.reassign,
+  // Admin Commands
+  duty: admin.duty,
+  schedule: admin.schedule,
+  bounty: admin.bounty,
 };
 
 // Map Permissions
-const ADMIN_COMMANDS = new Set(["assign", "approve", "reject", "reassign"]);
+const ADMIN_COMMANDS = new Set(["duty", "schedule", "bounty"]);
 
 export const REGISTRY: Record<string, SlashCommand> = {};
 

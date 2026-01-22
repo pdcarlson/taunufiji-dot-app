@@ -55,7 +55,7 @@ This application uses **Random Strings (`ID.unique()`)** as the Primary Keys (Do
 
 - **Goal:** Manage house chores, recurring schedules, and ad-hoc bounties.
 - **Features:**
-  - **Recurring Schedules:** Admin creates templates (e.g., "Trash - Mondays") which auto-spawn tasks.
+  - **Recurring Schedules:** Admin creates templates (e.g., "Trash - Mondays") which auto-spawn tasks. Supports **RRule** for complex schedules.
   - **Bounties:** Users post optional tasks with Point rewards ("Fix Door - 50pts").
   - **Assignments:** Direct assignment flow with "Time to Complete" deadlines.
 - **Task State Machine:**
@@ -88,9 +88,9 @@ This application uses **Random Strings (`ID.unique()`)** as the Primary Keys (Do
 ### 📊 Points System (Unified)
 
 - **Goal:** Track lifetime and current points for housing picks.
-- **How it Works:** Real-time sync with Appwrite `users` collection.
-- **Location:** Integrated directly into the Dashboard Home (`/dashboard`) via `PointsHistory` component.
-- **Files:** `components/dashboard/PointsHistory.tsx`, `lib/actions/ledger.actions.ts`.
+- **How it Works:** Real-time sync with Appwrite `users` collection. Domain Events trigger point awards.
+- **Location:** Distributed across Dashboard Widgets (`HousingWidget`, `LibraryWidget`).
+- **Files:** `lib/events/handlers/points.handler.ts`, `lib/actions/ledger.actions.ts`.
 
 ---
 
@@ -142,7 +142,5 @@ Required in `.env.local`:
 - `NEXT_PUBLIC_APPWRITE_PROJECT_ID`
 - `APPWRITE_API_KEY` (Server-side admin)
 - `NEXT_PUBLIC_APPWRITE_DATABASE_ID`
-
-<!-- TODO -->
-<!-- add date validation on assigned tasks -->
-<!-- add ability to edit assigned task due date and assignee -->
+- `DISCORD_GUILD_ID` (for instant command registration)
+- `DISCORD_HOUSING_CHANNEL_ID` (for admin notifications)

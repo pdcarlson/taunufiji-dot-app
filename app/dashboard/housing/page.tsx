@@ -12,13 +12,16 @@ import {
   getAllMembersAction,
 } from "@/lib/actions/housing.actions";
 import HousingStats from "@/components/dashboard/housing/HousingStats";
-import TaskCard from "@/components/dashboard/housing/TaskCard";
+import TaskCard, {
+  TaskCardSkeleton,
+} from "@/components/dashboard/housing/TaskCard";
 import DutyRoster from "@/components/dashboard/housing/DutyRoster";
 import ScheduleManager from "@/components/dashboard/housing/ScheduleManager";
 import ProofReviewModal from "@/components/dashboard/housing/ProofReviewModal";
 import CreateBountyModal from "@/components/dashboard/housing/CreateBountyModal";
 import CreateScheduleModal from "@/components/dashboard/housing/CreateScheduleModal";
 import CreateOneOffModal from "@/components/dashboard/housing/CreateOneOffModal";
+import EditTaskModal from "@/components/dashboard/housing/EditTaskModal";
 import { ListTodo, Users, CalendarClock, Loader2, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -34,6 +37,7 @@ export default function HousingPage() {
   const [activeTab, setActiveTab] = useState<"board" | "roster">("board");
   const [showOneOffModal, setShowOneOffModal] = useState(false);
   const [reviewTask, setReviewTask] = useState<HousingTask | null>(null);
+  const [editingTask, setEditingTask] = useState<HousingTask | null>(null);
   const [showBountyModal, setShowBountyModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
@@ -54,7 +58,7 @@ export default function HousingPage() {
         getAllMembersAction(jwt),
       ]);
       const allTasks = [...open, ...mine].filter(
-        (v, i, a) => a.findIndex((v2) => v2.$id === v.$id) === i
+        (v, i, a) => a.findIndex((v2) => v2.$id === v.$id) === i,
       );
       setTasks(allTasks);
       setMembers(allMembers);
@@ -92,16 +96,16 @@ export default function HousingPage() {
 
       // 2. Sort by Urgency (Due Date or Expiry)
       const aDate = new Date(
-        a.due_at || a.expires_at || "9999-12-31"
+        a.due_at || a.expires_at || "9999-12-31",
       ).getTime();
       const bDate = new Date(
-        b.due_at || b.expires_at || "9999-12-31"
+        b.due_at || b.expires_at || "9999-12-31",
       ).getTime();
       return aDate - bDate;
     });
 
   const availableBounties = tasks.filter(
-    (t) => t.status === "open" && t.type === "bounty"
+    (t) => t.status === "open" && t.type === "bounty",
   );
 
   return (
@@ -189,6 +193,7 @@ export default function HousingPage() {
                     onRefresh={loadData}
                     viewMode="review"
                     onReview={setReviewTask}
+                    onEdit={(t) => setEditingTask(t)} // Added
                   />
                 ))}
               </div>
@@ -201,7 +206,11 @@ export default function HousingPage() {
               My Responsibilities
             </h2>
             {loading ? (
-              <Loader />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(3)].map((_, i) => (
+                  <TaskCardSkeleton key={i} />
+                ))}
+              </div>
             ) : myResponsibilities.length === 0 ? (
               <div className="text-center py-12 bg-stone-50 rounded border border-dashed border-stone-200 text-stone-400 font-bold">
                 No active tasks assigned to you
@@ -218,6 +227,7 @@ export default function HousingPage() {
                     isAdmin={isAdmin}
                     onRefresh={loadData}
                     viewMode="action"
+                    onEdit={(t) => setEditingTask(t)} // Added
                   />
                 ))}
               </div>
@@ -232,7 +242,11 @@ export default function HousingPage() {
               </h2>
             </div>
             {loading ? (
-              <Loader />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(3)].map((_, i) => (
+                  <TaskCardSkeleton key={i} />
+                ))}
+              </div>
             ) : availableBounties.length === 0 ? (
               <div className="text-center py-12 bg-stone-50 rounded border border-dashed border-stone-200 text-stone-400 font-bold">
                 No active bounties
@@ -249,6 +263,7 @@ export default function HousingPage() {
                     isAdmin={isAdmin}
                     onRefresh={loadData}
                     viewMode="action"
+                    onEdit={(t) => setEditingTask(t)} // Added
                   />
                 ))}
               </div>
@@ -265,6 +280,7 @@ export default function HousingPage() {
           isAdmin={isAdmin}
           userId={user?.$id || ""}
           onRefresh={loadData}
+          onEdit={(t) => setEditingTask(t)} // Added
         />
       )}
 
@@ -298,6 +314,19 @@ export default function HousingPage() {
           onClose={() => setShowOneOffModal(false)}
           onSuccess={loadData}
           members={members}
+        />
+      )}
+
+      {/* EDIT TASK MODAL */}
+      {editingTask && (
+        <EditTaskModal
+          task={editingTask}
+          members={members}
+          onClose={() => setEditingTask(null)}
+          onRefresh={() => {
+            setEditingTask(null);
+            loadData();
+          }}
         />
       )}
     </div>

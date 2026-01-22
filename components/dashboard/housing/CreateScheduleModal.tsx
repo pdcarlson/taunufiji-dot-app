@@ -1,8 +1,7 @@
 "use client";
-
 import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
-import { X, Calendar, DollarSign, User, FileText, Check } from "lucide-react";
+import { X, Calendar, User, FileText, Check, Clock } from "lucide-react";
 import { createScheduleAction } from "@/lib/actions/housing.actions";
 import { account } from "@/lib/client/appwrite";
 import toast from "react-hot-toast";
@@ -15,6 +14,16 @@ interface Props {
   members?: Member[];
 }
 
+const DAYS = [
+  { label: "Monday", value: "MO" },
+  { label: "Tuesday", value: "TU" },
+  { label: "Wednesday", value: "WE" },
+  { label: "Thursday", value: "TH" },
+  { label: "Friday", value: "FR" },
+  { label: "Saturday", value: "SA" },
+  { label: "Sunday", value: "SU" },
+];
+
 export default function CreateScheduleModal({
   onClose,
   onSuccess,
@@ -25,25 +34,34 @@ export default function CreateScheduleModal({
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      title: "",
+      description: "",
+      assigned_to: "",
+      freq_day: "FR",
+      freq_time: "17:00",
+      lead_time: 24,
+    },
+  });
   const [loading, setLoading] = useState(false);
-
-  // Watch frequency to show helper text
-  const frequency = watch("frequency");
 
   const onSubmit = async (data: FieldValues) => {
     setLoading(true);
     try {
       const jwt = await account.createJWT();
 
-      let rule = data.frequency;
-      if (data.frequency === "custom") rule = data.custom_days;
+      // Construct RRule
+      // e.g. FREQ=WEEKLY;BYDAY=FR;BYHOUR=17;BYMINUTE=0
+      const [hour, minute] = data.freq_time.split(":").map(Number);
+      const rrule = `FREQ=WEEKLY;BYDAY=${data.freq_day};BYHOUR=${hour};BYMINUTE=${minute}`;
 
       const payload = {
         title: data.title,
         description: data.description,
-        recurrence_rule: rule, // Storing "7" or "14" as string
-        points_value: 0, // Default 0 for Duties
+        recurrence_rule: rrule,
+        lead_time_hours: Number(data.lead_time),
+        points_value: 0,
         assigned_to: data.assigned_to || undefined,
         active: true,
       };
@@ -72,9 +90,7 @@ export default function CreateScheduleModal({
             <h2 className="text-xl font-semibold text-white">
               New Recurring Task
             </h2>
-            <p className="text-sm text-zinc-400">
-              Set up a task that repeats automatically.
-            </p>
+            <p className="text-sm text-zinc-400">Set up a weekly schedule.</p>
           </div>
           <button
             onClick={onClose}
@@ -107,42 +123,66 @@ export default function CreateScheduleModal({
             )}
           </div>
 
-          {/* Frequency Row */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-              Repeat Every (Days)
-            </label>
-            <div className="relative group">
-              <Calendar
-                className="absolute left-3 top-3 text-zinc-500 group-focus-within:text-purple-400 transition-colors"
-                size={18}
-              />
-              <select
-                {...register("frequency", { required: true })}
-                className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all appearance-none cursor-pointer"
-              >
-                <option value="7">Weekly (7 Days)</option>
-                <option value="14">Bi-Weekly (14 Days)</option>
-                <option value="30">Monthly (30 Days)</option>
-                <option value="custom">Custom...</option>
-              </select>
+          {/* Schedule Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                Day of Week
+              </label>
+              <div className="relative group">
+                <Calendar
+                  className="absolute left-3 top-3 text-zinc-500 group-focus-within:text-purple-400 transition-colors"
+                  size={18}
+                />
+                <select
+                  {...register("freq_day", { required: true })}
+                  className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all appearance-none cursor-pointer"
+                >
+                  {DAYS.map((d) => (
+                    <option key={d.value} value={d.value}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                Deadline Time
+              </label>
+              <div className="relative group">
+                <Clock
+                  className="absolute left-3 top-3 text-zinc-500 group-focus-within:text-purple-400 transition-colors"
+                  size={18}
+                />
+                <input
+                  type="time"
+                  {...register("freq_time", { required: true })}
+                  className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all cursor-pointer"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Custom Days Input */}
-          {frequency === "custom" && (
-            <div className="space-y-2 animate-in slide-in-from-top-2">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                Days Interval
-              </label>
+          {/* Lead Time */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+              Unlock Lead Time (Hours)
+            </label>
+            <p className="text-[10px] text-zinc-500">
+              How many hours before the deadline should this task become
+              available?
+            </p>
+            <div className="relative group">
               <input
                 type="number"
-                {...register("custom_days", { required: true, min: 1 })}
-                className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
-                placeholder="e.g. 3"
+                {...register("lead_time", { required: true, min: 1 })}
+                className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                placeholder="24"
               />
             </div>
-          )}
+          </div>
 
           {/* Description */}
           <div className="space-y-2">
@@ -176,7 +216,7 @@ export default function CreateScheduleModal({
               >
                 <option value="">-- Floating / Open --</option>
                 {members?.map((m: Member) => (
-                  <option key={m.$id} value={m.$id}>
+                  <option key={m.$id} value={m.discord_id}>
                     {m.full_name}
                   </option>
                 ))}

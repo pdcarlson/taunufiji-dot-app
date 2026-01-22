@@ -17,7 +17,11 @@ const client = new Client()
 
 const db = new Databases(client);
 
-export async function getDashboardStatsAction(userId: string) {
+import { DashboardStats } from "@/lib/types/dashboard";
+
+export async function getDashboardStatsAction(
+  userId: string,
+): Promise<DashboardStats> {
   try {
     // 1. Authorization Guard
     const isAuthorized = await AuthService.verifyBrother(userId);
@@ -28,6 +32,8 @@ export async function getDashboardStatsAction(userId: string) {
         activeTasks: 0,
         pendingReviews: 0,
         fullName: "Brother",
+        housingHistory: [],
+        libraryHistory: [],
       };
     }
 
@@ -81,7 +87,52 @@ export async function getDashboardStatsAction(userId: string) {
         activeTasks: activeCount,
         pendingReviews: 0,
         fullName: "Brother",
+        housingHistory: [],
+        libraryHistory: [],
       };
+    }
+
+    // 4. Get Recent History (Last 3)
+    // 4. Get Distributed History
+    let housingHistory: any[] = [];
+    let libraryHistory: any[] = [];
+
+    try {
+      // Parallel fetch for efficiency
+      const [housingDocs, libraryDocs] = await Promise.all([
+        db.listDocuments(DB_ID, COLLECTIONS.LEDGER, [
+          Query.equal("user_id", userDoc.discord_id),
+          // Housing uses Categories: 'task', 'fine' (and maybe 'manual' if related)
+          Query.equal("category", ["task", "fine"]),
+          Query.orderDesc("timestamp"),
+          Query.limit(3),
+        ]),
+        db.listDocuments(DB_ID, COLLECTIONS.LEDGER, [
+          Query.equal("user_id", userDoc.discord_id),
+          // Library uses Category: 'event' (for uploads)
+          Query.equal("category", "event"),
+          Query.orderDesc("timestamp"),
+          Query.limit(3),
+        ]),
+      ]);
+
+      housingHistory = housingDocs.documents.map((d) => ({
+        id: d.$id,
+        reason: d.reason,
+        amount: d.amount,
+        category: d.category,
+        timestamp: d.timestamp,
+      }));
+
+      libraryHistory = libraryDocs.documents.map((d) => ({
+        id: d.$id,
+        reason: d.reason,
+        amount: d.amount,
+        category: d.category,
+        timestamp: d.timestamp,
+      }));
+    } catch (err) {
+      console.warn("Failed to fetch distributed history", err);
     }
 
     return {
@@ -89,6 +140,8 @@ export async function getDashboardStatsAction(userId: string) {
       activeTasks: activeCount,
       pendingReviews: pendingReviewsCount,
       fullName: userDoc.full_name || "Brother",
+      housingHistory,
+      libraryHistory,
     };
   } catch (e: unknown) {
     logger.error("getDashboardStatsAction Failed", e);
@@ -97,6 +150,8 @@ export async function getDashboardStatsAction(userId: string) {
       activeTasks: 0,
       pendingReviews: 0,
       fullName: "Brother",
+      housingHistory: [],
+      libraryHistory: [],
     };
   }
 }

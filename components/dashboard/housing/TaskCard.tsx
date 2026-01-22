@@ -93,6 +93,28 @@ interface TaskCardProps {
   // NEW: Determines if we show Upload buttons or Review buttons
   viewMode?: "action" | "review";
   onReview?: (task: Task) => void;
+  onEdit?: (task: Task) => void; // Added
+}
+
+export function TaskCardSkeleton() {
+  return (
+    <div className="bg-white border border-stone-200 rounded-xl p-5 flex flex-col h-[200px] animate-pulse">
+      <div className="flex justify-between items-start mb-3">
+        <div className="space-y-2">
+          <div className="w-20 h-4 bg-stone-200 rounded" />
+          <div className="w-32 h-6 bg-stone-200 rounded" />
+        </div>
+        <div className="w-16 h-6 bg-stone-200 rounded" />
+      </div>
+      <div className="flex-1 space-y-2">
+        <div className="w-full h-4 bg-stone-200 rounded" />
+        <div className="w-3/4 h-4 bg-stone-200 rounded" />
+      </div>
+      <div className="pt-3 border-t border-stone-100">
+        <div className="w-full h-8 bg-stone-200 rounded" />
+      </div>
+    </div>
+  );
 }
 
 export default function TaskCard({
@@ -104,16 +126,12 @@ export default function TaskCard({
   onRefresh,
   viewMode = "action",
   onReview,
+  onEdit, // Added
 }: TaskCardProps) {
   const [loading, setLoading] = useState(false);
 
   // VALUES
   const isMyTask = task.assigned_to === profileId;
-  // Public Site used 'assignee_id'. Internal Schema used 'assigned_to'.
-  // TasksService.claimTask sets 'assigned_to'.
-  // I should check `schema.ts`. `assignments` has `assigned_to`.
-  // So `task.assigned_to` is correct for internal.
-
   const isDuty = task.type === "duty" || task.type === "one_off";
   const isOneOff = task.type === "one_off";
   const isLocked = task.status === "locked";
@@ -122,9 +140,7 @@ export default function TaskCard({
 
   // ACTIONS
   const handleClaim = async () => {
-    // Duties cannot be claimed by users, only assigned by admins.
     if (isDuty) return;
-
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
@@ -181,9 +197,9 @@ export default function TaskCard({
   // 1. LOCKED / COOLDOWN CARD
   if (isLocked) {
     return (
-      <div className="bg-stone-50 border border-stone-200 rounded-xl p-5 flex flex-col h-full opacity-60">
+      <div className="bg-stone-50 border border-stone-200 rounded-xl p-5 flex flex-col h-full opacity-70 hover:opacity-100 transition-opacity">
         <div className="flex justify-between items-start mb-2">
-          <span className="text-[10px] tracking-widest font-bold text-stone-400 uppercase flex items-center gap-1">
+          <span className="text-[10px] tracking-widest font-bold text-stone-400 uppercase flex items-center gap-1 bg-stone-200/50 px-2 py-1 rounded">
             <Lock className="w-3 h-3" /> {isDuty ? "Cooldown" : "Locked"}
           </span>
           {task.unlock_at && (
@@ -191,7 +207,9 @@ export default function TaskCard({
           )}
         </div>
         <h3 className="font-bebas text-xl text-stone-500 mb-1">{task.title}</h3>
-        <p className="text-sm text-stone-400 mb-4">{task.description}</p>
+        <p className="text-sm text-stone-400 line-clamp-2 mb-4">
+          {task.description}
+        </p>
       </div>
     );
   }
@@ -199,7 +217,7 @@ export default function TaskCard({
   // 2. ACTIVE CARD
   return (
     <div
-      className={`relative bg-white border rounded-xl p-5 transition-all shadow-sm hover:shadow-md flex flex-col h-full ${
+      className={`relative bg-white border rounded-xl p-5 transition-all shadow-sm hover:shadow-md flex flex-col h-full group ${
         isMyTask && task.status === "pending" && !isReview
           ? "border-fiji-purple ring-1 ring-fiji-purple/20"
           : "border-stone-200"
@@ -213,7 +231,7 @@ export default function TaskCard({
       <div className="flex justify-between items-start mb-3">
         <div>
           {isDuty ? (
-            <span className="text-[10px] tracking-widest font-bold text-red-500 uppercase flex items-center gap-1 mb-1">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] tracking-widest font-bold text-red-600 bg-red-50 border border-red-100 uppercase mb-2">
               {isOneOff ? (
                 <Briefcase className="w-3 h-3" />
               ) : (
@@ -222,17 +240,17 @@ export default function TaskCard({
               {isOneOff ? "Assigned Duty" : "Recurring Duty"}
             </span>
           ) : (
-            <span className="text-[10px] tracking-widest font-bold text-fiji-gold-dark uppercase flex items-center gap-1 mb-1">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] tracking-widest font-bold text-fiji-gold-dark bg-yellow-50 border border-yellow-100 uppercase mb-2">
               <Zap className="w-3 h-3" /> Bounty
             </span>
           )}
-          <h3 className="font-bebas text-2xl text-stone-800 leading-none">
+          <h3 className="font-bebas text-2xl text-stone-800 leading-none group-hover:text-fiji-dark transition-colors">
             {task.title}
           </h3>
         </div>
-        <div className="flex flex-col items-end">
+        <div className="flex flex-col items-end gap-1">
           {!isDuty && (
-            <span className="bg-fiji-gold/20 text-fiji-gold-dark text-xs font-bold px-2 py-1 rounded">
+            <span className="bg-fiji-gold text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
               {task.points_value} PTS
             </span>
           )}
@@ -245,7 +263,9 @@ export default function TaskCard({
         </div>
       </div>
 
-      <p className="text-stone-600 text-sm mb-4 flex-1">{task.description}</p>
+      <p className="text-stone-600 text-sm mb-4 flex-1 line-clamp-3 leading-relaxed">
+        {task.description}
+      </p>
 
       {/* FOOTER ACTIONS */}
       <div className="pt-3 border-t border-stone-100 space-y-2">
@@ -256,7 +276,7 @@ export default function TaskCard({
               <button
                 onClick={handleClaim}
                 disabled={loading}
-                className={`w-full font-bold py-2 rounded text-sm transition-colors bg-stone-100 text-stone-700 hover:bg-stone-200`}
+                className={`w-full font-bold py-2 rounded text-sm transition-colors bg-stone-100 text-stone-700 hover:bg-stone-200 hover:text-stone-900 border border-stone-200`}
               >
                 Claim Bounty
               </button>
@@ -268,7 +288,7 @@ export default function TaskCard({
               !isReview && (
                 <div className="flex gap-2">
                   <label
-                    className={`flex-1 bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2 ${
+                    className={`flex-1 bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow hover:-translate-y-0.5 active:translate-y-0 ${
                       loading
                         ? "opacity-80 cursor-wait pointer-events-none"
                         : ""
@@ -293,7 +313,8 @@ export default function TaskCard({
                     <button
                       onClick={handleUnclaim}
                       disabled={loading}
-                      className="px-3 text-red-400 hover:bg-red-50 rounded"
+                      className="px-3 text-red-400 hover:bg-red-50 rounded border border-transparent hover:border-red-100 transition-colors"
+                      title="Unclaim"
                     >
                       <XCircle className="w-5 h-5" />
                     </button>
@@ -302,12 +323,12 @@ export default function TaskCard({
               )}
             {/* STATUS STATES */}
             {task.proof_s3_key && (
-              <div className="text-center text-xs text-stone-500 font-bold py-2 flex items-center justify-center gap-2">
+              <div className="text-center text-xs text-stone-500 font-bold py-2 flex items-center justify-center gap-2 bg-stone-50 rounded">
                 <Clock className="w-3 h-3" /> Under Review
               </div>
             )}
             {!task.proof_s3_key && task.status === "rejected" && (
-              <div className="text-center text-xs text-red-500 font-bold py-2 flex items-center justify-center gap-2">
+              <div className="text-center text-xs text-red-500 font-bold py-2 flex items-center justify-center gap-2 bg-red-50 rounded border border-red-100">
                 <XCircle className="w-3 h-3" /> Rejected - Please Resubmit
               </div>
             )}
@@ -318,7 +339,7 @@ export default function TaskCard({
         {viewMode === "review" && task.proof_s3_key && isAdmin && onReview && (
           <button
             onClick={() => onReview(task)}
-            className="w-full bg-stone-800 hover:bg-black text-white font-bold py-2 rounded text-sm shadow-sm"
+            className="w-full bg-stone-800 hover:bg-black text-white font-bold py-2 rounded text-sm shadow-sm transition-all hover:shadow"
           >
             Review Proof
           </button>

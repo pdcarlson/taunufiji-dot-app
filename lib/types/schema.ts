@@ -59,7 +59,7 @@ export interface AssignmentSchema {
   expires_at?: string; // ISO (For Bounties)
   unlock_at?: string; // ISO (For Recurring Tasks Cooldown)
   is_fine?: boolean;
-  reminded?: boolean; // Track if 12h warning sent
+  notification_level?: "none" | "unlocked" | "halfway" | "urgent"; // Track notification stage
   execution_limit?: number; // Hours to complete once claimed
 }
 

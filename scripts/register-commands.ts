@@ -22,9 +22,18 @@ async function registerCommands() {
     return;
   }
 
-  const url = `https://discord.com/api/v10/applications/${env.DISCORD_APP_ID}/commands`;
+  // Guild commands are instant; global commands take up to 1 hour
+  const guildId = process.env.DISCORD_GUILD_ID;
+  const url = guildId
+    ? `https://discord.com/api/v10/applications/${env.DISCORD_APP_ID}/guilds/${guildId}/commands`
+    : `https://discord.com/api/v10/applications/${env.DISCORD_APP_ID}/commands`;
 
-  console.log("🚀 Registering commands to:", url);
+  console.log(
+    guildId
+      ? "🏠 Registering GUILD commands (instant)"
+      : "🌐 Registering GLOBAL commands (up to 1h delay)",
+  );
+  console.log("🚀 URL:", url);
   console.log("📋 Command List:", COMMANDS.map((c) => c.name).join(", "));
 
   try {

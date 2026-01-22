@@ -1,7 +1,7 @@
 "use server";
 
 import { LibraryService } from "@/lib/services/library.service";
-import { PointsService } from "@/lib/services/points.service";
+
 import { StorageService } from "@/lib/services/s3.service";
 import { AuthService } from "@/lib/services/auth.service";
 import { logger } from "@/lib/logger";
@@ -121,16 +121,19 @@ export async function createLibraryResourceAction(
       uploaded_by: profile.discord_id, // FIX: Use Discord ID (Stable Attribute)
     });
 
-    // 3. Award Points
+    // 3. Dispatch Event (Event Architecture)
+    // Synchronously awaited so points are awarded before we return
     try {
-      await PointsService.awardPoints(profile.discord_id, {
-        amount: 10,
-        reason: "Uploaded Exam/Note",
-        category: "event",
+      const { DomainEventBus, DomainEvents } =
+        await import("@/lib/events/dispatcher");
+      await DomainEventBus.publish(DomainEvents.LIBRARY_UPLOADED, {
+        userId: profile.discord_id,
+        resourceId: result.$id,
+        fileName: data.metadata.standardizedFilename,
       });
     } catch (e) {
-      logger.error("Failed to award upload points", e);
-      // Do not fail the request if points fail, but log it.
+      logger.error("Failed to dispatch LIBRARY_UPLOADED event", e);
+      // Non-blocking error
     }
 
     return result;
