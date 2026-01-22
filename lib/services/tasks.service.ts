@@ -172,6 +172,7 @@ export const TasksService = {
     return await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, taskId, {
       status: "open",
       assigned_to: null,
+      due_at: null, // Clear the deadline so it doesn't show for others
     });
   },
 
@@ -649,7 +650,8 @@ export const TasksService = {
           status: "open",
           assigned_to: null,
           proof_s3_key: null,
-          claimed_at: null, // assuming we track this, if not ignore
+          claimed_at: null,
+          due_at: null, // Clear deadline
         });
       }
     }

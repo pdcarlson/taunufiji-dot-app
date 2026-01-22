@@ -27,10 +27,9 @@ export default function EditTaskModal({
     description: task.description,
     points_value: task.points_value,
     assigned_to: task.assigned_to || "",
-    due_at: task.due_at ? new Date(task.due_at).toISOString().slice(0, 16) : "",
-    unlock_at: task.unlock_at
-      ? new Date(task.unlock_at).toISOString().slice(0, 16)
-      : "",
+    // Extract YYYY-MM-DD from ISO string
+    due_at: task.due_at ? task.due_at.split("T")[0] : "",
+    unlock_at: task.unlock_at ? task.unlock_at.split("T")[0] : "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,9 +63,11 @@ export default function EditTaskModal({
       };
 
       if (formData.due_at)
-        payload.due_at = new Date(formData.due_at).toISOString();
+        payload.due_at = new Date(`${formData.due_at}T12:00:00`).toISOString();
       if (formData.unlock_at)
-        payload.unlock_at = new Date(formData.unlock_at).toISOString();
+        payload.unlock_at = new Date(
+          `${formData.unlock_at}T12:00:00`,
+        ).toISOString();
 
       const result = await updateTaskAction(task.$id, payload, jwt);
 
@@ -192,15 +193,16 @@ export default function EditTaskModal({
                 )}
               </label>
               <input
-                type="datetime-local"
+                type="date"
                 required={task.type !== "bounty"}
-                min={new Date().toISOString().slice(0, 16)}
+                min={new Date().toISOString().split("T")[0]}
                 className="w-full text-sm text-stone-600 border border-stone-200 rounded-lg p-2 outline-none"
                 value={formData.due_at}
                 onChange={(e) =>
                   setFormData({ ...formData, due_at: e.target.value })
                 }
               />
+              <p className="text-[10px] text-stone-400 mt-1">12:00 PM</p>
             </div>
 
             {/* Unlock Date */}
@@ -209,13 +211,14 @@ export default function EditTaskModal({
                 <Calendar className="w-3 h-3" /> Unlocks At
               </label>
               <input
-                type="datetime-local"
+                type="date"
                 className="w-full text-sm text-stone-600 border border-stone-200 rounded-lg p-2 outline-none"
                 value={formData.unlock_at}
                 onChange={(e) =>
                   setFormData({ ...formData, unlock_at: e.target.value })
                 }
               />
+              <p className="text-[10px] text-stone-400 mt-1">12:00 PM</p>
             </div>
           </div>
 

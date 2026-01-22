@@ -40,7 +40,6 @@ export default function CreateScheduleModal({
       description: "",
       assigned_to: "",
       freq_day: "FR",
-      freq_time: "17:00",
       lead_time: 24,
     },
   });
@@ -52,9 +51,8 @@ export default function CreateScheduleModal({
       const jwt = await account.createJWT();
 
       // Construct RRule
-      // e.g. FREQ=WEEKLY;BYDAY=FR;BYHOUR=17;BYMINUTE=0
-      const [hour, minute] = data.freq_time.split(":").map(Number);
-      const rrule = `FREQ=WEEKLY;BYDAY=${data.freq_day};BYHOUR=${hour};BYMINUTE=${minute}`;
+      // Always Noon (12:00)
+      const rrule = `FREQ=WEEKLY;BYDAY=${data.freq_day};BYHOUR=12;BYMINUTE=0`;
 
       const payload = {
         title: data.title,
@@ -147,20 +145,14 @@ export default function CreateScheduleModal({
               </div>
             </div>
 
+            {/* Defaults Info */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
                 Deadline Time
               </label>
-              <div className="relative group">
-                <Clock
-                  className="absolute left-3 top-3 text-zinc-500 group-focus-within:text-purple-400 transition-colors"
-                  size={18}
-                />
-                <input
-                  type="time"
-                  {...register("freq_time", { required: true })}
-                  className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all cursor-pointer"
-                />
+              <div className="w-full bg-zinc-900/30 border border-white/5 rounded-xl py-2.5 px-4 text-zinc-500 text-sm flex items-center gap-2">
+                <Clock size={16} />
+                <span>Default: 12:00 PM (Noon)</span>
               </div>
             </div>
           </div>

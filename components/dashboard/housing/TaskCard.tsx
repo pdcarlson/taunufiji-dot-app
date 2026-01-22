@@ -287,9 +287,16 @@ export default function TaskCard({
               <button
                 onClick={handleClaim}
                 disabled={loading}
-                className={`w-full font-bold py-2 rounded text-sm transition-colors bg-stone-100 text-stone-700 hover:bg-stone-200 hover:text-stone-900 border border-stone-200`}
+                className={`w-full font-bold py-2 rounded text-sm transition-colors bg-stone-100 text-stone-700 hover:bg-stone-200 hover:text-stone-900 border border-stone-200 flex items-center justify-center gap-2`}
               >
-                Claim Bounty
+                {loading ? (
+                  <>
+                    <Loader size="sm" className="text-stone-500" />
+                    <span>Claiming...</span>
+                  </>
+                ) : (
+                  "Claim Bounty"
+                )}
               </button>
             )}
             {isMyTask &&

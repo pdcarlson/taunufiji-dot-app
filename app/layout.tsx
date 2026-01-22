@@ -17,8 +17,8 @@ const langdon = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Tau Nu Fiji | OS",
-  description: "Internal Operating System for Tau Nu Chapter",
+  title: "Tau Nu Fiji | App",
+  description: "Tau Nu Fiji Chapter App",
 };
 
 export default function RootLayout({
@@ -33,8 +33,8 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <AuthProvider>
-            <Toaster position="bottom-center" />
-            {children}
+          <Toaster position="bottom-center" />
+          {children}
         </AuthProvider>
       </body>
     </html>

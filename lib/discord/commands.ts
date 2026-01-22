@@ -48,7 +48,7 @@ export const COMMANDS = [
       },
       {
         name: "due_date",
-        description: "Due date (e.g. '2026-01-25 17:00' or 'tomorrow 5pm')",
+        description: "Due date (YYYY-MM-DD)",
         type: 3, // STRING
         required: true,
       },
@@ -87,10 +87,10 @@ export const COMMANDS = [
         ],
       },
       {
-        name: "time",
-        description: "Deadline time (e.g. 17:00)",
+        name: "description",
+        description: "Description of the task",
         type: 3, // STRING
-        required: true,
+        required: false,
       },
       {
         name: "user",

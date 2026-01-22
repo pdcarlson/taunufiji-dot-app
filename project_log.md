@@ -186,3 +186,8 @@
   - Wrapped Notification Service in try/catch to prevent Discord API outages from blocking app/db operations.
 - **Bug Fixes**:
   - **Admin Visibility**: Fixed regression where pending approvals from other users were invisible to Admins. Added `getPendingReviews` fetch for Admin users.
+- **Refactor**:
+  - **Date-Only Migration**: Removed time inputs from Modals and Discord Commands. All deadlines now default to **12:00 PM (Noon)** local/server time to reduce ambiguity.
+  - **Discord UX**: Added `description` field to `current_schedule` command and clarified date formats in tooltips.
+  - **Bounty Logic**: Refactored `unclaimTask` and `rejectTask` to explicitly clear `due_at` dates. This ensures available bounties never show a deadline until claimed.
+  - **Feedback**: Added Loading Spinner to "Claim Bounty" button.

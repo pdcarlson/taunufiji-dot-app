@@ -13,14 +13,16 @@ export const duty: CommandHandler = async (interaction, options) => {
   const dueDateInput = options.due_date;
   const description = options.description || "Assigned via Discord";
 
-  // Parse due_date (basic: expects ISO or "YYYY-MM-DD HH:MM")
+  // Parse due_date (Expects YYYY-MM-DD)
   let dueAt: Date;
   try {
-    dueAt = new Date(dueDateInput);
+    // Append T12:00:00 to force Noon
+    const isoString = `${dueDateInput}T12:00:00`;
+    dueAt = new Date(isoString);
     if (isNaN(dueAt.getTime())) throw new Error("Invalid date format");
   } catch {
     return createEphemeralResponse(
-      `❌ Invalid due date format: "${dueDateInput}". Use YYYY-MM-DD HH:MM.`,
+      `❌ Invalid due date format: "${dueDateInput}". Use YYYY-MM-DD (e.g. 2026-01-30).`,
     );
   }
 
@@ -36,7 +38,7 @@ export const duty: CommandHandler = async (interaction, options) => {
     });
 
     return createEphemeralResponse(
-      `✅ Duty assigned: **${title}** to <@${userId}>.\nDue: ${dueAt.toLocaleString()}`,
+      `✅ Duty assigned: **${title}** to <@${userId}>.\nDue: ${dueAt.toLocaleDateString()} (Noon)`,
     );
   } catch (e) {
     console.error("Duty Error", e);
@@ -46,29 +48,23 @@ export const duty: CommandHandler = async (interaction, options) => {
 
 /**
  * /schedule - Create a recurring task (mirrors CreateScheduleModal)
- * Fields: title, day, time, user (optional), lead_time
- * Logic: Builds RRULE, calls createSchedule
+ * Fields: title, day, description, user (optional), lead_time
+ * Logic: Builds RRULE (Noon), calls createSchedule
  */
 export const schedule: CommandHandler = async (interaction, options) => {
   const title = options.title;
   const day = options.day; // "MO", "TU", etc.
-  const time = options.time; // "17:00"
+  const description = options.description || "Created via Discord";
   const userId = options.user || undefined;
   const leadTime = options.lead_time || 24;
 
-  // Build RRULE
-  const [hour, minute] = time.split(":").map(Number);
-  if (isNaN(hour) || isNaN(minute)) {
-    return createEphemeralResponse(
-      `❌ Invalid time format: "${time}". Use HH:MM (e.g. 17:00).`,
-    );
-  }
-  const rrule = `FREQ=WEEKLY;BYDAY=${day};BYHOUR=${hour};BYMINUTE=${minute}`;
+  // Build RRULE (Always Noon)
+  const rrule = `FREQ=WEEKLY;BYDAY=${day};BYHOUR=12;BYMINUTE=0`;
 
   try {
     await TasksService.createSchedule({
       title,
-      description: "Created via Discord",
+      description,
       recurrence_rule: rrule,
       lead_time_hours: leadTime,
       points_value: 0, // Duties = 0 pts
@@ -86,7 +82,7 @@ export const schedule: CommandHandler = async (interaction, options) => {
     };
     const dayName = dayMap[day] || day;
     return createEphemeralResponse(
-      `✅ Schedule created: **${title}**\nEvery ${dayName} at ${time}. Lead time: ${leadTime}h.`,
+      `✅ Schedule created: **${title}**\nEvery ${dayName} at 12:00 PM. Lead time: ${leadTime}h.`,
     );
   } catch (e) {
     console.error("Schedule Error", e);

@@ -34,7 +34,8 @@ export default function CreateOneOffModal({
         description: data.description,
         points_value: 0, // Default 0 for Duties
         assigned_to: data.assigned_to || undefined,
-        due_at: new Date(data.due_at).toISOString(),
+        // Force Noon Logic
+        due_at: new Date(`${data.due_at}T12:00:00`).toISOString(),
         type: "one_off" as const,
       };
 
@@ -92,15 +93,20 @@ export default function CreateOneOffModal({
 
           <div className="grid grid-cols-2 gap-4">
             {/* DUE DATE */}
+            {/* DUE DATE */}
             <div>
               <label className="block text-xs font-bold text-stone-500 uppercase mb-1">
                 Due Date
               </label>
               <input
-                type="datetime-local"
+                type="date"
+                min={new Date().toISOString().split("T")[0]}
                 {...register("due_at", { required: true })}
                 className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-fiji-purple/20"
               />
+              <p className="text-[10px] text-stone-400 mt-1">
+                Defaults to 12:00 PM (Noon)
+              </p>
             </div>
           </div>
 
