@@ -31,7 +31,7 @@ export const duty: CommandHandler = async (interaction, options) => {
     const currentYear = new Date().getFullYear();
 
     // Match the working EditTaskModal pattern exactly
-    const dateString = `${currentYear}-${month}-${day}T12:00:00`;
+    const dateString = `${currentYear}-${month}-${day}T23:59:00`;
     dueAt = new Date(dateString);
 
     // validate date is real
@@ -44,7 +44,7 @@ export const duty: CommandHandler = async (interaction, options) => {
     // if date is in the past, assume next year
     const now = new Date();
     if (dueAt < now) {
-      const nextYearString = `${currentYear + 1}-${month}-${day}T12:00:00`;
+      const nextYearString = `${currentYear + 1}-${month}-${day}T23:59:00`;
       dueAt = new Date(nextYearString);
     }
   } catch {

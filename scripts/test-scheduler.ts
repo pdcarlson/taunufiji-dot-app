@@ -27,7 +27,7 @@ function testScheduler() {
   console.log("\n--- Test 2: RRule (Next Friday) ---");
   // FREQ=WEEKLY;BYDAY=FR;BYHOUR=17;BYMINUTE=0
   // We mock a date ensuring next Friday is calculable
-  const mockNow = new Date("2025-01-01T12:00:00Z"); // Wed Jan 1st 2025. Next Friday is Jan 3rd.
+  const mockNow = new Date("2025-01-01T23:59:00Z"); // Wed Jan 1st 2025. Next Friday is Jan 3rd.
 
   const rrule = "FREQ=WEEKLY;BYDAY=FR;BYHOUR=17;BYMINUTE=0";
   const resultRRule = calculateNextInstance(rrule, mockNow, 24);
@@ -81,7 +81,7 @@ function testScheduler() {
   console.log("\n--- Test 5: Monthly Recurrence (1st of Month) ---");
   const rruleMonthly = "FREQ=MONTHLY;BYMONTHDAY=1";
   // Mock: Jan 2nd
-  const mockJan2 = new Date("2025-01-02T12:00:00Z");
+  const mockJan2 = new Date("2025-01-02T23:59:00Z");
   const resultMonthly = calculateNextInstance(rruleMonthly, mockJan2, 24);
 
   if (!resultMonthly) return assert(false, "Monthly result null");

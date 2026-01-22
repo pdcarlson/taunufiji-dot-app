@@ -35,7 +35,7 @@ export default function CreateOneOffModal({
         points_value: 0, // Default 0 for Duties
         assigned_to: data.assigned_to || undefined,
         // Force Noon Logic
-        due_at: new Date(`${data.due_at}T12:00:00`).toISOString(),
+        due_at: new Date(`${data.due_at}T23:59:00`).toISOString(),
         type: "one_off" as const,
       };
 

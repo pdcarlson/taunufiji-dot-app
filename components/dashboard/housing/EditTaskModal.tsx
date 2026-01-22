@@ -89,7 +89,7 @@ export default function EditTaskModal({
         // Duty Specific
         payload.assigned_to = formData.assigned_to || null;
         if (formData.due_at) {
-          const dueIso = new Date(`${formData.due_at}T12:00:00`).toISOString();
+          const dueIso = new Date(`${formData.due_at}T23:59:00`).toISOString();
           payload.due_at = dueIso;
 
           // Recalculate Unlock Logic if Recurring
