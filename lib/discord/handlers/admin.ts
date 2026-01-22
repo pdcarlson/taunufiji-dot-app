@@ -30,9 +30,13 @@ export const duty: CommandHandler = async (interaction, options) => {
     const day = match[2];
     const currentYear = new Date().getFullYear();
 
-    // Match the working EditTaskModal pattern exactly
-    const dateString = `${currentYear}-${month}-${day}T23:59:00`;
-    dueAt = new Date(dateString);
+    // Create ISO string representing 11:59 PM EST
+    // EST is UTC-5, so 11:59 PM EST = 04:59 AM UTC (next day)
+    // This matches what the frontend browser creates when in EST timezone
+    const date = new Date(`${currentYear}-${month}-${day}`);
+    date.setDate(date.getDate() + 1); // Next day
+    date.setUTCHours(4, 59, 0, 0); // 04:59 UTC = 11:59 PM EST
+    dueAt = date;
 
     // validate date is real
     if (isNaN(dueAt.getTime())) {
@@ -44,8 +48,10 @@ export const duty: CommandHandler = async (interaction, options) => {
     // if date is in the past, assume next year
     const now = new Date();
     if (dueAt < now) {
-      const nextYearString = `${currentYear + 1}-${month}-${day}T23:59:00`;
-      dueAt = new Date(nextYearString);
+      const nextYearDate = new Date(`${currentYear + 1}-${month}-${day}`);
+      nextYearDate.setDate(nextYearDate.getDate() + 1);
+      nextYearDate.setUTCHours(4, 59, 0, 0);
+      dueAt = nextYearDate;
     }
   } catch {
     return createEphemeralResponse(
@@ -65,7 +71,7 @@ export const duty: CommandHandler = async (interaction, options) => {
     });
 
     return createEphemeralResponse(
-      `✅ Duty assigned: **${title}** to <@${userId}>.\nDue: ${dueAt.toLocaleDateString()} (Noon)`,
+      `✅ Duty assigned: **${title}** to <@${userId}>.\nDue: ${dueAt.toLocaleDateString()} at 11:59 PM EST`,
     );
   } catch (e) {
     console.error("Duty Error", e);
