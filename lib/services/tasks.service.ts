@@ -483,6 +483,25 @@ export const TasksService = {
     ]);
   },
 
+  async getSchedule(scheduleId: string) {
+    return await db.getDocument(DB_ID, COLLECTIONS.SCHEDULES, scheduleId);
+  },
+
+  async updateSchedule(
+    scheduleId: string,
+    data: Partial<CreateScheduleDTO> & {
+      active?: boolean;
+      lead_time_hours?: number;
+    },
+  ) {
+    return await db.updateDocument(
+      DB_ID,
+      COLLECTIONS.SCHEDULES,
+      scheduleId,
+      data,
+    );
+  },
+
   /**
    * Daily/Hourly Cron Job
    * 1. Unlocks tasks that have passed cooldown.

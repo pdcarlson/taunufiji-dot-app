@@ -1,14 +1,14 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import {
   updateTaskAction,
   deleteTaskAction,
+  getScheduleAction,
+  updateScheduleLeadTimeAction,
 } from "@/lib/actions/housing.actions";
 import { account } from "@/lib/client/appwrite";
 import { Member, HousingTask } from "@/lib/types/models";
 import { Loader } from "@/components/ui/Loader";
-import { X, Calendar, Edit2, Users, Clock, Trash2 } from "lucide-react";
+import { X, Calendar, Edit2, Users, Clock, Trash2, Repeat } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface EditTaskModalProps {
@@ -25,6 +25,7 @@ export default function EditTaskModal({
   onRefresh,
 }: EditTaskModalProps) {
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: task.title,
     description: task.description,
@@ -34,11 +35,30 @@ export default function EditTaskModal({
     due_at: task.due_at ? task.due_at.split("T")[0] : "",
     unlock_at: task.unlock_at ? task.unlock_at.split("T")[0] : "",
     execution_limit: task.execution_limit || undefined,
+    lead_time_hours: 24, // Default, updated via fetch
   });
 
   const isBounty = task.type === "bounty";
+  const isRecurring = !!task.schedule_id;
   const isAssigned = !!task.assigned_to;
-  const canDelete = isBounty ? !isAssigned : true; // Duties can always be deleted (or maybe we assume so)
+  const canDelete = isBounty ? !isAssigned : true;
+
+  // Fetch Schedule Details if Recurring
+  useEffect(() => {
+    if (isRecurring && task.schedule_id) {
+      setInitialLoading(true);
+      getScheduleAction(task.schedule_id)
+        .then((schedule) => {
+          if (schedule) {
+            setFormData((prev) => ({
+              ...prev,
+              lead_time_hours: schedule.lead_time_hours || 24,
+            }));
+          }
+        })
+        .finally(() => setInitialLoading(false));
+    }
+  }, [isRecurring, task.schedule_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,47 +74,83 @@ export default function EditTaskModal({
         return;
       }
 
-      if (!isBounty && formData.due_at && formData.unlock_at) {
-        if (new Date(formData.unlock_at) > new Date(formData.due_at)) {
-          toast.error("Unlock time cannot be after Due Date");
-          setLoading(false);
-          return;
-        }
-      }
-
       // Clean up data
       const payload: any = {
         title: formData.title,
         description: formData.description,
-        points_value: Number(formData.points_value),
+        points_value: isBounty ? Number(formData.points_value) : 0, // Force 0 for Duty
       };
 
       if (isBounty) {
-        // Bounty Specific
         if (formData.execution_limit) {
           payload.execution_limit = Number(formData.execution_limit);
         }
       } else {
         // Duty Specific
         payload.assigned_to = formData.assigned_to || null;
-        if (formData.due_at)
-          payload.due_at = new Date(
-            `${formData.due_at}T12:00:00`,
-          ).toISOString();
-        if (formData.unlock_at)
-          payload.unlock_at = new Date(
-            `${formData.unlock_at}T12:00:00`,
-          ).toISOString();
+        if (formData.due_at) {
+          const dueIso = new Date(`${formData.due_at}T12:00:00`).toISOString();
+          payload.due_at = dueIso;
+
+          // Recalculate Unlock Logic if Recurring
+          if (isRecurring) {
+            const leadTime = Number(formData.lead_time_hours) || 24;
+            const unlockDate = new Date(dueIso);
+            unlockDate.setTime(
+              unlockDate.getTime() - leadTime * 60 * 60 * 1000,
+            );
+
+            payload.unlock_at = unlockDate.toISOString();
+
+            // Immediate Status Update
+            const now = new Date();
+            // If already legally open, ensure it's open.
+            // But if it's "Approved" or "Pending", we shouldn't revert to "Open".
+            // Only force status if it was "Locked" or "Open".
+            // Actually, if we are editing, we are likely Admins fixing things.
+            // Let's check current status?
+            // "safe change": Only unlock if currently locked?
+            // User complaint: "it still says opens in x days". This implies it is LOOKING locked.
+            // So we definitely want to UNLOCK it if time is right.
+            if (now >= unlockDate) {
+              // Only override if it was locked.
+              if (task.status === "locked") {
+                payload.status = "open";
+                payload.notification_level = "unlocked";
+              }
+            } else {
+              // If we moved valid time to future, we should LOCK it.
+              if (task.status === "open") {
+                payload.status = "locked";
+                payload.notification_level = "none";
+              }
+            }
+          }
+        }
       }
 
-      const result = await updateTaskAction(task.$id, payload, jwt);
+      // Parallel Actions
+      const promises = [updateTaskAction(task.$id, payload, jwt)];
 
-      if (result.success) {
+      // If Recurring & Lead Time Changed, update Schedule
+      if (isRecurring && task.schedule_id) {
+        promises.push(
+          updateScheduleLeadTimeAction(
+            task.schedule_id,
+            Number(formData.lead_time_hours),
+            jwt,
+          ),
+        );
+      }
+
+      const [taskRes] = await Promise.all(promises);
+
+      if (taskRes.success) {
         toast.success("Task updated");
         onRefresh();
         onClose();
       } else {
-        toast.error(result.error || "Update failed");
+        toast.error(taskRes.error || "Update failed");
       }
     } catch (e) {
       toast.error("Failed to update task");
@@ -133,7 +189,11 @@ export default function EditTaskModal({
           <div>
             <h2 className="text-xl font-bebas text-stone-800 flex items-center gap-2">
               <Edit2 className="w-5 h-5 text-stone-400" /> Edit{" "}
-              {isBounty ? "Bounty" : "Task"}
+              {isBounty
+                ? "Bounty"
+                : isRecurring
+                  ? "Recurring Duty"
+                  : "One-Off Duty"}
             </h2>
             <p className="text-xs text-stone-500 font-mono">{task.$id}</p>
           </div>
@@ -147,6 +207,12 @@ export default function EditTaskModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {initialLoading && (
+            <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center">
+              <Loader size="lg" />
+            </div>
+          )}
+
           {/* Title */}
           <div>
             <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
@@ -182,27 +248,29 @@ export default function EditTaskModal({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {/* Points */}
-            <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
-                Points Value
-              </label>
-              <input
-                type="number"
-                min="0"
-                required
-                className="w-full text-base font-mono text-stone-800 border border-stone-200 rounded-lg p-2 focus:border-fiji-purple outline-none"
-                value={formData.points_value}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    points_value: Number(e.target.value),
-                  })
-                }
-              />
-            </div>
+            {/* Points (BOUNTY ONLY) */}
+            {isBounty && (
+              <div>
+                <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
+                  Points Value
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  className="w-full text-base font-mono text-stone-800 border border-stone-200 rounded-lg p-2 focus:border-fiji-purple outline-none"
+                  value={formData.points_value}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      points_value: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            )}
 
-            {/* Bounty: Execution Limit | Duty: Assignee */}
+            {/* Bounty: Execution Limit | Recurring: Lead Time | Duty: Assignee */}
             {isBounty ? (
               <div>
                 <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
@@ -222,8 +290,36 @@ export default function EditTaskModal({
                   placeholder="3"
                 />
               </div>
-            ) : (
+            ) : isRecurring ? (
+              // RECURRING DUTY: Lead Time
               <div>
+                <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> Lead Time (Hours)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  className="w-full text-sm text-stone-700 border border-stone-200 rounded-lg p-2 focus:border-fiji-purple outline-none"
+                  value={formData.lead_time_hours}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      lead_time_hours: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            ) : (
+              // ONE OFF DUTY: Spacer or nothing? maybe Assignee takes full width?
+              // Let's keep grid and put Assignee in next block or here options?
+              // Actually Assignee is separate below.
+              <div className="hidden"></div>
+            )}
+
+            {/* Assignee if NOT Bounty (Already shown? No, loop logic below) */}
+            {!isBounty && (
+              <div className={isRecurring ? "" : "col-span-2"}>
                 <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
                   <Users className="w-3 h-3" /> Assignee
                 </label>
@@ -249,7 +345,7 @@ export default function EditTaskModal({
           {!isBounty && (
             <div className="grid grid-cols-2 gap-4">
               {/* Due Date */}
-              <div>
+              <div className="col-span-2">
                 <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
                   <Calendar className="w-3 h-3" /> Due Date
                   <span className="text-red-500">*</span>
@@ -267,21 +363,7 @@ export default function EditTaskModal({
                 <p className="text-[10px] text-stone-400 mt-1">12:00 PM</p>
               </div>
 
-              {/* Unlock Date */}
-              <div>
-                <label className="block text-xs font-bold uppercase text-stone-500 mb-1 flex items-center gap-1">
-                  <Calendar className="w-3 h-3" /> Unlocks At
-                </label>
-                <input
-                  type="date"
-                  className="w-full text-sm text-stone-600 border border-stone-200 rounded-lg p-2 outline-none"
-                  value={formData.unlock_at}
-                  onChange={(e) =>
-                    setFormData({ ...formData, unlock_at: e.target.value })
-                  }
-                />
-                <p className="text-[10px] text-stone-400 mt-1">12:00 PM</p>
-              </div>
+              {/* Unlock Date REMOVED per requirements */}
             </div>
           )}
 
@@ -289,21 +371,16 @@ export default function EditTaskModal({
           <div className="flex justify-between gap-3 pt-4 border-t border-stone-100 mt-2">
             <div>
               {/* DELETE BUTTON */}
-              {isBounty && (
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={!canDelete || loading}
-                  className="px-4 py-2 text-sm font-bold text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  title={
-                    !canDelete
-                      ? "Cannot delete claimed bounty"
-                      : "Delete Bounty"
-                  }
-                >
-                  <Trash2 size={16} /> Delete
-                </button>
-              )}
+              {/* Allow delete for bounties AND duties now? */}
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={!canDelete || loading}
+                className="px-4 py-2 text-sm font-bold text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                title="Delete Task"
+              >
+                <Trash2 size={16} /> Delete
+              </button>
             </div>
 
             <div className="flex gap-2">

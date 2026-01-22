@@ -195,3 +195,7 @@
   - **Master Roster**: Locked completed tasks (`status='approved'`) from being edited to preserve historical data.
   - **Strict Expiry**: Implemented Cron Logic to fine/expire overdue duties and unclaim overdue bounties. submission is now strictly blocked after due date.
   - **Lazy Consistency**: Implemented "Just-in-Time" processing in `getMyTasks` to immediately unlock ready tasks and expire overdue ones. **Added Filter** to hide expired tasks from user view.
+  - **Modal Refactor**:
+    - **Edit Modal**: Intelligent Duty constraints (Hidden Points/Unlock). Added **Lead Time** control for Recurring Tasks that updates the parent Schedule. Fixed bug where changing Due Date didn't update "Locked" status.
+    - **Create Modals**: Removed "Points" input from Schedule and One-Off creators (Default 0).
+    - **Backend**: Added `getSchedule` and `updateSchedule` capabilities to `TasksService`.

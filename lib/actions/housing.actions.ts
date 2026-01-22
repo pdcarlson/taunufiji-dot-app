@@ -467,25 +467,61 @@ export async function deleteTaskAction(taskId: string, jwt?: string) {
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
-    // TaskService.deleteTask isn't explicitly exposed but we can use DB or add it.
-    // Let's use DB directly here for simplicity or add a wrapper in Service.
-    // Better to use Service if possible, but Service.deleteTask doesn't exist yet?
-    // Looking at file, `rejectTask` does delete.
-    // Let's add a clean delete wrapper if needed, or just use DB here since we are Admin.
-    // Actually, `TasksService` is better. I will add `deleteTask` to Service first?
-    // Wait, I can't do parallel file edits if I want to be safe.
-    // I'll check Service first. If not there, I'll implement it here using DB directly for now (Admin privs).
-    // Actually, `TasksService` imports `db`.
-    // I'll just use DB here to save a round trip? No, keep it in Service.
-    // I will assume Service has it or I will add it.
-    // Let's look at Service again? No I saw it earlier, it has `rejectTask` which deletes.
-    // I'll add `deleteTask` to Service in the next step.
-    // For now I'll stub this and fix Service.
     await TasksService.deleteTask(taskId);
     revalidatePath("/dashboard/housing");
     return { success: true };
   } catch (e) {
     console.error("deleteTaskAction failed", e);
+    return { success: false, error: (e as Error).message };
+  }
+}
+
+export async function getScheduleAction(scheduleId: string, jwt?: string) {
+  try {
+    const account = await getAuthAccount(jwt);
+    const user = await account.get();
+    // Role check optional if we allow user to see schedule details?
+    // Usually only Admin edits.
+    const isAdmin = await AuthService.verifyRole(
+      user.$id,
+      HOUSING_ADMIN_ROLES as string[],
+    );
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const schedule = await TasksService.getSchedule(scheduleId);
+    return JSON.parse(JSON.stringify(schedule));
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function updateScheduleLeadTimeAction(
+  scheduleId: string,
+  leadTime: number,
+  jwt?: string,
+) {
+  try {
+    const account = await getAuthAccount(jwt);
+    const user = await account.get();
+    const isAdmin = await AuthService.verifyRole(
+      user.$id,
+      HOUSING_ADMIN_ROLES as string[],
+    );
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    await TasksService.updateSchedule(scheduleId, {
+      lead_time_hours: leadTime,
+    });
+
+    // Optional: Recalculate unlocking for tasks?
+    // Usually the cron handles future instances.
+    // If we want to strictly update the *linked* task's unlock time, we'd need to fetch it.
+    // Logic: If there is an OPEN or LOCKED task associated with this schedule, update its unlock_at?
+    // Let's keep it simple: Changing schedule affects FUTURE instances.
+
+    revalidatePath("/dashboard/housing");
+    return { success: true };
+  } catch (e) {
     return { success: false, error: (e as Error).message };
   }
 }
