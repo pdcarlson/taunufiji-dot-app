@@ -10,6 +10,7 @@ import {
   getSchedulesAction,
   checkHousingAdminAction,
   getAllMembersAction,
+  getPendingReviewsAction,
 } from "@/lib/actions/housing.actions";
 import HousingStats from "@/components/dashboard/housing/HousingStats";
 import TaskCard, {
@@ -52,12 +53,14 @@ export default function HousingPage() {
       setIsAdmin(adminStatus);
 
       // 2. Fetch Tasks & Members
-      const [open, mine, allMembers] = await Promise.all([
+      // 2. Fetch Tasks & Members
+      const [open, mine, allMembers, pending] = await Promise.all([
         getOpenTasksAction(jwt),
         getMyTasksAction(user.$id, jwt),
         getAllMembersAction(jwt),
+        adminStatus ? getPendingReviewsAction(jwt) : Promise.resolve([]),
       ]);
-      const allTasks = [...open, ...mine].filter(
+      const allTasks = [...open, ...mine, ...pending].filter(
         (v, i, a) => a.findIndex((v2) => v2.$id === v.$id) === i,
       );
       setTasks(allTasks);

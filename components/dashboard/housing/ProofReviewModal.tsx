@@ -9,6 +9,7 @@ import { account } from "@/lib/client/appwrite";
 import { X, Check, AlertTriangle, ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { Loader } from "@/components/ui/Loader";
 
 import { HousingTask } from "@/lib/types/models";
 
@@ -87,8 +88,9 @@ export default function ProofReviewModal({
   };
 
   const handleReject = async () => {
-    const reason = prompt("Enter rejection reason (optional):");
+    let reason = prompt("Enter rejection reason (optional):");
     if (reason === null) return; // Cancelled
+    if (reason.trim() === "") reason = "No reason provided.";
 
     setLoading(true);
     try {
@@ -126,6 +128,11 @@ export default function ProofReviewModal({
                 <ExternalLink className="w-5 h-5" />
               </a>
             </>
+          ) : details.loading ? (
+            <div className="text-stone-500 flex flex-col items-center animate-pulse">
+              <Loader size="lg" className="text-stone-600 mb-2" />
+              <p>Loading Proof...</p>
+            </div>
           ) : (
             <div className="text-stone-500 flex flex-col items-center">
               <AlertTriangle className="w-12 h-12 mb-2" />

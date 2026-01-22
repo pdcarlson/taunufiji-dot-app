@@ -170,3 +170,19 @@
   - **Unclaim Bug**: Fixed silent failure caused by ID mismatch (`profile.$id` -> `profile.discord_id`).
   - **TaskCard**: Removed misplaced Edit button from cards.
   - **Master Task Roster Overhaul**: Now shows all task types (Bounty, Recurring, One-off), filters old tasks (>7 days), displays Type/Status/Due Date columns, and has edit button on hover for admins.
+
+## 2026-01-22: Logic Hardening & UX Polish
+
+- **Critical Logic Verified**:
+  - Enforced `due_at` for assigned duties. prevent past dates and time-travel (`unlock_at` > `due_at`).
+  - Added 10MB file size limit validation on client-side.
+  - Added min/max validation for Points and Duration in Bounty creation.
+- **UX Improvements**:
+  - **TaskCard**: Always show Due Date for claimed tasks. Removed "Risk: -50 PTS" badge (reverted).
+  - **Status Logic**: Fixed bug where Approved tasks showed as "Under Review". Added explicit "Completed" status.
+  - **Persistence**: Approved tasks now remain visible for 24h before archiving.
+  - **Feedback**: Added Loading Spinner for Proof images.
+- **Resilience**:
+  - Wrapped Notification Service in try/catch to prevent Discord API outages from blocking app/db operations.
+- **Bug Fixes**:
+  - **Admin Visibility**: Fixed regression where pending approvals from other users were invisible to Admins. Added `getPendingReviews` fetch for Admin users.

@@ -38,6 +38,23 @@ export async function getOpenTasksAction(jwt?: string) {
   }
 }
 
+export async function getPendingReviewsAction(jwt?: string) {
+  try {
+    const account = await getAuthAccount(jwt);
+    const user = await account.get();
+
+    // Check Admin (Optional: Could assume Caller checks, but safety first)
+    if (!(await AuthService.verifyBrother(user.$id)))
+      throw new Error("Unauthorized");
+
+    const res = await TasksService.getPendingReviews();
+    return JSON.parse(JSON.stringify(res.documents));
+  } catch (error) {
+    console.error("Failed to fetch pending reviews", error);
+    return [];
+  }
+}
+
 export async function claimTaskAction(
   taskId: string,
   authId: string,
