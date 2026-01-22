@@ -82,7 +82,7 @@ export default function DashboardHome() {
               Persistence and determination alone are omnipotent.&quot;
             </p>
             <p className="text-sm text-stone-500 font-bold uppercase tracking-widest">
-              — Calvin Coolidge (Gamma Omicron, 1895)
+              — Calvin Coolidge (Amherst College, 1895)
             </p>
           </div>
         </div>
