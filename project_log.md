@@ -245,3 +245,12 @@
 - **Fixes**:
   - Fixed production build error: imported `HousingTask` from `models.ts` instead of defining local interface missing Appwrite Document properties
 - **Cleanup**: Removed 208 lines of old `runCron()` code from `tasks.service.ts`
+
+## 2026-01-23: Notification System Improvements
+
+- **Overhaul**: Simplified DM notification format (removed emojis, standardized structure)
+- **New Feature**: Added User DM on task expiry
+  - When a task expires, the user now receives a direct message: `Task expired: {title}. A fine of -50 points has been applied.`
+  - Previously only admins were notified in the housing channel
+- **Reliability Upgrade**: Cron job now requires **BOTH** Admin Notification and User DM to succeed before marking a task as "expired_notified". This ensures retry logic covers both channels.
+- **Discord Integration**: Added `expired` to `NotificationType` enum.
