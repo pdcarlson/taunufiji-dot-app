@@ -12,7 +12,8 @@ export type NotificationType =
   | "approved"
   | "rejected"
   | "unassigned"
-  | "submitted"; // Channel only
+  | "submitted" // Channel only
+  | "expired"; // User DM when task expires
 
 export const NotificationService = {
   /**
@@ -75,28 +76,31 @@ export const NotificationService = {
 
     switch (type) {
       case "unlocked":
-        message = `🔓 **New Task**: ${title} is now available.`;
+        message = `Task available: ${title}`;
         break;
       case "urgent":
-        message = `🚨 **URGENT**: ${title} is due in less than 12 hours!`;
+        message = `Urgent: ${title} due in <12 hours`;
         break;
       case "assigned":
-        message = `👋 **Assigned**: You have been assigned **${title}**.`;
+        message = `Assigned to you: ${title}`;
         break;
       case "updated":
-        message = `📝 **Update**: Details for **${title}** have changed.`;
+        message = `Task updated: ${title}`;
         break;
       case "unassigned":
-        message = `🚫 **Unassigned**: You are removed from **${title}**.`;
+        message = `Removed from task: ${title}`;
         break;
       case "approved":
-        message = `✅ **Approved**: **${title}** complete! (+${points || 0} pts).`;
+        message = `Task approved: ${title} (+${points || 0} pts)`;
         break;
       case "rejected":
-        message = `❌ **Rejected**: **${title}** was rejected.${reason ? ` Reason: ${reason}` : ""}`;
+        message = `Task rejected: ${title}${reason ? `. Reason: ${reason}` : ""}`;
+        break;
+      case "expired":
+        message = `Task expired: ${title}. A fine of -50 points has been applied.`;
         break;
       default:
-        message = `**Notification**: ${title}`;
+        message = `Notification: ${title}`;
     }
 
     return { message, link };

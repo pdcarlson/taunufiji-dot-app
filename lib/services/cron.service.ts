@@ -277,10 +277,21 @@ export const CronService = {
           // Filter: ignore bounties
           if (task.type === "bounty") continue;
 
-          // Send admin notification FIRST (so we can retry on failure)
+          // Send notifications FIRST (both admin and user) (so we can retry on failure)
           if (task.assigned_to) {
+            // Admin notification
             await NotificationService.notifyAdmins(
               `🚨 **MISSED TASK**: <@${task.assigned_to}> failed to complete **${task.title}**. Task expired.`,
+            );
+
+            // User DM notification
+            await NotificationService.sendNotification(
+              task.assigned_to,
+              "expired",
+              {
+                title: task.title,
+                taskId: task.$id,
+              },
             );
           }
 
