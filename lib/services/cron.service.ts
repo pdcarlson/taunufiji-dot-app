@@ -277,17 +277,18 @@ export const CronService = {
           // Filter: ignore bounties
           if (task.type === "bounty") continue;
 
-          // Update notification level
-          await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, task.$id, {
-            notification_level: "expired",
-          });
-
-          // Send admin notification
+          // Send admin notification FIRST (so we can retry on failure)
           if (task.assigned_to) {
             await NotificationService.notifyAdmins(
               `🚨 **MISSED TASK**: <@${task.assigned_to}> failed to complete **${task.title}**. Task expired.`,
             );
           }
+
+          // Only update notification_level AFTER notification succeeds
+          await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, task.$id, {
+            notification_level: "expired",
+          });
+
           expired_notified++;
         } catch (error: unknown) {
           const errMsg = `Failed to notify expired task ${task.$id}: ${getErrorMessage(error)}`;
