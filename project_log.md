@@ -211,3 +211,12 @@
 - **Fixes**:
   - Fixed syntax errors in `tasks.service.ts` (unclosed try/catch blocks).
   - Improved `runCron` return statistics to include error details.
+
+- **Critical Fix (Fines)**:
+  - **Issue**: Appwrite Database Ledger Schema `amount` strictly enforced positive integers (0-999999), causing fines (-50) to crash the Cron Job.
+  - **Resolution**:
+    - Added `is_debit` boolean attribute to `ledger` collection via migration (`scripts/add-ledger-debit-attr.ts`).
+    - Updated `PointsService` to store fines as absolute values with `is_debit: true`.
+    - Updated `PointsHistory` UI to interpret `is_debit` and display negative amounts in Red.
+- **Workflow Optimization**:
+  - Updated Cron GitHub Action to run every 5 minutes (`*/5 * * * *`) for rapid testing cycles.

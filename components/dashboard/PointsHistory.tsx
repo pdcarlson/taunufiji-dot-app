@@ -57,47 +57,54 @@ export default function PointsHistory() {
         )}
 
         <div className="space-y-3">
-          {history.map((tx) => (
-            <div
-              key={tx.$id}
-              className="group hover:bg-stone-50 p-4 rounded-xl border border-stone-100 transition-colors flex items-center justify-between"
-            >
-              <div className="flex items-center gap-4">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                    tx.amount >= 0
-                      ? "bg-emerald-100 text-emerald-600"
-                      : "bg-red-100 text-red-600"
-                  }`}
-                >
-                  {tx.amount >= 0 ? (
-                    <ArrowUpRight className="w-5 h-5" />
-                  ) : (
-                    <ArrowDownLeft className="w-5 h-5" />
-                  )}
-                </div>
-                <div>
-                  <div className="font-bold text-stone-800">{tx.reason}</div>
-                  <div className="text-xs text-stone-400 uppercase tracking-wider font-medium">
-                    {new Date(tx.timestamp).toLocaleDateString()} •{" "}
-                    <span
-                      className={tx.category === "fine" ? "text-red-400" : ""}
-                    >
-                      {tx.category}
-                    </span>
+          {history.map((tx) => {
+            // FIX: Restore sign from is_debit flag (DB stores abs value)
+            const effectiveAmount = tx.is_debit
+              ? -Math.abs(tx.amount)
+              : tx.amount;
+
+            return (
+              <div
+                key={tx.$id}
+                className="group hover:bg-stone-50 p-4 rounded-xl border border-stone-100 transition-colors flex items-center justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                      effectiveAmount >= 0
+                        ? "bg-emerald-100 text-emerald-600"
+                        : "bg-red-100 text-red-600"
+                    }`}
+                  >
+                    {effectiveAmount >= 0 ? (
+                      <ArrowUpRight className="w-5 h-5" />
+                    ) : (
+                      <ArrowDownLeft className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-bold text-stone-800">{tx.reason}</div>
+                    <div className="text-xs text-stone-400 uppercase tracking-wider font-medium">
+                      {new Date(tx.timestamp).toLocaleDateString()} •{" "}
+                      <span
+                        className={tx.category === "fine" ? "text-red-400" : ""}
+                      >
+                        {tx.category}
+                      </span>
+                    </div>
                   </div>
                 </div>
+                <div
+                  className={`font-bebas text-xl ${
+                    effectiveAmount >= 0 ? "text-emerald-600" : "text-red-500"
+                  }`}
+                >
+                  {effectiveAmount > 0 ? "+" : ""}
+                  {effectiveAmount}
+                </div>
               </div>
-              <div
-                className={`font-bebas text-xl ${
-                  tx.amount >= 0 ? "text-emerald-600" : "text-red-500"
-                }`}
-              >
-                {tx.amount > 0 ? "+" : ""}
-                {tx.amount}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

@@ -43,12 +43,15 @@ export const PointsService = {
       });
 
       // 4. Create Ledger Record (Store Discord ID reference)
+      // FIX: Appwrite Schema enforces Amount > 0. Store Absolute + Flag
+      const isDebit = tx.amount < 0;
       await db.createDocument(DB_ID, COLLECTIONS.LEDGER, ID.unique(), {
         user_id: discordUserId,
-        amount: tx.amount,
+        amount: Math.abs(tx.amount), // Always positive
         reason: tx.reason,
         category: tx.category,
         timestamp: new Date().toISOString(),
+        is_debit: isDebit,
       });
 
       logger.log(

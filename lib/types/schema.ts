@@ -69,6 +69,7 @@ export interface LedgerSchema {
   category: "task" | "fine" | "event" | "manual";
   timestamp: string;
   user_id: string; // User ID
+  is_debit?: boolean; // True if amount is a deduction (because amount must be positive in DB)
 }
 
 export interface ProfessorSchema {
