@@ -551,8 +551,9 @@ export const TasksService = {
     const urgentPromises = openTasks.documents.map(async (doc) => {
       if (!doc.assigned_to || !doc.due_at) return;
 
+      const dueTime = new Date(doc.due_at).getTime();
+
       // If task is due within next 12 hours (filtered by query), send urgent notification
-      // Double check strictly:
       if (dueTime <= twelveHoursFromNow.getTime()) {
         await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
           notification_level: "urgent",
