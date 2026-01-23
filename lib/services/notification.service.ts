@@ -137,7 +137,9 @@ export const NotificationService = {
   },
 
   async sendMessage(channelId: string, content: string) {
-    if (!env.DISCORD_BOT_TOKEN) return false;
+    if (!env.DISCORD_BOT_TOKEN) {
+      throw new Error("DISCORD_BOT_TOKEN not set in environment");
+    }
 
     try {
       const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
@@ -151,13 +153,14 @@ export const NotificationService = {
 
       if (!res.ok) {
         const err = await res.text();
-        console.error(`Failed to send Discord Msg to ${channelId}:`, err);
-        return false;
+        throw new Error(`Discord API Error (${res.status}): ${err}`);
       }
       return true;
     } catch (e) {
-      console.error("NotificationService.sendMessage Failed", e);
-      return false;
+      if (e instanceof Error) {
+        throw e; // Re-throw with full details
+      }
+      throw new Error(`Unknown error in sendMessage: ${String(e)}`);
     }
   },
 };
