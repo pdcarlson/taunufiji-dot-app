@@ -220,3 +220,28 @@
     - Updated `PointsHistory` UI to interpret `is_debit` and display negative amounts in Red.
 - **Workflow Optimization**:
   - Updated Cron GitHub Action to run every 5 minutes (`*/5 * * * *`) for rapid testing cycles.
+  - Updated Cron GitHub Action to run every 5 minutes (`*/5 * * * *`) for rapid testing cycles.
+
+## 2026-01-23: Cron Notification Overhaul
+
+- **Architecture Change**: Extracted cron job logic from `tasks.service.ts` to dedicated `cron.service.ts` for better separation of concerns
+- **New Service Created**:
+  - `lib/services/cron.service.ts` - Simplified 5-step workflow:
+    1. Unlock locked recurring tasks (locked → open)
+    2. Notify uninformed recurring tasks (none → unlocked)
+    3. Send urgent notifications (< 12h to due)
+    4. Expire overdue duties (open → expired + fine)
+    5. Notify expired tasks to admin channel
+- **Schema Update**:
+  - Updated `notification_level` enum: removed "halfway" (unused), added "expired"
+- **Cron Routes Updated**:
+  - `app/api/cron/route.ts` and `app/api/cron/housing/route.ts` now use `CronService.runHourly()`
+  - Removed all Discord webhook error notifications (errors now log to console for GitHub Actions visibility)
+- **Logic Simplification**:
+  - ✅ Bounties are ignored in urgent/expiry processing
+  - ✅ Duties: Get urgent notification if < 12h, expire notification if status=expired
+  - ✅ Recurring Tasks: Get "unlocked" notification when status=open, then urgent/expired as needed
+- **Error Handling**: All catch blocks use proper TypeScript `unknown` type with `getErrorMessage()` helper
+- **Fixes**:
+  - Fixed production build error: imported `HousingTask` from `models.ts` instead of defining local interface missing Appwrite Document properties
+- **Cleanup**: Removed 208 lines of old `runCron()` code from `tasks.service.ts`
