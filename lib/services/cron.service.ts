@@ -284,9 +284,15 @@ export const CronService = {
 
           // Send admin notification
           if (task.assigned_to) {
-            await NotificationService.notifyAdmins(
+            const sent = await NotificationService.notifyAdmins(
               `🚨 **MISSED TASK**: <@${task.assigned_to}> failed to complete **${task.title}**. Task expired.`,
             );
+
+            if (!sent) {
+              throw new Error(
+                `Failed to send Discord notification for expired task ${task.$id}`,
+              );
+            }
           }
           expired_notified++;
         } catch (error: unknown) {
