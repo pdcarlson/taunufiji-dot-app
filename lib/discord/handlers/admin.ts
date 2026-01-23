@@ -91,8 +91,20 @@ export const schedule: CommandHandler = async (interaction, options) => {
   const userId = options.assigned_to || undefined;
   const leadTime = options.lead_time_hours || 24;
 
-  // build RRULE (midnight deadline)
-  const rrule = `FREQ=WEEKLY;BYDAY=${day};BYHOUR=23;BYMINUTE=59`;
+  // RRule runs in UTC timezone on server
+  // For 11:59 PM EST: EST is UTC-5, so 11:59 PM EST = 04:59 AM UTC (next day)
+  // Shift to next day of week since 04:59 crosses midnight
+  const dayShiftMap: Record<string, string> = {
+    MO: "TU", // Monday 11:59 PM EST = Tuesday 04:59 AM UTC
+    TU: "WE",
+    WE: "TH",
+    TH: "FR",
+    FR: "SA",
+    SA: "SU",
+    SU: "MO",
+  };
+  const nextDay = dayShiftMap[day];
+  const rrule = `FREQ=WEEKLY;BYDAY=${nextDay};BYHOUR=4;BYMINUTE=59`;
 
   try {
     await TasksService.createSchedule({
@@ -115,7 +127,7 @@ export const schedule: CommandHandler = async (interaction, options) => {
     };
     const dayName = dayMap[day] || day;
     return createEphemeralResponse(
-      `✅ Schedule created: **${title}**\nEvery ${dayName} at 11:59 PM. Lead time: ${leadTime}h.`,
+      `✅ Schedule created: **${title}**\nEvery ${dayName} at 11:59 PM EST. Lead time: ${leadTime}h.`,
     );
   } catch (e) {
     console.error("Schedule Error", e);

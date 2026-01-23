@@ -50,9 +50,20 @@ export default function CreateScheduleModal({
     try {
       const jwt = await account.createJWT();
 
-      // Construct RRule
-      // Midnight deadline (11:59 PM)
-      const rrule = `FREQ=WEEKLY;BYDAY=${data.freq_day};BYHOUR=23;BYMINUTE=59`;
+      // RRule runs in UTC timezone
+      // For 11:59 PM EST: EST is UTC-5, so 11:59 PM EST = 04:59 AM UTC (next day)
+      // Shift to next day of week since 04:59 crosses midnight
+      const dayShiftMap: Record<string, string> = {
+        MO: "TU", // Monday 11:59 PM EST = Tuesday 04:59 AM UTC
+        TU: "WE",
+        WE: "TH",
+        TH: "FR",
+        FR: "SA",
+        SA: "SU",
+        SU: "MO",
+      };
+      const nextDay = dayShiftMap[data.freq_day];
+      const rrule = `FREQ=WEEKLY;BYDAY=${nextDay};BYHOUR=4;BYMINUTE=59`;
 
       const payload = {
         title: data.title,
