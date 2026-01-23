@@ -254,3 +254,9 @@
   - Previously only admins were notified in the housing channel
 - **Reliability Upgrade**: Cron job now requires **BOTH** Admin Notification and User DM to succeed before marking a task as "expired_notified". This ensures retry logic covers both channels.
 - **Discord Integration**: Added `expired` to `NotificationType` enum.
+
+## 2026-01-23: Repository Maintenance
+
+- **Cleanup**: Ignored legacy PDF content in `legacy-site/content/taunews` to reduce repo size.
+  - Removed files from git tracking (`git rm --cached`).
+  - Updated `.gitignore`.
