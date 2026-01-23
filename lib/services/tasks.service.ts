@@ -539,20 +539,21 @@ export const TasksService = {
 
     // 2. 12-Hour Urgent Notifications
     // Find 'open' tasks where due_at is within 12 hours AND notification_level == "unlocked"
+    const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+
     const openTasks = await db.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [
       Query.equal("status", "open"),
       Query.equal("notification_level", "unlocked"), // Only notify once after unlock
+      Query.lessThanEqual("due_at", twelveHoursFromNow.toISOString()),
       Query.limit(100), // Batch size
     ]);
 
     const urgentPromises = openTasks.documents.map(async (doc) => {
       if (!doc.assigned_to || !doc.due_at) return;
 
-      const dueTime = new Date(doc.due_at).getTime();
-      const twelveHoursFromNow = now.getTime() + 12 * 60 * 60 * 1000;
-
-      // If task is due within next 12 hours, send urgent notification
-      if (dueTime <= twelveHoursFromNow) {
+      // If task is due within next 12 hours (filtered by query), send urgent notification
+      // Double check strictly:
+      if (dueTime <= twelveHoursFromNow.getTime()) {
         await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
           notification_level: "urgent",
         });

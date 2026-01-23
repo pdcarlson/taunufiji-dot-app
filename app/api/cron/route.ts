@@ -20,6 +20,8 @@ export async function GET(req: Request) {
     console.log("✅ Cron Job Completed:", result);
 
     // 3. optional: notify discord on success (if monitoring webhook is set)
+    // SILENCED: Only notify on failure as per user request
+    /*
     if (process.env.DISCORD_MONITORING_WEBHOOK) {
       const summary = `✅ **Cron Job Success**\n\`\`\`\nUnlocked: ${result.unlocked}\nUrgent Notifications: ${result.urgent}\nExpired Bounties: ${result.expired_bounties}\nExpired Duties: ${result.expired_duties}\n\`\`\``;
 
@@ -34,10 +36,27 @@ export async function GET(req: Request) {
         console.warn("Discord notification failed:", notifyError);
       }
     }
+    */
 
     return NextResponse.json({ success: true, result });
   } catch (e: any) {
     console.error("❌ Cron Job Failed:", e);
+
+    // Notify failure
+    if (process.env.DISCORD_MONITORING_WEBHOOK) {
+      try {
+        await fetch(process.env.DISCORD_MONITORING_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: `🚨 **CRON JOB FAILED** 🚨\n\`\`\`\nError: ${e.message}\nStack: ${e.stack ? e.stack.slice(0, 500) : "N/A"}\n\`\`\``,
+          }),
+        });
+      } catch (webhookError) {
+        console.error("Failed to send error notification", webhookError);
+      }
+    }
+
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
