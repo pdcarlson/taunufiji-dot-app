@@ -260,3 +260,4 @@
 - **Cleanup**: Ignored legacy PDF content in `legacy-site/content/taunews` to reduce repo size.
   - Removed files from git tracking (`git rm --cached`).
   - Updated `.gitignore`.
+  - Also ignored `legacy-site/static/media/taunews` (redundant large files).
