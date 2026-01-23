@@ -51,8 +51,8 @@ export default function CreateScheduleModal({
       const jwt = await account.createJWT();
 
       // Construct RRule
-      // Always Noon (12:00)
-      const rrule = `FREQ=WEEKLY;BYDAY=${data.freq_day};BYHOUR=12;BYMINUTE=0`;
+      // Midnight deadline (11:59 PM)
+      const rrule = `FREQ=WEEKLY;BYDAY=${data.freq_day};BYHOUR=23;BYMINUTE=59`;
 
       const payload = {
         title: data.title,
@@ -152,7 +152,7 @@ export default function CreateScheduleModal({
               </label>
               <div className="w-full bg-zinc-900/30 border border-white/5 rounded-xl py-2.5 px-4 text-zinc-500 text-sm flex items-center gap-2">
                 <Clock size={16} />
-                <span>Default: 12:00 PM (Noon)</span>
+                <span>Default: 11:59 PM</span>
               </div>
             </div>
           </div>
