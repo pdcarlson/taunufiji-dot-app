@@ -714,34 +714,29 @@ GitHub Actions cron trigger: 0 * * * *
     ├─ verify secret key
     ├─ if invalid → return 401
     └─ call TasksService.runCron()
-        ↓ (Cron Service Logic)
-        ├─ 1. UNLOCK TASKS
-        │   ├─ query: status=locked AND unlock_at <= now
-        │   ├─ for each → update status="open", send DM
-        │   └─ log: "Unlocked X tasks"
-        ├─ 2. HALFWAY NOTIFICATIONS
-        │   ├─ query: status=open AND notification_level=none
-        │   ├─ calculate: (now - created) >= (due - created) / 2
-        │   ├─ for each → send DM, update notification_level="halfway"
-        │   └─ log: "Sent X halfway reminders"
-        ├─ 3. URGENT NOTIFICATIONS
-        │   ├─ query: notification_level=halfway AND due_at within 12h
-        │   ├─ for each → send DM, update notification_level="urgent"
-        │   └─ log: "Sent X urgent reminders"
-        ├─ 4. EXPIRE BOUNTIES
-        │   ├─ query: type=bounty AND status=pending AND due_at < now
-        │   ├─ for each → update assigned_to=null, status="open"
-        │   └─ log: "Unclaimed X bounties"
-        ├─ 5. EXPIRE DUTIES
-        │   ├─ query: type IN [duty, one_off] AND status=open AND due_at < now
-        │   ├─ for each task:
+    ↓ (Cron Service Logic)
+        ├─ 1. UNLOCK TASKS (status="locked" AND unlock_at <= now)
+        │   ├─ for each → update status="open", send DM to user
+        │   └─ "Task available: {title}"
+        ├─ 2. NOTIFY UNINFORMED (status="open" AND notification_level="none")
+        │   ├─ for each → send DM to user
+        │   └─ "Task available: {title}"
+        ├─ 3. URGENT NOTIFICATIONS (< 12h to due date)
+        │   ├─ query: status="open" AND due_at within 12h
+        │   ├─ for each → send DM to user
+        │   └─ "Urgent: {title} due in <12 hours"
+        ├─ 4. EXPIRE OVERDUE DUTIES
+        │   ├─ query: status="open" AND due_at < now
+        │   ├─ for each:
         │   │   ├─ update status="expired"
-        │   │   ├─ deduct 50 points from user
-        │   │   ├─ create ledger entry (category="fine")
-        │   │   ├─ send admin notification to Discord channel
-        │   │   └─ if schedule_id exists:
-        │   │       └─ call triggerNextInstance(schedule_id)
-        │   └─ log: "Expired X duties, fined Y points"
+        │   │   ├─ fine user -50 points
+        │   │   └─ trigger next recurring instance (if applicable)
+        ├─ 5. NOTIFY EXPIRED TASKS
+        │   ├─ query: status="expired" AND notification_level != "expired"
+        │   ├─ for each:
+        │   │   ├─ send Admin Channel Notification (🚨 MISSED TASK)
+        │   │   ├─ send User DM ("Task expired: {title}...")
+        │   │   └─ IF BOTH SUCCEED: update notification_level="expired"
         └─ return summary stats
   ↓ GitHub Action logs result
   ↓ (Optional) Send Discord webhook with summary
