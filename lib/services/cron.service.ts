@@ -1,6 +1,7 @@
 import { Client, Databases, Query } from "node-appwrite";
 import { env } from "../config/env";
 import { DB_ID, COLLECTIONS } from "../types/schema";
+import { HousingTask } from "../types/models";
 import { NotificationService } from "./notification.service";
 import { PointsService } from "./points.service";
 import { TasksService } from "./tasks.service";
@@ -12,19 +13,6 @@ const client = new Client()
   .setKey(env.APPWRITE_API_KEY!);
 
 const db = new Databases(client);
-
-interface HousingTask {
-  $id: string;
-  title: string;
-  description: string;
-  status: string;
-  type: string;
-  assigned_to?: string;
-  due_at?: string;
-  unlock_at?: string;
-  notification_level?: string;
-  schedule_id?: string;
-}
 
 // Helper function to safely get error message
 function getErrorMessage(error: unknown): string {
