@@ -537,6 +537,39 @@ export const TasksService = {
       }
     });
 
+    // 1.5. Backfill Notifications for Open Tasks
+    // Catch tasks created directly as "open" (one-off duties, bounties) that never got unlock notification
+    // Query for open tasks with no notification level set
+    const uninformedTasks = await db.listDocuments(
+      DB_ID,
+      COLLECTIONS.ASSIGNMENTS,
+      [Query.equal("status", "open"), Query.limit(100)],
+    );
+
+    // Filter for tasks that haven't been notified (notification_level is empty/none)
+    const backfillNotifyPromises = uninformedTasks.documents.map(
+      async (doc) => {
+        // Skip if already notified or no assignee
+        if (!doc.assigned_to) return;
+        if (doc.notification_level && doc.notification_level !== "none") return;
+
+        // Update notification level
+        await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
+          notification_level: "unlocked",
+        });
+
+        // Send unlock notification
+        await NotificationService.sendNotification(
+          doc.assigned_to,
+          "unlocked",
+          {
+            title: doc.title,
+            taskId: doc.$id,
+          },
+        );
+      },
+    );
+
     // 2. 12-Hour Urgent Notifications
     // Find 'open' tasks where due_at is within 12 hours AND notification_level == "unlocked"
     const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
@@ -631,14 +664,23 @@ export const TasksService = {
 
     await Promise.all([
       ...unlockPromises,
+      ...backfillNotifyPromises,
       ...urgentPromises,
       ...bountyPromises,
       ...finePromises,
     ]);
 
+    // Count how many backfill notifications were actually sent
+    const backfillCount = uninformedTasks.documents.filter(
+      (doc) =>
+        doc.assigned_to &&
+        (!doc.notification_level || doc.notification_level === "none"),
+    ).length;
+
     // Return statistics
     return {
       unlocked: lockedTasks.total,
+      backfill_notified: backfillCount,
       urgent: openTasks.documents.length,
       expired_bounties: claimedBounties.total,
       expired_duties: overdueDuties.total,
