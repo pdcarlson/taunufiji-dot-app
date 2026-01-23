@@ -1,13 +1,22 @@
-// NOTE: Departments and Courses are now stored in the Appwrite Database.
 // This file is only for static constants that rarely change.
 
 export const ASSESSMENT_TYPES = [
+  "Unknown",
   "Exam 1",
   "Exam 2",
   "Exam 3",
-  "Final",
   "Midterm",
-  "Quiz",
+  "Final",
+  "Quiz 1",
+  "Quiz 2",
+  "Quiz 3",
+  "Quiz 4",
+  "Quiz 5",
+  "Quiz 6",
+  "Quiz 7",
+  "Quiz 8",
+  "Quiz 9",
+  "Quiz 10",
   "Lab 1",
   "Lab 2",
   "Lab 3",
