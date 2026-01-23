@@ -6,7 +6,7 @@ const BASE_URL = "https://taunufiji.app"; // Or env.NEXT_PUBLIC_APP_URL
 // Notification Types matching the Matrix
 export type NotificationType =
   | "unlocked"
-  | "halfway"
+  | "urgent"
   | "assigned"
   | "updated"
   | "approved"
@@ -77,8 +77,8 @@ export const NotificationService = {
       case "unlocked":
         message = `🔓 **New Task**: ${title} is now available.`;
         break;
-      case "halfway":
-        message = `⏳ **Heads Up**: ${title} is halfway due.`;
+      case "urgent":
+        message = `🚨 **URGENT**: ${title} is due in less than 12 hours!`;
         break;
       case "assigned":
         message = `👋 **Assigned**: You have been assigned **${title}**.`;

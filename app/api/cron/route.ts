@@ -21,7 +21,7 @@ export async function GET(req: Request) {
 
     // 3. optional: notify discord on success (if monitoring webhook is set)
     if (process.env.DISCORD_MONITORING_WEBHOOK) {
-      const summary = `✅ **Cron Job Success**\n\`\`\`\nUnlocked: ${result.unlocked}\nHalfway Notifications: ${result.halfway}\nExpired Bounties: ${result.expired_bounties}\nExpired Duties: ${result.expired_duties}\n\`\`\``;
+      const summary = `✅ **Cron Job Success**\n\`\`\`\nUnlocked: ${result.unlocked}\nUrgent Notifications: ${result.urgent}\nExpired Bounties: ${result.expired_bounties}\nExpired Duties: ${result.expired_duties}\n\`\`\``;
 
       try {
         await fetch(process.env.DISCORD_MONITORING_WEBHOOK, {

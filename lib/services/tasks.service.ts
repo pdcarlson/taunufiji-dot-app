@@ -537,35 +537,27 @@ export const TasksService = {
       }
     });
 
-    // 2. Halfway Notifications
-    // Find 'open' tasks where now > halfway point AND notification_level == "unlocked" (or "none")
-    // Note: Appwrite Math is limited. We fetch OPEN tasks with notification_level != 'halfway'
+    // 2. 12-Hour Urgent Notifications
+    // Find 'open' tasks where due_at is within 12 hours AND notification_level == "unlocked"
     const openTasks = await db.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [
       Query.equal("status", "open"),
-      Query.notEqual("notification_level", "halfway"), // Don't spam
-      Query.notEqual("notification_level", "urgent"), // Don't regress
+      Query.equal("notification_level", "unlocked"), // Only notify once after unlock
       Query.limit(100), // Batch size
     ]);
 
-    const halfwayPromises = openTasks.documents.map(async (doc) => {
+    const urgentPromises = openTasks.documents.map(async (doc) => {
       if (!doc.assigned_to || !doc.due_at) return;
 
-      const startTime = doc.unlock_at
-        ? new Date(doc.unlock_at).getTime()
-        : new Date(doc.$createdAt).getTime();
       const dueTime = new Date(doc.due_at).getTime();
-      const duration = dueTime - startTime;
+      const twelveHoursFromNow = now.getTime() + 12 * 60 * 60 * 1000;
 
-      if (duration <= 0) return; // Weird data
-
-      const halfwayPoint = startTime + duration / 2;
-
-      if (now.getTime() > halfwayPoint) {
+      // If task is due within next 12 hours, send urgent notification
+      if (dueTime <= twelveHoursFromNow) {
         await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
-          notification_level: "halfway",
+          notification_level: "urgent",
         });
 
-        await NotificationService.sendNotification(doc.assigned_to, "halfway", {
+        await NotificationService.sendNotification(doc.assigned_to, "urgent", {
           title: doc.title,
           taskId: doc.$id,
         });
@@ -602,20 +594,24 @@ export const TasksService = {
     const finePromises = overdueDuties.documents.map(async (doc) => {
       if (doc.type === "bounty" || doc.type === "project") return;
 
+      // Check if task was submitted (pending) BEFORE expiring it
+      const isPending = doc.status === "pending";
+
       await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
         status: "expired",
       });
 
-      if (doc.assigned_to) {
+      // Only notify admin if task was NOT pending (pending means user submitted proof)
+      if (doc.assigned_to && !isPending) {
         await PointsService.awardPoints(doc.assigned_to, {
           amount: -50,
           reason: `Missed Duty: ${doc.title}`,
           category: "fine",
         });
 
+        // Don't include task link for missed tasks (admin doesn't need to review)
         await NotificationService.notifyAdmins(
           `🚨 **MISSED TASK**: <@${doc.assigned_to}> failed to complete **${doc.title}**. Task expired.`,
-          { taskId: doc.$id },
         );
       }
 
@@ -633,15 +629,15 @@ export const TasksService = {
 
     await Promise.all([
       ...unlockPromises,
-      ...halfwayPromises,
+      ...urgentPromises,
       ...bountyPromises,
       ...finePromises,
     ]);
 
-    // Simplified Return - NO FILTER
+    // Return statistics
     return {
       unlocked: lockedTasks.total,
-      halfway: openTasks.documents.length,
+      urgent: openTasks.documents.length,
       expired_bounties: claimedBounties.total,
       expired_duties: overdueDuties.total,
     };
