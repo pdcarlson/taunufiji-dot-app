@@ -59,9 +59,10 @@ export default function PointsHistory() {
         <div className="space-y-3">
           {history.map((tx) => {
             // FIX: Restore sign from is_debit flag (DB stores abs value)
-            const effectiveAmount = tx.is_debit
-              ? -Math.abs(tx.amount)
-              : tx.amount;
+            const effectiveAmount =
+              tx.is_debit || tx.category === "fine"
+                ? -Math.abs(tx.amount)
+                : tx.amount;
 
             return (
               <div
