@@ -581,23 +581,35 @@ export const TasksService = {
       Query.limit(100), // Batch size
     ]);
 
-    const urgentPromises = openTasks.documents.map(async (doc) => {
-      if (!doc.assigned_to || !doc.due_at) return;
+    const urgentPromises = openTasks.documents.map(
+      async (doc): Promise<string | null> => {
+        try {
+          if (!doc.assigned_to || !doc.due_at) return null;
 
-      const dueTime = new Date(doc.due_at).getTime();
+          const dueTime = new Date(doc.due_at).getTime();
 
-      // If task is due within next 12 hours (filtered by query), send urgent notification
-      if (dueTime <= twelveHoursFromNow.getTime()) {
-        await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
-          notification_level: "urgent",
-        });
+          // If task is due within next 12 hours (filtered by query), send urgent notification
+          if (dueTime <= twelveHoursFromNow.getTime()) {
+            await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
+              notification_level: "urgent",
+            });
 
-        await NotificationService.sendNotification(doc.assigned_to, "urgent", {
-          title: doc.title,
-          taskId: doc.$id,
-        });
-      }
-    });
+            await NotificationService.sendNotification(
+              doc.assigned_to,
+              "urgent",
+              {
+                title: doc.title,
+                taskId: doc.$id,
+              },
+            );
+          }
+          return null;
+        } catch (error: any) {
+          console.error(`Failed to process urgent task ${doc.$id}:`, error);
+          return `Urgent Task ${doc.$id}: ${error.message || error}`;
+        }
+      },
+    );
 
     // 3. Expire Bounties (Claimed but Overdue)
     const claimedBounties = await db.listDocuments(
@@ -626,43 +638,51 @@ export const TasksService = {
       ],
     );
 
-    const finePromises = overdueDuties.documents.map(async (doc) => {
-      if (doc.type === "bounty" || doc.type === "project") return;
-
-      // Check if task was submitted (pending) BEFORE expiring it
-      const isPending = doc.status === "pending";
-
-      await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
-        status: "expired",
-      });
-
-      // Only notify admin if task was NOT pending (pending means user submitted proof)
-      if (doc.assigned_to && !isPending) {
-        await PointsService.awardPoints(doc.assigned_to, {
-          amount: -50,
-          reason: `Missed Duty: ${doc.title}`,
-          category: "fine",
-        });
-
-        // Don't include task link for missed tasks (admin doesn't need to review)
-        await NotificationService.notifyAdmins(
-          `🚨 **MISSED TASK**: <@${doc.assigned_to}> failed to complete **${doc.title}**. Task expired.`,
-        );
-      }
-
-      if (doc.schedule_id) {
+    const finePromises = overdueDuties.documents.map(
+      async (doc): Promise<string | null> => {
         try {
-          await this.triggerNextInstance(
-            doc.schedule_id,
-            doc as unknown as HousingTask,
-          );
-        } catch (e) {
-          console.error("Recurrence failed for fined task", e);
-        }
-      }
-    });
+          if (doc.type === "bounty" || doc.type === "project") return null;
 
-    await Promise.all([
+          // Check if task was submitted (pending) BEFORE expiring it
+          const isPending = doc.status === "pending";
+
+          await db.updateDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, doc.$id, {
+            status: "expired",
+          });
+
+          // Only notify admin if task was NOT pending (pending means user submitted proof)
+          if (doc.assigned_to && !isPending) {
+            await PointsService.awardPoints(doc.assigned_to, {
+              amount: -50,
+              reason: `Missed Duty: ${doc.title}`,
+              category: "fine",
+            });
+
+            // Don't include task link for missed tasks (admin doesn't need to review)
+            await NotificationService.notifyAdmins(
+              `🚨 **MISSED TASK**: <@${doc.assigned_to}> failed to complete **${doc.title}**. Task expired.`,
+            );
+          }
+
+          if (doc.schedule_id) {
+            try {
+              await this.triggerNextInstance(
+                doc.schedule_id,
+                doc as unknown as HousingTask,
+              );
+            } catch (e) {
+              console.error("Recurrence failed for fined task", e);
+            }
+          }
+          return null;
+        } catch (error: any) {
+          console.error(`Failed to expire task ${doc.$id}:`, error);
+          return `Expire Task ${doc.$id}: ${error.message || error}`;
+        }
+      },
+    );
+
+    const results = await Promise.all([
       ...unlockPromises,
       ...backfillNotifyPromises,
       ...urgentPromises,
@@ -677,6 +697,9 @@ export const TasksService = {
         (!doc.notification_level || doc.notification_level === "none"),
     ).length;
 
+    // Filter out nulls to get only errors
+    const errors = results.filter((r): r is string => typeof r === "string");
+
     // Return statistics
     return {
       unlocked: lockedTasks.total,
@@ -684,6 +707,7 @@ export const TasksService = {
       urgent: openTasks.documents.length,
       expired_bounties: claimedBounties.total,
       expired_duties: overdueDuties.total,
+      errors,
     };
   },
 

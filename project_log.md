@@ -199,3 +199,15 @@
     - **Edit Modal**: Intelligent Duty constraints (Hidden Points/Unlock). Added **Lead Time** control for Recurring Tasks that updates the parent Schedule. Fixed bug where changing Due Date didn't update "Locked" status.
     - **Create Modals**: Removed "Points" input from Schedule and One-Off creators (Default 0).
     - **Backend**: Added `getSchedule` and `updateSchedule` capabilities to `TasksService`.
+
+## 2026-01-23: Cron Resilience & Debugging
+
+- **Diagnostic Audit**:
+  - Ran comprehensive audit (`scripts/debug-task.ts`). Confirmed **Zero** stuck/overdue tasks in DB.
+  - Conclusion: Reported issues were likely transient or timezone-related.
+- **Architecture Hardening**:
+  - **Granular Error Policy**: Refactored `TasksService.runCron` to catch errors _per task_. One failing task no longer crashes the job.
+  - **Visibility**: Updated `/api/cron` to send specific **Discord Warning Webhooks** if any sub-task fails, eliminating "silent failures".
+- **Fixes**:
+  - Fixed syntax errors in `tasks.service.ts` (unclosed try/catch blocks).
+  - Improved `runCron` return statistics to include error details.

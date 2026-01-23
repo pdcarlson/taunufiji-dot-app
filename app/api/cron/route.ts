@@ -38,6 +38,28 @@ export async function GET(req: Request) {
     }
     */
 
+    // 3. Notify on "Partial Failure" (Warnings)
+    if (
+      result.errors &&
+      result.errors.length > 0 &&
+      process.env.DISCORD_MONITORING_WEBHOOK
+    ) {
+      const summary = `⚠️ **Cron Job Warnings**\nSome tasks failed to process:\n\`\`\`\n${result.errors.join("\n")}\n\`\`\``;
+
+      try {
+        await fetch(process.env.DISCORD_MONITORING_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: summary }),
+        });
+      } catch (notifyError) {
+        console.warn("Discord warning notification failed:", notifyError);
+      }
+    }
+
+    // 4. Success Log (Silenced for user, but useful for debug)
+    // console.log("Cron Result:", result);
+
     return NextResponse.json({ success: true, result });
   } catch (e: any) {
     console.error("❌ Cron Job Failed:", e);
