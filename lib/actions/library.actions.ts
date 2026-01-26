@@ -169,3 +169,41 @@ export async function getMetadataAction(jwt?: string) {
     return { courses: {}, professors: [] };
   }
 }
+
+/**
+ * Checks if a resource already exists
+ */
+export async function checkDuplicateResourceAction(
+  data: {
+    department: string;
+    courseNumber: string;
+    assessmentType: string;
+    semester: string;
+    year: string | number;
+    version: string;
+  },
+  jwt: string, // JWT for authentication
+) {
+  try {
+    const year =
+      typeof data.year === "string" ? parseInt(data.year) : data.year;
+
+    // Use JWT client like other actions
+    const { account } = await createJWTClient(jwt);
+    const user = await account.get();
+    if (!user) return false; // Fail safe
+
+    return await LibraryService.checkDuplicate({
+      department: data.department,
+      course_number: data.courseNumber,
+      type: data.assessmentType,
+      semester: data.semester,
+      year: year,
+      version: data.version,
+    });
+  } catch (e) {
+    logger.error("Check Duplicate Failed", e);
+    // If check fails, assume not duplicate to minimize friction
+    return false;
+  }
+}

@@ -208,4 +208,29 @@ export const LibraryService = {
       }
     }
   },
+
+  /**
+   * Checks for duplicate resources to prevent double uploads.
+   */
+  async checkDuplicate(criteria: {
+    department: string;
+    course_number: string;
+    type: string;
+    semester: string;
+    year: number;
+    version: string;
+  }) {
+    const queries = [
+      Query.equal("department", criteria.department),
+      Query.equal("course_number", criteria.course_number),
+      Query.equal("type", criteria.type),
+      Query.equal("semester", criteria.semester),
+      Query.equal("year", criteria.year),
+      Query.equal("version", criteria.version),
+      Query.limit(1), // We only need to know if ONE exists
+    ];
+
+    const res = await db.listDocuments(DB_ID, COLLECTIONS.LIBRARY, queries);
+    return res.total > 0;
+  },
 };

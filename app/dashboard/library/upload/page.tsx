@@ -22,6 +22,7 @@ import toast from "react-hot-toast";
 import {
   uploadFileAction,
   createLibraryResourceAction,
+  checkDuplicateResourceAction, // Imported
 } from "@/lib/actions/library.actions"; // Need these actions
 import { getMetadataAction } from "@/lib/actions/library.actions"; // Need this action
 
@@ -169,6 +170,29 @@ export default function UnifiedUploadPage() {
       const stdName = generateFilename("pdf");
       const currentSem = stickyMetadata.semester || "Unknown";
 
+      // Generate JWT once for all server actions
+      const { jwt } = await account.createJWT();
+
+      // 0. CHECK FOR DUPLICATES
+      toast.loading("Checking for duplicates...", { id: toastId });
+      const isDuplicate = await checkDuplicateResourceAction(
+        {
+          department: stickyMetadata.department,
+          courseNumber: stickyMetadata.courseNumber,
+          assessmentType: stickyMetadata.assessmentType,
+          semester: currentSem,
+          year: stickyMetadata.year,
+          version: stickyMetadata.version,
+        },
+        jwt,
+      ); // Pass JWT
+
+      if (isDuplicate) {
+        toast.error("This exam already exists!", { id: toastId });
+        setIsSubmitting(false);
+        return;
+      }
+
       // 1. DETERMINE FILE VERSION
       if (stickyMetadata.version === "Student") {
         if (!redactorRef.current) throw new Error("Redactor not loaded");
@@ -186,8 +210,7 @@ export default function UnifiedUploadPage() {
       // 2. UPLOAD TO STORAGE
       toast.loading("Uploading File...", { id: toastId });
 
-      // Use Server Action for Upload to get ID
-      const { jwt } = await account.createJWT(); // Generate JWT for stateless auth
+      // Use jwt generated earlier
       const formData = new FormData();
       formData.append("file", fileToUpload);
       formData.append("jwt", jwt); // Pass JWT
@@ -239,10 +262,10 @@ export default function UnifiedUploadPage() {
     .sort();
 
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col lg:flex-row gap-6 relative">
+    <div className="h-full flex flex-col lg:flex-row gap-4 relative">
       {/* LEFT COLUMN: WORKSPACE */}
       <div
-        className={`flex-1 flex flex-col rounded-xl overflow-hidden border-2 transition-all ${
+        className={`flex-1 flex flex-col overflow-hidden border-2 transition-all ${
           !currentFile
             ? isDragging
               ? "border-fiji-purple bg-fiji-purple/5 border-dashed"
@@ -303,7 +326,7 @@ export default function UnifiedUploadPage() {
       </div>
 
       {/* RIGHT COLUMN: METADATA FORM */}
-      <div className="w-full lg:w-96 bg-white border border-stone-200 rounded-xl p-6 shadow-sm flex flex-col overflow-y-auto">
+      <div className="w-full lg:w-80 bg-white border border-stone-200 p-4 shadow-sm flex flex-col overflow-y-auto">
         <div className="mb-6">
           <h2 className="font-bebas text-3xl text-fiji-dark">Exam Details</h2>
           <p className="text-sm text-stone-500">

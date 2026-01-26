@@ -3,7 +3,7 @@
 import { AuthService } from "@/lib/services/auth.service";
 import { syncUserAction } from "@/lib/actions/auth.actions";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
 import {
@@ -22,6 +22,10 @@ export default function DashboardShell({
 }) {
   const { user, profile, loading, error, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Detect if we're on the upload page (needs full screen width)
+  const isUploadPage = pathname?.includes("/library/upload");
 
   useEffect(() => {
     if (!loading) {
@@ -54,7 +58,13 @@ export default function DashboardShell({
       <Sidebar />
 
       {/* Main Content */}
-      <main className="p-4 md:p-8 max-w-5xl mx-auto animate-in fade-in duration-300">
+      <main
+        className={
+          isUploadPage
+            ? "h-screen p-6" // Full screen with 24px margins for upload page
+            : "p-4 md:p-8 max-w-5xl mx-auto animate-in fade-in duration-300" // Constrained for other pages
+        }
+      >
         {children}
       </main>
 

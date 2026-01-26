@@ -261,3 +261,25 @@
   - Removed files from git tracking (`git rm --cached`).
   - Updated `.gitignore`.
   - Also ignored `legacy-site/static/media/taunews` (redundant large files).
+
+## 2026-01-26: Library Upload Improvements
+
+- **Duplicate Checking**:
+  - Implemented `checkDuplicate` logic in `LibraryService` preventing users from uploading the same exam (Dept/Number/Type/Sem/Year/Version) twice.
+  - Added frontend toast error ("This exam already exists!") to block submission.
+- **PDF Viewer Enhancements**:
+  - **Margins**: Reduced canvas padding from 40px to 10px for a "tight fit" view.
+  - **Zoom**: Added discrete Zoom Controls (0.5x to 3.0x) and "+" / "-" buttons.
+  - **Reload**: Added a "Reload PDF" button to restart the rendering process if it gets stuck.
+
+## 2026-01-26: Full-Width Upload Page Layout
+
+- **Context-Aware DashboardShell**: Modified `DashboardShell.tsx` to detect `/library/upload` routes using `usePathname()`.
+- **Removed Width Constraints**: Upload page now uses full screen width (no `max-w-5xl` constraint) and full height (`h-screen`).
+- **Other Pages Unchanged**: All other dashboard pages retain the centered 1024px max-width layout with padding.
+
+## 2026-01-26: PDF Redaction & Upload Fixes
+
+- **Fixed Redaction Alignment**: Removed CSS `scale()` transform that was causing double-scaling (canvas already rendered at correct size).
+- **Increased Upload Limit**: Changed Next.js `bodySizeLimit` from 10MB to 200MB to support large PDF uploads.
+- **Fixed Duplicate Check**: Converted from session-based to JWT-based authentication to match app architecture and fix "No session" errors.

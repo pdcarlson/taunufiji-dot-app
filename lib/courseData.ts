@@ -5,6 +5,7 @@ export const ASSESSMENT_TYPES = [
   "Exam 1",
   "Exam 2",
   "Exam 3",
+  "Exam 4",
   "Midterm",
   "Final",
   "Quiz 1",
@@ -37,8 +38,12 @@ export const ASSESSMENT_TYPES = [
   "Homework 8",
   "Homework 9",
   "Homework 10",
+  "Practicum 1",
+  "Practicum 2",
+  "Practicum 3",
+  "Practicum 4",
+  "Practicum 5",
   "Backwork",
-  "Unknown",
 ];
 
 export const VERSIONS = ["Key", "Blank", "Student"];

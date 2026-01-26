@@ -109,4 +109,44 @@ describe("LibraryService", () => {
     expect(metadata.courses["CS"][0].number).toBe("1200");
     expect(metadata.professors).toContain("Cutler");
   });
+
+  it("checkDuplicate returns true if document exists", async () => {
+    // Mock that a document was found
+    mocks.mockListDocuments.mockResolvedValueOnce({
+      total: 1,
+      documents: [{}],
+    });
+
+    const exists = await LibraryService.checkDuplicate({
+      department: "CS",
+      course_number: "1200",
+      type: "Exam 1",
+      semester: "Fall",
+      year: 2024,
+      version: "Student",
+    });
+
+    expect(exists).toBe(true);
+    expect(mocks.mockListDocuments).toHaveBeenCalledWith(
+      expect.anything(), // dbId
+      expect.anything(), // collection
+      expect.any(Array), // queries - loosening the check since array equality is strict
+    );
+  });
+
+  it("checkDuplicate returns false if no document exists", async () => {
+    // Mock that no document was found
+    mocks.mockListDocuments.mockResolvedValueOnce({ total: 0, documents: [] });
+
+    const exists = await LibraryService.checkDuplicate({
+      department: "CS",
+      course_number: "1200",
+      type: "Exam 1",
+      semester: "Fall",
+      year: 2024,
+      version: "Student",
+    });
+
+    expect(exists).toBe(false);
+  });
 });

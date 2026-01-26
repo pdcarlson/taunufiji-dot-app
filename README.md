@@ -223,12 +223,14 @@ BOUNTY:
 
 **Features**:
 
-- ✅ PDF storage in AWS S3
+- ✅ PDF storage in AWS S3 (up to 200MB per file)
 - ✅ Metadata tracking in Appwrite
 - ✅ Client-side PDF redaction (PdfRedactor component)
 - ✅ Advanced filtering (department, course, professor)
 - ✅ Presigned URL downloads (5min expiry)
 - ✅ Points rewards for uploads (+10pts)
+- ✅ Duplicate upload prevention (by dept/course/type/semester/year/version)
+- ✅ Full-screen upload interface with PDF zoom controls
 
 **Document Types**:
 
@@ -238,24 +240,27 @@ BOUNTY:
 **Upload Flow**:
 
 1. Click "Upload Resource"
-2. Drag & drop PDF or use file picker
-3. Select type: Answer Key or Student Copy
+2. Drag & drop PDF or use file picker (max 200MB)
+3. Select version: Answer Key or Student Copy
 4. **If Student Copy**:
-   - PdfRedactor loads PDF in browser
-   - Click to redact name, ID, dates
-   - Redacted PDF generated with pdf-lib
+   - PdfRedactor loads PDF in browser with tight margins (10px padding)
+   - Zoom controls: 50% to 300% (+ / - buttons)
+   - Click and drag to redact name, ID, dates
+   - Reload button available if rendering issues occur
+   - Redacted PDF generated with pdf-lib (burns redactions permanently)
 5. Fill metadata form:
    - Department (autocomplete): e.g., "CS", "MATH"
-   - Course number: e.g., "101"
-   - Course name: e.g., "Intro to Computer Science"
+   - Course number: e.g., "1100"
+   - Assessment type: e.g., "Exam 1", "Final", "Quiz 3"
    - Professor (autocomplete)
    - Semester: Fall/Spring/Summer
    - Year: 2024
-6. Submit → Server action:
+6. **Duplicate Check**: System verifies no existing exam with same metadata
+7. Submit → Server action (JWT auth):
    - Uploads to S3: `s3://bucket/library/<uuid>.pdf`
    - Creates `library_resources` document
    - Awards 10 points to uploader
-7. File immediately searchable
+8. File immediately searchable
 
 **Search & Download**:
 
@@ -263,6 +268,24 @@ BOUNTY:
 2. Results update in real-time (client-side)
 3. Click "Download" → Server generates presigned S3 URL
 4. Browser downloads directly from S3 (5min expiry)
+
+**UI Enhancements** (2026-01-26):
+
+- **Full-Width Layout**: Upload page uses entire screen width (no max-width constraint)
+- **Context-Aware Shell**: Dashboard detects `/library/upload` route and removes margins
+- **24px Screen Margins**: Clean spacing without overflow
+- **PDF Viewer Improvements**:
+  - Discrete zoom levels (0.5x - 3.0x) with visual percentage display
+  - Page navigation (left/right arrows, keyboard support)
+  - Reload functionality for stuck renders
+  - Tight canvas margins (10px) for maximum viewable area
+
+**Technical Implementation**:
+
+- **Redaction**: Uses `pdf-lib` to render pages as PNG, draw black rectangles, re-embed as PDF
+- **Coordinate System**: Canvas rendered at effective scale (baseScale × zoomLevel), no CSS scaling
+- **File Upload**: Next.js Server Actions with 200MB body size limit
+- **Duplicate Prevention**: Server-side query by 6 dimensions before upload proceeds
 
 ---
 

@@ -11,10 +11,7 @@ import React, {
 } from "react";
 import { PDFDocument } from "pdf-lib";
 import * as pdfjsLib from "pdfjs-dist";
-import {
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // --- Loading Component ---
 const PageLoading = () => (
@@ -36,14 +33,19 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
     const [pdfJsDoc, setPdfJsDoc] = useState<any>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [numPages, setNumPages] = useState(0);
-    const [scale, setScale] = useState(1.0);
+    const [baseScale, setBaseScale] = useState(1.0); // Fit-to-screen scale
+    const [zoomLevel, setZoomLevel] = useState(1.0); // User multiplier
     const [isPageRendering, setIsPageRendering] = useState(false);
     const [redactionBoxes, setRedactionBoxes] = useState<Record<number, any[]>>(
-      {}
+      {},
     );
     const [isDrawing, setIsDrawing] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    // Derived scale
+    const scale = baseScale * zoomLevel;
     const renderTaskRef = useRef<any>(null);
     const drawingStartPos = useRef<{ x: number; y: number } | null>(null);
     const currentBoxRef = useRef<any>(null);
@@ -62,7 +64,7 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
           // IMPORTANT: Update standard font path or worker src if needed for Next.js 15
           // Using standard CDN for worker in internal-os to ensure compatibility if local missing
           pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-          
+
           const fileBuffer = await file.arrayBuffer();
           const loadingTask = pdfjsLib.getDocument({ data: fileBuffer });
           const doc = await loadingTask.promise;
@@ -73,7 +75,7 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
         }
       };
       loadDocs();
-    }, [file]);
+    }, [file, reloadKey]);
 
     // --- EFFECT 2: Render Page ---
     useLayoutEffect(() => {
@@ -86,16 +88,24 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
           const page = await pdfJsDoc.getPage(currentPage);
           const viewport = page.getViewport({ scale: 1.0 });
 
-          // Fit to width mostly, but ensure height fits reasonably
+          // TIGHT FIT: Reduce padding to nearly zero (10px buffer)
           const containerWidth = containerRef.current!.clientWidth;
           const containerHeight = containerRef.current!.clientHeight;
-          const scaleToWidth = (containerWidth - 40) / viewport.width; // 20px padding
-          const scaleToHeight = (containerHeight - 40) / viewport.height;
-          const newScale = Math.min(scaleToWidth, scaleToHeight);
 
-          setScale(newScale);
+          // Calculate base scale to fit container tightly
+          const scaleToWidth = (containerWidth - 10) / viewport.width;
+          const scaleToHeight = (containerHeight - 10) / viewport.height;
+          const newBaseScale = Math.min(scaleToWidth, scaleToHeight);
 
-          const scaledViewport = page.getViewport({ scale: newScale });
+          setBaseScale(newBaseScale);
+
+          // Render at the EFFECTIVE scale (Base * Zoom)
+          // For high quality zoom, we should ideally render at higher res,
+          // but for performance, we might just scale the canvas via CSS transform?
+          // Actually, PDF.js looks blurry if we CSS scale up. Best to re-render.
+          const effectiveScale = newBaseScale * zoomLevel;
+
+          const scaledViewport = page.getViewport({ scale: effectiveScale });
           const canvas = canvasRef.current;
           if (!canvas) return;
 
@@ -121,7 +131,7 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
       return () => {
         if (renderTaskRef.current) renderTaskRef.current.cancel();
       };
-    }, [pdfJsDoc, currentPage]);
+    }, [pdfJsDoc, currentPage, zoomLevel, reloadKey]); // Added zoomLevel and reloadKey dependency
 
     // --- CONTROLS ---
     const handlePrevPage = useCallback(() => {
@@ -254,12 +264,12 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
         >
           <canvas
             ref={canvasRef}
-            className="shadow-2xl transition-transform duration-200 ease-out"
+            className="shadow-2xl transition-transform duration-200 ease-out origin-center"
             style={{
               position: "absolute",
               top: "50%",
               left: "50%",
-              transform: "translate(-50%, -50%)",
+              transform: `translate(-50%, -50%)`, // Removed scale - canvas already rendered at correct size
               visibility: isPageRendering ? "hidden" : "visible",
             }}
           />
@@ -268,11 +278,9 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
           <div
             className="absolute pointer-events-none"
             style={{
-              top: canvasRef.current ? canvasRef.current.style.top : "50%",
-              left: canvasRef.current ? canvasRef.current.style.left : "50%",
-              transform: canvasRef.current
-                ? canvasRef.current.style.transform
-                : "translate(-50%, -50%)",
+              top: "50%",
+              left: "50%",
+              transform: `translate(-50%, -50%)`, // Removed scale to match canvas positioning
               width: canvasRef.current ? canvasRef.current.width : 0,
               height: canvasRef.current ? canvasRef.current.height : 0,
             }}
@@ -301,30 +309,77 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
         {/* FLOATING CONTROLS */}
         {numPages > 0 && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-stone-800 text-white px-2 py-2 rounded-xl shadow-2xl flex items-center gap-2 border border-stone-700/50 backdrop-blur-md">
-            <button
-              onClick={handlePrevPage}
-              disabled={currentPage <= 1 || isPageRendering}
-              className="p-2 hover:bg-stone-700 rounded-lg disabled:opacity-30 transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+            {/* Page Nav */}
+            <div className="flex items-center gap-1 border-r border-stone-600 pr-2">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage <= 1 || isPageRendering}
+                className="p-2 hover:bg-stone-700 rounded-lg disabled:opacity-30 transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
 
-            <div className="px-3 font-mono text-sm font-bold min-w-[80px] text-center select-none">
-              {currentPage} / {numPages}
+              <div className="px-2 font-mono text-sm font-bold min-w-[60px] text-center select-none">
+                {currentPage}/{numPages}
+              </div>
+
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage >= numPages || isPageRendering}
+                className="p-2 hover:bg-stone-700 rounded-lg disabled:opacity-30 transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
 
+            {/* Zoom Controls */}
+            <div className="flex items-center gap-1 border-r border-stone-600 pr-2">
+              <button
+                onClick={() => setZoomLevel((z) => Math.max(0.5, z - 0.25))}
+                className="p-2 hover:bg-stone-700 rounded-lg font-mono text-sm font-bold w-10"
+                title="Zoom Out"
+              >
+                -
+              </button>
+              <span className="text-xs font-mono w-12 text-center text-stone-300">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+              <button
+                onClick={() => setZoomLevel((z) => Math.min(3.0, z + 0.25))}
+                className="p-2 hover:bg-stone-700 rounded-lg font-mono text-sm font-bold w-10"
+                title="Zoom In"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Reload */}
             <button
-              onClick={handleNextPage}
-              disabled={currentPage >= numPages || isPageRendering}
-              className="p-2 hover:bg-stone-700 rounded-lg disabled:opacity-30 transition-colors"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="p-2 hover:bg-stone-700 rounded-lg text-stone-300 hover:text-white transition-colors"
+              title="Reload PDF"
             >
-              <ChevronRight className="w-5 h-5" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-rotate-cw"
+              >
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+              </svg>
             </button>
           </div>
         )}
       </div>
     );
-  }
+  },
 );
 
 PdfRedactor.displayName = "PdfRedactor";
