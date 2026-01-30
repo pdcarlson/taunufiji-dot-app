@@ -15,5 +15,4 @@ jobs:
             - name: Trigger cron endpoint
               run: |
                   curl -f -X GET \
-                    -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-                    "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/cron"
+                    "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/cron?key=${{ secrets.CRON_SECRET }}"
