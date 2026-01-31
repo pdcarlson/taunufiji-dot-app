@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 import HousingWidget from "@/components/dashboard/HousingWidget";
 import LibraryWidget from "@/components/dashboard/LibraryWidget";
 import LeaderboardWidget from "@/components/dashboard/LeaderboardWidget";
-import { getDashboardStatsAction } from "@/lib/actions/dashboard.actions";
+import { getDashboardStatsAction } from "@/lib/presentation/actions/dashboard.actions";
 
-import { DashboardStats } from "@/lib/types/dashboard";
+import { DashboardStats } from "@/lib/domain/entities/dashboard";
 
 export default function DashboardHome() {
   const { user } = useAuth();

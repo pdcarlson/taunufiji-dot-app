@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import TaskCard from "./TaskCard";
-import { HousingTask } from "@/lib/types/models";
+import { HousingTask } from "@/lib/domain/entities/models";
 
 // Mock dependencies
-vi.mock("@/lib/client/appwrite", () => ({
+vi.mock("@/lib/infrastructure/client/appwrite", () => ({
   account: {
     createJWT: vi.fn().mockResolvedValue({ jwt: "mock_jwt" }),
   },
 }));
 
-vi.mock("@/lib/actions/housing.actions", () => ({
+vi.mock("@/lib/presentation/actions/housing.actions", () => ({
   claimTaskAction: vi.fn(),
   unclaimTaskAction: vi.fn(),
   submitProofAction: vi.fn(),

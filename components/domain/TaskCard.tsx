@@ -2,14 +2,14 @@
 
 import { Models } from "appwrite";
 import { CheckCircle, Clock, AlertCircle, ArrowRight } from "lucide-react";
-import { AssignmentSchema } from "@/lib/types/schema";
+import { AssignmentSchema } from "@/lib/domain/entities/schema";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 
 import {
   claimTaskAction,
   submitProofAction,
-} from "@/lib/actions/housing.actions";
+} from "@/lib/presentation/actions/housing.actions";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 interface TaskCardProps {

@@ -19,7 +19,7 @@ process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID =
   process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || "mock-project";
 
 async function deleteGlobalCommands() {
-  const { env } = await import("@/lib/config/env");
+  const { env } = await import("@/lib/infrastructure/config/env");
 
   if (!env.DISCORD_APP_ID || !env.DISCORD_BOT_TOKEN) {
     console.error("❌ Missing Discord credentials");

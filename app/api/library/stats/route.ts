@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { AuthService } from "@/lib/services/auth.service";
-import { LibraryService } from "@/lib/services/library.service";
-import { createSessionClient, createJWTClient } from "@/lib/server/appwrite";
+import { AuthService } from "@/lib/application/services/auth.service";
+import { LibraryService } from "@/lib/application/services/library.service";
+import { createSessionClient, createJWTClient } from "@/lib/presentation/server/appwrite";
 
 export const dynamic = "force-dynamic";
 

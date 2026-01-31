@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { AuthService } from "@/lib/services/auth.service";
-import { LibraryService } from "@/lib/services/library.service";
-import { createSessionClient, createJWTClient } from "@/lib/server/appwrite";
-import { DB_ID, COLLECTIONS } from "@/lib/types/schema";
-import { Query } from "node-appwrite";
+import { AuthService } from "@/lib/application/services/auth.service";
+import { LibraryService } from "@/lib/application/services/library.service";
+import {
+  createSessionClient,
+  createJWTClient,
+} from "@/lib/presentation/server/appwrite";
+import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +36,7 @@ export async function GET(req: Request) {
     }
 
     console.log(
-      `[API] Metadata: Checkpoint 3 - User ${user.$id} Found. Verifying Brother Status...`
+      `[API] Metadata: Checkpoint 3 - User ${user.$id} Found. Verifying Brother Status...`,
     );
     const isBrother = await AuthService.verifyBrother(user.$id);
     if (!isBrother) {
@@ -53,7 +55,7 @@ export async function GET(req: Request) {
     console.error("Library Metadata Error:", e.message);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

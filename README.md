@@ -83,18 +83,34 @@ dot-app/
 │   └── ui/                 # Generic UI primitives
 ├── lib/                    # Core business logic
 │   ├── actions/            # Next.js Server Actions (API wrappers)
-│   ├── services/           # Pure business logic (Appwrite SDK)
+│   ├── core/               # Infrastructure layer
+│   │   ├── appwrite/       # Centralized Appwrite client factory
+│   │   ├── s3/             # AWS S3 storage service
+│   │   └── container.ts    # Dependency injection container
+│   ├── domain/             # Domain layer
+│   │   ├── events/         # Domain event definitions
+│   │   └── types/          # TypeScript schema & models
+│   ├── services/           # Application services
+│   │   ├── task/           # Task management services (facade)
+│   │   │   ├── duty.service.ts     # Task claiming/submission
+│   │   │   ├── admin.service.ts    # Task creation/management
+│   │   │   ├── schedule.service.ts # Recurring schedule logic
+│   │   │   └── query.service.ts    # Task queries
+│   │   ├── auth.service.ts
+│   │   ├── points.service.ts
+│   │   ├── user.service.ts
+│   │   └── ...
+│   ├── handlers/           # Domain event handlers
+│   │   ├── points.handler.ts       # Points awards on events
+│   │   ├── notification.handler.ts # Discord notifications
+│   │   └── init.ts                 # Handler registration
+│   ├── events/             # Event bus infrastructure
 │   ├── discord/            # Discord bot integration
-│   ├── events/             # Domain events
 │   ├── config/             # Configuration modules
-│   ├── types/              # TypeScript definitions
-│   ├── utils/              # Utility functions
+│   ├── types/              # Legacy type re-exports (→ domain/types)
 │   ├── client/             # Client-side Appwrite SDK
-│   └── server/             # Server-side Appwrite SDK
+│   └── server/             # Server-side SDK utilities
 ├── scripts/                # Administrative tools
-│   ├── register-commands.ts   # Discord command registration
-│   ├── test-cron-dry.ts      # Cron logic testing
-│   └── archive/              # Historical scripts
 ├── public/                 # Static assets (images, fonts)
 ├── hooks/                  # Custom React hooks
 └── .github/workflows/      # CI/CD & Cron jobs
@@ -349,9 +365,9 @@ BOUNTY:
 
 ## 🏗️ Architecture
 
-### Service Layer Pattern
+### Layered Architecture with Repository Pattern
 
-**Strict separation between framework and business logic**:
+**Strict separation between framework, business logic, and infrastructure**:
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -374,13 +390,21 @@ BOUNTY:
                 │ calls
                 ▼
 ┌─────────────────────────────────────────────┐
-│ Service (Pure Business Logic)               │
-│ lib/services/tasks.service.ts               │
-│ - No Next.js dependencies                   │
-│ - Uses Node Appwrite SDK (+ API key)        │
-│ - Contains business rules                   │
-│ - Returns domain models                     │
-│ - Testable with mocks                       │
+│ Service Layer                               │
+│ lib/services/task/*.service.ts              │
+│ - Pure business logic                       │
+│ - Uses getContainer() for repositories      │
+│ - Emits domain events                       │
+│ - Testable with mocked repositories         │
+└───────────────┬─────────────────────────────┘
+                │ calls via dependency injection
+                ▼
+┌─────────────────────────────────────────────┐
+│ Repository Layer                            │
+│ lib/core/appwrite/tasks.repository.ts       │
+│ - Data access abstraction                   │
+│ - Appwrite SDK calls                        │
+│ - Easy to mock for testing                  │
 └───────────────┬─────────────────────────────┘
                 │ calls SDK
                 ▼
@@ -390,12 +414,45 @@ BOUNTY:
 └─────────────────────────────────────────────┘
 ```
 
-**Why This Matters**:
+### Dependency Injection Container
 
-- **Testability**: Services are pure functions → easy to unit test
+Services access repositories through a central container:
+
+```typescript
+// lib/core/container.ts
+const container = {
+  taskRepository: new TaskRepository(),
+  userRepository: new UserRepository(),
+  ledgerRepository: new LedgerRepository(),
+};
+
+export function getContainer() {
+  return container;
+}
+```
+
+**Usage in Services**:
+
+```typescript
+// lib/services/task/duty.service.ts
+import { getContainer } from "@/lib/core/container";
+
+export const DutyService = {
+  async claimTask(taskId: string, userId: string) {
+    const { taskRepository } = getContainer();
+    const task = await taskRepository.findById(taskId);
+    // Business logic...
+    return taskRepository.update(taskId, { assigned_to: userId });
+  },
+};
+```
+
+**Benefits**:
+
+- **Testability**: Mock repositories for unit tests
 - **Reusability**: Services called from actions, cron jobs, scripts
 - **Security**: Actions enforce auth/authz before business logic
-- **Separation**: Business rules independent of framework
+- **Separation**: Business rules independent of infrastructure
 
 ---
 

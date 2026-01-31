@@ -2,11 +2,11 @@
 import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import { X, Calendar, User, FileText, Check, Clock } from "lucide-react";
-import { createScheduleAction } from "@/lib/actions/housing.actions";
-import { account } from "@/lib/client/appwrite";
+import { createScheduleAction } from "@/lib/presentation/actions/housing.actions";
+import { account } from "@/lib/infrastructure/client/appwrite";
 import toast from "react-hot-toast";
 
-import { Member } from "@/lib/types/models";
+import { Member } from "@/lib/domain/entities/models";
 
 interface Props {
   onClose: () => void;

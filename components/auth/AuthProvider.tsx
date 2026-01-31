@@ -7,10 +7,10 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { account } from "@/lib/client/appwrite";
+import { account } from "@/lib/infrastructure/client/appwrite";
 import { Models, OAuthProvider } from "appwrite";
 import { useRouter, usePathname } from "next/navigation";
-import { getProfileAction } from "@/lib/actions/auth.actions";
+import { getProfileAction } from "@/lib/presentation/actions/auth.actions";
 
 interface AuthContextType {
   user: Models.User<Models.Preferences> | null;

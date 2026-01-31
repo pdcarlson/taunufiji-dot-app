@@ -4,9 +4,9 @@ import {
   deleteTaskAction,
   getScheduleAction,
   updateScheduleLeadTimeAction,
-} from "@/lib/actions/housing.actions";
-import { account } from "@/lib/client/appwrite";
-import { Member, HousingTask } from "@/lib/types/models";
+} from "@/lib/presentation/actions/housing.actions";
+import { account } from "@/lib/infrastructure/client/appwrite";
+import { Member, HousingTask } from "@/lib/domain/entities/models";
 import { Loader } from "@/components/ui/Loader";
 import { X, Calendar, Edit2, Users, Clock, Trash2, Repeat } from "lucide-react";
 import toast from "react-hot-toast";

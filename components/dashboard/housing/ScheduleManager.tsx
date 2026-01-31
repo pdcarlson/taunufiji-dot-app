@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import CreateScheduleModal from "./CreateScheduleModal";
 import toast from "react-hot-toast";
 
-import { HousingSchedule, Member } from "@/lib/types/models";
+import { HousingSchedule, Member } from "@/lib/domain/entities/models";
 
 interface Props {
   schedules: HousingSchedule[];

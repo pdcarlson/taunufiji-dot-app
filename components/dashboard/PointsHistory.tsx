@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { getTransactionHistoryAction } from "@/lib/actions/ledger.actions";
-import { account } from "@/lib/client/appwrite";
+import { getTransactionHistoryAction } from "@/lib/presentation/actions/ledger.actions";
+import { account } from "@/lib/infrastructure/client/appwrite";
 import { Models } from "appwrite";
-import { LedgerSchema } from "@/lib/types/schema";
+import { LedgerSchema } from "@/lib/domain/entities/schema";
 import { ArrowDownLeft, ArrowUpRight, History } from "lucide-react";
 import { Loader } from "@/components/ui/Loader";
 

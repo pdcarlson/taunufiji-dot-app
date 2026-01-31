@@ -9,7 +9,7 @@ import ScholarshipStats from "@/components/dashboard/library/ScholarshipStats";
 import { Upload, Search } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { account } from "@/lib/client/appwrite";
+import { account } from "@/lib/infrastructure/client/appwrite";
 import { toast } from "react-hot-toast";
 
 const INITIAL_FILTERS = {

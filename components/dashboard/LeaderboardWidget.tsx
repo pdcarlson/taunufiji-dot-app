@@ -6,10 +6,10 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import {
   getLeaderboardAction,
   getMyRankAction,
-} from "@/lib/actions/dashboard.actions";
+} from "@/lib/presentation/actions/dashboard.actions";
 import { Trophy, Medal, Crown, Loader2, AlertCircle } from "lucide-react";
 import clsx from "clsx";
-import { TasksService } from "@/lib/services/tasks.service";
+import { TasksService } from "@/lib/application/services/tasks.service";
 
 interface LeaderboardMember {
   id: string;

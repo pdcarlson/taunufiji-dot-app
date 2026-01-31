@@ -1,4 +1,4 @@
-import { CronService } from "@/lib/services/cron.service";
+import { CronService } from "@/lib/application/services/cron.service";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";

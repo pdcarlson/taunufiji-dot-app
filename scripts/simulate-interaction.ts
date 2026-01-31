@@ -15,8 +15,8 @@ const MOCK_ROLES = ["750151182395244584", "1148288953745686538"]; // Brother + C
 
 async function simulate(commandName: string, options: any[] = []) {
   // Dynamic Import to ensure Env Vars are set BEFORE lib/config/env.ts runs
-  const { dispatchCommand } = await import("@/lib/discord/registry");
-  const { InteractionType } = await import("@/lib/discord/types");
+  const { dispatchCommand } = await import("@/lib/infrastructure/discord/registry");
+  const { InteractionType } = await import("@/lib/infrastructure/discord/types");
 
   console.log(`\n🤖 Simulating: /${commandName}`, options);
 

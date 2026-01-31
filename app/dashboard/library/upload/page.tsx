@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useUploadQueue } from "@/components/dashboard/library/upload/UploadContext";
 import { useAuth } from "@/components/auth/AuthProvider"; // Updated import
-import { account } from "@/lib/client/appwrite";
+import { account } from "@/lib/infrastructure/client/appwrite";
 import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/courseData";
 import PdfRedactor, {
   PdfRedactorRef,
@@ -23,8 +23,8 @@ import {
   uploadFileAction,
   createLibraryResourceAction,
   checkDuplicateResourceAction, // Imported
-} from "@/lib/actions/library.actions"; // Need these actions
-import { getMetadataAction } from "@/lib/actions/library.actions"; // Need this action
+} from "@/lib/presentation/actions/library.actions"; // Need these actions
+import { getMetadataAction } from "@/lib/presentation/actions/library.actions"; // Need this action
 
 export default function UnifiedUploadPage() {
   const { user } = useAuth();

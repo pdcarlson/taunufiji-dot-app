@@ -1,7 +1,7 @@
 "use client";
 
-import { AuthService } from "@/lib/services/auth.service";
-import { syncUserAction } from "@/lib/actions/auth.actions";
+import { AuthService } from "@/lib/application/services/auth.service";
+import { syncUserAction } from "@/lib/presentation/actions/auth.actions";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";

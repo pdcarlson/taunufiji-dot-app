@@ -1,8 +1,8 @@
 
 import { NextResponse } from "next/server";
-import { AuthService } from "@/lib/services/auth.service";
-import { LibraryService, LibrarySearchFilters } from "@/lib/services/library.service";
-import { createSessionClient, createJWTClient } from "@/lib/server/appwrite";
+import { AuthService } from "@/lib/application/services/auth.service";
+import { LibraryService, LibrarySearchFilters } from "@/lib/application/services/library.service";
+import { createSessionClient, createJWTClient } from "@/lib/presentation/server/appwrite";
 
 
 import { logger } from "@/lib/logger";

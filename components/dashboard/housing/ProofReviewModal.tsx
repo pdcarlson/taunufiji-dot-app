@@ -4,14 +4,14 @@ import {
   approveTaskAction,
   rejectTaskAction,
   getReviewDetailsAction,
-} from "@/lib/actions/housing.actions";
-import { account } from "@/lib/client/appwrite";
+} from "@/lib/presentation/actions/housing.actions";
+import { account } from "@/lib/infrastructure/client/appwrite";
 import { X, Check, AlertTriangle, ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { Loader } from "@/components/ui/Loader";
 
-import { HousingTask } from "@/lib/types/models";
+import { HousingTask } from "@/lib/domain/entities/models";
 
 // ...
 

@@ -24,6 +24,32 @@ async function setup() {
         console.log("✅ Created Collection: housing_schedules");
     } catch (e: any) {
         if (e.code === 409) console.log("ℹ️ Collection housing_schedules already exists");
+        else console.error("Er
+import { Client, Databases, Permission, Role } from "node-appwrite";
+import { DB_ID, COLLECTIONS } from "../lib/types/schema";
+import dotenv from "dotenv";
+
+dotenv.config({ path: ".env.local" });
+
+const client = new Client()
+  .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+  .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
+  .setKey(process.env.APPWRITE_API_KEY!);
+
+const db = new Databases(client);
+
+async function setup() {
+    console.log("Setting up Housing V2...");
+
+    // 1. Create Schedules Collection
+    try {
+        await db.createCollection(DB_ID, COLLECTIONS.SCHEDULES, "Housing Schedules", [
+            Permission.read(Role.any()), // Public Read (or authenticated?)
+            Permission.write(Role.team("cabinet")), // Only admins
+        ]);
+        console.log("✅ Created Collection: housing_schedules");
+    } catch (e: any) {
+        if (e.code === 409) console.log("ℹ️ Collection housing_schedules already exists");
         else console.error("Error creating collection", e);
     }
 

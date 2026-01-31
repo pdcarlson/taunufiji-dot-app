@@ -12,8 +12,8 @@ process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID =
 
 async function registerCommands() {
   // Dynamic imports to ensure env vars (and mocks) are set BEFORE lib/config/env runs
-  const { COMMANDS } = await import("@/lib/discord/commands");
-  const { env } = await import("@/lib/config/env");
+  const { COMMANDS } = await import("@/lib/infrastructure/discord/commands");
+  const { env } = await import("@/lib/infrastructure/config/env");
 
   if (!env.DISCORD_APP_ID || !env.DISCORD_BOT_TOKEN) {
     console.error(

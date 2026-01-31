@@ -15,7 +15,7 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 
 import { Client, Databases, Query } from "node-appwrite";
-import { env } from "@/lib/config/env";
+import { env } from "@/lib/infrastructure/config/env";
 import { DB_ID, COLLECTIONS } from "@/lib/types/schema";
 import { HousingTask } from "@/lib/types/models";
 
