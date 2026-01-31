@@ -5,7 +5,7 @@ import { LibraryService, LibrarySearchFilters } from "@/lib/application/services
 import { createSessionClient, createJWTClient } from "@/lib/presentation/server/appwrite";
 
 
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
 

@@ -4,12 +4,15 @@ import {
   TasksService,
   CreateAssignmentDTO,
   CreateScheduleDTO,
-} from "@/lib/application/services/tasks.service";
+} from "@/lib/application/services/task";
 import { PointsService } from "@/lib/application/services/points.service";
 import { StorageService } from "@/lib/infrastructure/storage/storage";
 import { revalidatePath } from "next/cache";
 
-import { createSessionClient, createJWTClient } from "@/lib/presentation/server/appwrite";
+import {
+  createSessionClient,
+  createJWTClient,
+} from "@/lib/presentation/server/appwrite";
 import { AuthService } from "@/lib/application/services/auth.service";
 import { HOUSING_ADMIN_ROLES } from "@/lib/infrastructure/config/roles";
 

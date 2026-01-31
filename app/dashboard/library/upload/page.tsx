@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useUploadQueue } from "@/components/dashboard/library/upload/UploadContext";
 import { useAuth } from "@/components/auth/AuthProvider"; // Updated import
 import { account } from "@/lib/infrastructure/client/appwrite";
-import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/courseData";
+import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
 import PdfRedactor, {
   PdfRedactorRef,
 } from "@/components/dashboard/library/upload/PdfRedactor";

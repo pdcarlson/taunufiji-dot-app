@@ -5,13 +5,10 @@
  * Implementations should handle the specifics of the data store.
  */
 
-import { Models } from "node-appwrite";
 import { LedgerSchema } from "@/lib/domain/entities/schema";
+import { LedgerEntry } from "@/lib/domain/entities/models";
 
-/**
- * Ledger entry with document metadata
- */
-export type LedgerEntry = Models.Document & LedgerSchema;
+export type { LedgerEntry };
 
 /**
  * Query options for listing ledger entries

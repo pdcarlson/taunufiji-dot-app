@@ -7,7 +7,7 @@ import {
   useCallback,
   ReactNode,
 } from "react";
-import { ASSESSMENT_TYPES, SEMESTERS, VERSIONS } from "@/lib/courseData";
+import { ASSESSMENT_TYPES, SEMESTERS, VERSIONS } from "@/lib/utils/courseData";
 
 // Define our types to avoid "any" soup
 export interface MetadataType {

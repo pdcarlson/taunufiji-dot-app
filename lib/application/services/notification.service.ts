@@ -1,6 +1,6 @@
+import { getContainer } from "@/lib/infrastructure/container";
 import { env } from "@/lib/infrastructure/config/env";
 
-const DISCORD_API = "https://discord.com/api/v10";
 const BASE_URL = "https://taunufiji.app"; // Or env.NEXT_PUBLIC_APP_URL
 
 // Notification Types matching the Matrix
@@ -30,9 +30,10 @@ export const NotificationService = {
     },
   ) {
     try {
+      const { notificationProvider } = getContainer();
       const { message, link } = this.formatMessage(type, payload);
       const finalContent = link ? `${message} \n[View Task](${link})` : message;
-      return await this.notifyUser(userId, finalContent);
+      return await notificationProvider.sendDM(userId, finalContent);
     } catch (e) {
       // Fail Safe: Don't block business logic if Discord is down
       console.error("Notification Failed silently:", e);
@@ -46,13 +47,17 @@ export const NotificationService = {
   async notifyAdmins(message: string, payload?: { taskId?: string }) {
     if (!env.DISCORD_HOUSING_CHANNEL_ID) return false;
 
+    const { notificationProvider } = getContainer();
     let content = message;
     if (payload?.taskId) {
       const link = `${BASE_URL}/dashboard/housing?taskId=${payload.taskId}`;
       content += `\n[Review Proof](${link})`;
     }
 
-    return await this.notifyChannel(env.DISCORD_HOUSING_CHANNEL_ID, content);
+    return await notificationProvider.sendToChannel(
+      env.DISCORD_HOUSING_CHANNEL_ID,
+      content,
+    );
   },
 
   /**
@@ -104,67 +109,5 @@ export const NotificationService = {
     }
 
     return { message, link };
-  },
-
-  // --- Low Level Methods ---
-
-  async notifyUser(discordUserId: string, message: string) {
-    if (!env.DISCORD_BOT_TOKEN) return false;
-
-    try {
-      const dmRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ recipient_id: discordUserId }),
-      });
-
-      if (!dmRes.ok) {
-        console.error(
-          `Failed to open DM with ${discordUserId}: ${dmRes.status}`,
-        );
-        return false;
-      }
-
-      const channel = await dmRes.json();
-      return await this.sendMessage(channel.id, message);
-    } catch (e) {
-      console.error("NotificationService.notifyUser Failed", e);
-      return false;
-    }
-  },
-
-  async notifyChannel(channelId: string, message: string) {
-    return await this.sendMessage(channelId, message);
-  },
-
-  async sendMessage(channelId: string, content: string) {
-    if (!env.DISCORD_BOT_TOKEN) {
-      throw new Error("DISCORD_BOT_TOKEN not set in environment");
-    }
-
-    try {
-      const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content }),
-      });
-
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Discord API Error (${res.status}): ${err}`);
-      }
-      return true;
-    } catch (e) {
-      if (e instanceof Error) {
-        throw e; // Re-throw with full details
-      }
-      throw new Error(`Unknown error in sendMessage: ${String(e)}`);
-    }
   },
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/courseData";
+import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
 import { Search, Filter, Loader2 } from "lucide-react";
 import { account } from "@/lib/infrastructure/client/appwrite";
 import toast from "react-hot-toast";

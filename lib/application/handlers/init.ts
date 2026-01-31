@@ -7,6 +7,7 @@
 
 import { PointsHandler } from "./points.handler";
 import { NotificationHandler } from "./notification.handler";
+import { TaskExpiredHandler } from "./task-expired.handler";
 
 let initialized = false;
 
@@ -15,6 +16,7 @@ export function initHandlers() {
 
   PointsHandler.init();
   NotificationHandler.init();
+  TaskExpiredHandler.init();
 
   initialized = true;
   console.log("[Handlers] All event handlers initialized.");

@@ -6,7 +6,7 @@ import { X, Clock, DollarSign, FileText, Check } from "lucide-react";
 import { createTaskAction } from "@/lib/presentation/actions/housing.actions";
 import { account } from "@/lib/infrastructure/client/appwrite";
 import toast from "react-hot-toast";
-import { CreateAssignmentDTO } from "@/lib/application/services/tasks.service";
+import { CreateAssignmentDTO } from "@/lib/application/services/task";
 
 interface Props {
   onClose: () => void;

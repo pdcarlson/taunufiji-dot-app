@@ -19,6 +19,10 @@ import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
 import { AppwriteTaskRepository } from "./persistence/task.repository";
 import { AppwriteUserRepository } from "./persistence/user.repository";
 import { AppwriteLedgerRepository } from "./persistence/ledger.repository";
+import { ILibraryRepository } from "@/lib/domain/ports/library.repository";
+import { AppwriteLibraryRepository } from "./persistence/library.repository";
+import { INotificationProvider } from "@/lib/domain/ports/notification.provider";
+import { DiscordAdapter } from "./messaging/discord.adapter";
 
 /**
  * Container interface defining all available dependencies
@@ -27,6 +31,8 @@ export interface Container {
   taskRepository: ITaskRepository;
   userRepository: IUserRepository;
   ledgerRepository: ILedgerRepository;
+  libraryRepository: ILibraryRepository;
+  notificationProvider: INotificationProvider;
 }
 
 // Singleton container instance
@@ -42,6 +48,8 @@ export function getContainer(): Container {
       taskRepository: new AppwriteTaskRepository(),
       userRepository: new AppwriteUserRepository(),
       ledgerRepository: new AppwriteLedgerRepository(),
+      libraryRepository: new AppwriteLibraryRepository(),
+      notificationProvider: new DiscordAdapter(),
     };
   }
   return container;

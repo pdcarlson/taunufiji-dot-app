@@ -9,7 +9,7 @@ import {
 } from "@/lib/presentation/actions/dashboard.actions";
 import { Trophy, Medal, Crown, Loader2, AlertCircle } from "lucide-react";
 import clsx from "clsx";
-import { TasksService } from "@/lib/application/services/tasks.service";
+import { TasksService } from "@/lib/application/services/task";
 
 interface LeaderboardMember {
   id: string;

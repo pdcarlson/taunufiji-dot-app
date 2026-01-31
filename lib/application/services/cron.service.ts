@@ -9,7 +9,7 @@ import { getContainer } from "@/lib/infrastructure/container";
 import { HousingTask } from "@/lib/domain/entities/models";
 import { NotificationService } from "./notification.service";
 import { PointsService } from "./points.service";
-import { TasksService } from "./tasks.service";
+import { TasksService } from "./task";
 
 // Helper function to safely get error message
 function getErrorMessage(error: unknown): string {

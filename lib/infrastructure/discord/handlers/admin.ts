@@ -1,5 +1,5 @@
 import { createResponse, createEphemeralResponse } from "../utils";
-import { TasksService } from "@/lib/application/services/tasks.service";
+import { TasksService } from "@/lib/application/services/task";
 import { CommandHandler } from "../types";
 
 /**

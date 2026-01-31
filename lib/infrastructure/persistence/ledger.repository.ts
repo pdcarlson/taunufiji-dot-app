@@ -6,13 +6,14 @@
 
 import { Query, ID } from "node-appwrite";
 import { getDatabase } from "./client";
-import { DB_ID, COLLECTIONS, LedgerSchema } from "@/lib/domain/entities/schema";
+import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/schema";
 import {
   ILedgerRepository,
   LedgerQueryOptions,
-  LedgerEntry,
 } from "@/lib/domain/ports/ledger.repository";
-import { DatabaseError } from "@/lib/domain/errors";
+import { LedgerEntry } from "@/lib/domain/entities/models";
+import { LedgerSchema } from "@/lib/domain/entities/schema";
+import { NotFoundError, DatabaseError } from "@/lib/domain/errors";
 
 export class AppwriteLedgerRepository implements ILedgerRepository {
   // =========================================================================

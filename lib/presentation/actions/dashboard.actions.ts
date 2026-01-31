@@ -2,7 +2,7 @@
 
 import { createSessionClient } from "@/lib/presentation/server/appwrite";
 
-import { TasksService } from "@/lib/application/services/tasks.service";
+import { TasksService } from "@/lib/application/services/task";
 import { AuthService } from "@/lib/application/services/auth.service";
 import { LibraryService } from "@/lib/application/services/library.service";
 import { logger } from "@/lib/utils/logger";

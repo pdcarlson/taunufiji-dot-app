@@ -176,14 +176,7 @@ export const DutyService = {
         });
 
         // Recur
-        if (task.schedule_id) {
-          const { ScheduleService } = await import("./schedule.service");
-          try {
-            await ScheduleService.triggerNextInstance(task.schedule_id, task);
-          } catch (e) {
-            console.error("Lazy Recur failed", e);
-          }
-        }
+        // Handled by TaskExpiredHandler listening to TASK_EXPIRED event
         continue;
       }
 
