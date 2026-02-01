@@ -40,7 +40,7 @@ function TimeDisplay({
     const tick = () => {
       const targetTime = new Date(target).getTime();
       const now = new Date().getTime();
-      let diff = targetTime - now;
+      const diff = targetTime - now;
 
       if (diff <= 0) {
         setText(mode === "unlock" ? "Ready" : "Expired");

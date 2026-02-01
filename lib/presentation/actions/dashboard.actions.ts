@@ -2,9 +2,10 @@
 
 import { createSessionClient } from "@/lib/presentation/server/appwrite";
 
-import { TasksService } from "@/lib/application/services/task";
+import { getContainer } from "@/lib/infrastructure/container";
+import { MaintenanceService } from "@/lib/application/services/task";
 import { AuthService } from "@/lib/application/services/auth.service";
-import { LibraryService } from "@/lib/application/services/library.service";
+
 import { logger } from "@/lib/utils/logger";
 import { Client, Databases, Query } from "node-appwrite";
 import { env } from "@/lib/infrastructure/config/env";
@@ -42,13 +43,15 @@ export async function getDashboardStatsAction(
     // Ensure we query by Profile ID, not Auth ID
     const profile = await AuthService.getProfile(userId);
 
+    const { dutyService } = getContainer();
+
     // <--- KEY FIX: Use discord_id (Stable) instead of $id (Random after migration)
     let activeCount = 0;
     if (profile) {
       // Ensure tasks are up-to-date (expire overdue, unlock scheduled)
-      await TasksService.performMaintenance(profile.discord_id);
+      await MaintenanceService.performMaintenance(profile.discord_id);
 
-      const myTasksRes = await TasksService.getMyTasks(profile.discord_id);
+      const myTasksRes = await dutyService.getMyTasks(profile.discord_id);
       if (myTasksRes && Array.isArray(myTasksRes.documents)) {
         activeCount = myTasksRes.documents.filter(
           (d: any) =>
@@ -183,22 +186,19 @@ export async function getLeaderboardAction(userId?: string) {
         if (!(await AuthService.verifyBrother(user.$id))) {
           return [];
         }
-      } catch (sessionError) {
-        console.warn("Leaderboard: No session and no userId provided.");
+      } catch (_sessionError) {
         return [];
       }
     }
 
-    const res = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
-      Query.orderDesc("details_points_current"),
-      Query.limit(5),
-      Query.select(["full_name", "details_points_current", "discord_handle"]),
-    ]);
+    const { pointsService } = getContainer();
+    const leaderboard = await pointsService.getLeaderboard(5);
 
-    return res.documents.map((doc, i) => ({
-      id: doc.$id,
-      name: doc.full_name || doc.discord_handle || "Unknown",
-      points: doc.details_points_current || 0,
+    // Map to View Model
+    return leaderboard.map((entry: any, i: number) => ({
+      id: entry.id, // Discord ID or Doc ID
+      name: entry.name,
+      points: entry.points,
       rank: i + 1,
     }));
   } catch (e) {

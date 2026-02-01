@@ -1,11 +1,14 @@
 "use server";
 
 import {
-  TasksService,
+  AdminService,
+  QueryService,
+  ScheduleService,
+  // Ensure types are exported or import from ./types
   CreateAssignmentDTO,
   CreateScheduleDTO,
 } from "@/lib/application/services/task";
-import { PointsService } from "@/lib/application/services/points.service";
+
 import { StorageService } from "@/lib/infrastructure/storage/storage";
 import { revalidatePath } from "next/cache";
 
@@ -32,7 +35,7 @@ export async function getOpenTasksAction(jwt?: string) {
     if (!(await AuthService.verifyBrother(user.$id)))
       throw new Error("Unauthorized");
 
-    const res = await TasksService.getOpenTasks();
+    const res = await QueryService.getOpenTasks();
     // Serialize Appwrite Models to plain JSON if needed (Next.js passes data automatically)
     return JSON.parse(JSON.stringify(res));
   } catch (error) {
@@ -50,13 +53,17 @@ export async function getPendingReviewsAction(jwt?: string) {
     if (!(await AuthService.verifyBrother(user.$id)))
       throw new Error("Unauthorized");
 
-    const res = await TasksService.getPendingReviews();
+    const res = await QueryService.getPendingReviews();
     return JSON.parse(JSON.stringify(res));
   } catch (error) {
     console.error("Failed to fetch pending reviews", error);
     return [];
   }
 }
+
+import { getContainer } from "@/lib/infrastructure/container";
+
+// ...
 
 export async function claimTaskAction(
   taskId: string,
@@ -76,7 +83,8 @@ export async function claimTaskAction(
     const profile = await AuthService.getProfile(user.$id);
     if (!profile) throw new Error("Profile not found");
 
-    await TasksService.claimTask(taskId, profile.discord_id);
+    const { dutyService } = getContainer();
+    await dutyService.claimTask(taskId, profile.discord_id);
     revalidatePath("/dashboard/housing");
     return { success: true };
   } catch (error) {
@@ -85,8 +93,7 @@ export async function claimTaskAction(
   }
 }
 
-// @ts-ignore
-const heicConvert = require("heic-convert");
+// ...
 
 export async function submitProofAction(formData: FormData, jwt?: string) {
   try {
@@ -98,58 +105,31 @@ export async function submitProofAction(formData: FormData, jwt?: string) {
     const taskId = formData.get("taskId") as string;
     const file = formData.get("file") as File;
 
-    if (!file || !taskId) throw new Error("Missing fields");
-
-    let buffer = Buffer.from(await file.arrayBuffer());
-    let contentType = file.type;
-    let fileName = file.name;
-
-    // Server-Side HEIC Conversion
-    const isHeic =
-      file.name.toLowerCase().endsWith(".heic") ||
-      file.name.toLowerCase().endsWith(".heif") ||
-      file.type.includes("heic") ||
-      file.type.includes("heif");
-
-    if (isHeic) {
-      console.log(`Converting HEIC on server: ${fileName}`);
-      try {
-        const outputBuffer = await heicConvert({
-          buffer: buffer, // the HEIC file buffer
-          format: "JPEG", // output format
-          quality: 0.8, // jpeg compression quality
-        });
-
-        buffer = Buffer.from(outputBuffer);
-        contentType = "image/jpeg";
-        fileName = fileName.replace(/\.(heic|heif)$/i, ".jpg");
-        console.log(`Conversion successful: ${fileName}`);
-      } catch (conversionError) {
-        console.error("Server-side HEIC conversion failed", conversionError);
-        throw new Error("Failed to process iPhone photo on server.");
-      }
-    }
+    if (!file || file.size === 0) throw new Error("File is required");
 
     // 1. Upload to S3
-    const key = `proofs/${taskId}-${Date.now()}-${fileName}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    // Generate Key
+    const ext = file.name.split(".").pop();
+    const key = `proofs/${taskId}/${Date.now()}.${ext}`;
 
-    await StorageService.uploadFile(buffer, key, contentType);
+    await StorageService.uploadFile(buffer, key, file.type);
+    const s3Key = key;
 
-    // 1.5 Get Profile ID
+    // 2. Resolve Profile
     const profile = await AuthService.getProfile(user.$id);
     if (!profile) throw new Error("Profile not found");
 
-    // 2. Update DB
-    await TasksService.submitProof(taskId, profile.discord_id, key);
+    // 3. Mark Submitted via Service
+    const { dutyService } = getContainer();
+    await dutyService.submitProof(taskId, profile.discord_id, s3Key);
 
     revalidatePath("/dashboard/housing");
     return { success: true };
-  } catch (e) {
-    console.error("Upload failed", e);
-    return {
-      success: false,
-      error: e instanceof Error ? e.message : "Upload failed",
-    };
+  } catch (error) {
+    console.error("Failed to submit proof", error);
+    return { success: false, error: "Failed to submit proof" };
   }
 }
 
@@ -164,7 +144,9 @@ export async function getMyTasksAction(userId: string, jwt?: string) {
   const profile = await AuthService.getProfile(user.$id);
   if (!profile) return [];
 
-  const res = await TasksService.getMyTasks(profile.discord_id);
+  // 2. Get Tasks
+  const { dutyService } = getContainer();
+  const res = await dutyService.getMyTasks(profile.discord_id);
   return JSON.parse(JSON.stringify(res.documents));
 }
 
@@ -179,7 +161,7 @@ export async function getHistoryAction(userId: string) {
   const profile = await AuthService.getProfile(user.$id);
   if (!profile) return [];
 
-  const res = await TasksService.getHistory(profile.$id);
+  const res = await QueryService.getHistory(profile.$id);
   return JSON.parse(JSON.stringify(res));
 }
 
@@ -194,7 +176,7 @@ export async function unclaimTaskAction(taskId: string, jwt?: string) {
     if (!profile) throw new Error("Profile not found");
 
     // Verification that user OWNS the task they are unclaiming
-    const task = await TasksService.getTask(taskId);
+    const task = await QueryService.getTask(taskId);
     if (!task) throw new Error("Task not found");
 
     // Schema uses 'assigned_to' as Profile ID (Discord ID)
@@ -202,7 +184,8 @@ export async function unclaimTaskAction(taskId: string, jwt?: string) {
       throw new Error("You do not own this task");
     }
 
-    await TasksService.unclaimTask(taskId, profile.discord_id);
+    const { dutyService } = getContainer();
+    await dutyService.unclaimTask(taskId, profile.discord_id);
     revalidatePath("/dashboard/housing");
     return { success: true };
   } catch (e) {
@@ -221,7 +204,7 @@ export async function approveTaskAction(taskId: string, jwt?: string) {
     );
     if (!isAdmin) throw new Error("Unauthorized (Admin Only)");
 
-    await TasksService.verifyTask(taskId, user.$id);
+    await AdminService.verifyTask(taskId, user.$id);
     revalidatePath("/dashboard/housing");
     return { success: true };
   } catch (e: unknown) {
@@ -245,7 +228,7 @@ export async function rejectTaskAction(
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
-    await TasksService.rejectTask(taskId, reason || "No reason provided");
+    await AdminService.rejectTask(taskId, reason || "No reason provided");
     revalidatePath("/dashboard/housing");
     return { success: true };
   } catch (e) {
@@ -268,7 +251,7 @@ export async function createTaskAction(
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
-    await TasksService.createTask(data);
+    await AdminService.createTask(data);
     revalidatePath("/dashboard/housing");
     return { success: true };
   } catch (e) {
@@ -295,7 +278,7 @@ export async function reassignTaskAction(
     // Handle Unassign (empty string -> null)
     const targetProfileId = userId && userId.length > 0 ? userId : null;
 
-    await TasksService.adminReassign(taskId, targetProfileId);
+    await AdminService.adminReassign(taskId, targetProfileId);
 
     revalidatePath("/dashboard/housing");
     return { success: true };
@@ -315,15 +298,15 @@ export async function getSchedulesAction(jwt?: string) {
     );
     if (!isAdmin) return [];
 
-    // Need TasksService.getSchedules() -> I haven't implemented this in Service yet!
+    // Need ScheduleService.() -> I haven't implemented this in Service yet!
     // I should implement it in Service first.
     // For now, I'll use db.listDocuments directly in Service, so I need to go back to Service.
     // But I can't call DB directly here.
-    // I will assume TasksService.getSchedules() exists and then go fix it.
+    // I will assume ScheduleService.() exists and then go fix it.
     // Wait, I can't assume. I should fix it.
     // But tool use rules: "Do not do parallel tool calls".
     // I will finish this file then update TasksService.
-    const res = await TasksService.getSchedules();
+    const res = await ScheduleService.getSchedules();
     return JSON.parse(JSON.stringify(res));
   } catch (e) {
     console.error("Failed to fetch schedules", e);
@@ -344,7 +327,7 @@ export async function createScheduleAction(
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
-    await TasksService.createSchedule(data);
+    await ScheduleService.createSchedule(data);
     revalidatePath("/dashboard/housing");
     return { success: true };
   } catch (e) {
@@ -375,7 +358,7 @@ export async function getAllMembersAction(jwt?: string) {
     // Security Guard
     if (!(await AuthService.verifyBrother(user.$id))) return [];
 
-    const members = await TasksService.getMembers();
+    const members = await QueryService.getMembers();
 
     return members;
   } catch (e) {
@@ -394,7 +377,7 @@ export async function getReviewDetailsAction(taskId: string, jwt?: string) {
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
-    const task = await TasksService.getTask(taskId);
+    const task = await QueryService.getTask(taskId);
     if (!task) throw new Error("Task not found");
 
     let submitterName = "Unknown Brother";
@@ -419,7 +402,7 @@ export async function getReviewDetailsAction(taskId: string, jwt?: string) {
       // So `assigned_to` IS the Document ID of the User Profile.
       // So we can just `db.getDocument`.
       try {
-        const submitter = await TasksService.getUserProfile(task.assigned_to);
+        const submitter = await QueryService.getUserProfile(task.assigned_to);
         if (submitter) {
           submitterName =
             submitter.full_name || submitter.discord_handle || "Brother";
@@ -454,7 +437,7 @@ export async function updateTaskAction(
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
-    await TasksService.updateTask(taskId, data);
+    await AdminService.updateTask(taskId, data);
     revalidatePath("/dashboard/housing");
     return { success: true };
   } catch (e) {
@@ -473,7 +456,7 @@ export async function deleteTaskAction(taskId: string, jwt?: string) {
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
-    await TasksService.deleteTask(taskId);
+    await AdminService.deleteTask(taskId);
     revalidatePath("/dashboard/housing");
     return { success: true };
   } catch (e) {
@@ -494,7 +477,7 @@ export async function getScheduleAction(scheduleId: string, jwt?: string) {
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
-    const schedule = await TasksService.getSchedule(scheduleId);
+    const schedule = await ScheduleService.getSchedule(scheduleId);
     return JSON.parse(JSON.stringify(schedule));
   } catch (e) {
     return null;
@@ -515,7 +498,7 @@ export async function updateScheduleLeadTimeAction(
     );
     if (!isAdmin) throw new Error("Unauthorized");
 
-    await TasksService.updateSchedule(scheduleId, {
+    await ScheduleService.updateSchedule(scheduleId, {
       lead_time_hours: leadTime,
     });
 

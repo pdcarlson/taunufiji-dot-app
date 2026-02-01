@@ -1,7 +1,10 @@
 "use server";
 
 import { PointsService } from "@/lib/application/services/points.service";
-import { createSessionClient, createJWTClient } from "@/lib/presentation/server/appwrite";
+import {
+  createSessionClient,
+  createJWTClient,
+} from "@/lib/presentation/server/appwrite";
 import { AuthService } from "@/lib/application/services/auth.service";
 
 async function getAuthAccount(jwt?: string) {
@@ -11,6 +14,10 @@ async function getAuthAccount(jwt?: string) {
   const { account } = await createSessionClient();
   return account;
 }
+
+import { getContainer } from "@/lib/infrastructure/container";
+
+// ...
 
 export async function getTransactionHistoryAction(
   userId: string,
@@ -30,7 +37,8 @@ export async function getTransactionHistoryAction(
     const profile = await AuthService.getProfile(userId);
     if (!profile) return [];
 
-    const res = await PointsService.getHistory(profile.discord_id);
+    const { pointsService } = getContainer();
+    const res = await pointsService.getHistory(profile.discord_id);
     return JSON.parse(JSON.stringify(res));
   } catch (error) {
     console.error("Failed to fetch history", error);

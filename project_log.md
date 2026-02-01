@@ -283,3 +283,18 @@
 - **Fixed Redaction Alignment**: Removed CSS `scale()` transform that was causing double-scaling (canvas already rendered at correct size).
 - **Increased Upload Limit**: Changed Next.js `bodySizeLimit` from 10MB to 200MB to support large PDF uploads.
 - **Fixed Duplicate Check**: Converted from session-based to JWT-based authentication to match app architecture and fix "No session" errors.
+
+## 2026-02-01: Architecture Audit & Refactor
+
+- **Consolidation**:
+  - Moved legacy Event Handlers to `lib/infrastructure/events/handlers`.
+  - Deleted superseded `lib/application/handlers`.
+  - Unified Event initialization in `lib/infrastructure/events/init.ts` and wired it via `instrumentation.ts` for reliable startup.
+- **Service Layer (Dependency Injection)**:
+  - Removed the static `TasksService` facade.
+  - Refactored `housing.actions.ts`, `dashboard.actions.ts`, `admin.ts`, and `cron.service.ts` to use individual services (`AdminService`, `QueryService`, `DutyService`) directly or via `getContainer()`.
+  - Upgraded `DutyService` and `PointsService` to use proper Constructor Injection with Interfaces, enabling better testability and loose coupling.
+- **Maintenance**:
+  - Refactored `MaintenanceService` to use DI for `DutyService`, resolving circular dependency and static call issues.
+  - Added `uploadFile` method to `StorageService` logic within actions to replace broken/missing references.
+  - Fixed Build and Lint errors across the board, including stricter Type Checking and unused import removal.

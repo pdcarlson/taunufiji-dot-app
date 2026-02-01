@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PointsService } from "./points.service";
 import { MockFactory } from "@/lib/test/mock-factory";
-import { setContainer, resetContainer } from "@/lib/infrastructure/container";
 import { Member } from "@/lib/domain/entities";
 
 // Mock Logger
@@ -15,14 +14,12 @@ vi.mock("@/lib/utils/logger", () => ({
 describe("PointsService", () => {
   const mockUserRepo = MockFactory.createUserRepository();
   const mockLedgerRepo = MockFactory.createLedgerRepository();
+  let service: PointsService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    resetContainer();
-    setContainer({
-      userRepository: mockUserRepo,
-      ledgerRepository: mockLedgerRepo,
-    });
+    // Instantiating without Redis for unit tests
+    service = new PointsService(mockUserRepo, mockLedgerRepo);
   });
 
   describe("awardPoints", () => {
@@ -38,7 +35,7 @@ describe("PointsService", () => {
       mockLedgerRepo.create = vi.fn().mockResolvedValue({} as any);
 
       // 2. Execute
-      await PointsService.awardPoints("discord_123", {
+      await service.awardPoints("discord_123", {
         amount: 10,
         reason: "Test Award",
         category: "task",
@@ -61,7 +58,7 @@ describe("PointsService", () => {
       const mockUser = { $id: "u1" } as Member;
       mockUserRepo.findByDiscordId = vi.fn().mockResolvedValue(mockUser);
 
-      await PointsService.awardPoints("discord_123", {
+      await service.awardPoints("discord_123", {
         amount: -5,
         reason: "Fine",
         category: "fine",
@@ -80,7 +77,7 @@ describe("PointsService", () => {
       mockUserRepo.findByDiscordId = vi.fn().mockResolvedValue(null);
 
       await expect(
-        PointsService.awardPoints("unknown", {
+        service.awardPoints("unknown", {
           amount: 10,
           reason: "",
           category: "manual",

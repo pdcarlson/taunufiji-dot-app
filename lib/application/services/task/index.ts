@@ -23,12 +23,3 @@ export {
   QueryService,
   MaintenanceService,
 };
-
-// Facade for backwards compatibility and ease of use/import
-export const TasksService = {
-  ...DutyService,
-  ...AdminService,
-  ...ScheduleService,
-  ...QueryService,
-  ...MaintenanceService,
-};

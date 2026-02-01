@@ -17,6 +17,7 @@
     "appwrite": "^21.5.0",
     "clsx": "^2.1.1",
     "heic-convert": "^2.1.0",
+    "ioredis": "^5.9.2",
     "lucide-react": "^0.562.0",
     "next": "^16.1.6",
     "node-appwrite": "^21.1.0",

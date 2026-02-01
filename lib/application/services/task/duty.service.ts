@@ -5,21 +5,22 @@
  * Uses repository pattern for data access.
  */
 
-import { getContainer } from "@/lib/infrastructure/container";
 import { HousingTask } from "@/lib/domain/entities";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents } from "@/lib/domain/events";
+import { IDutyService } from "@/lib/domain/ports/services/duty.service.port";
+import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 
-export const DutyService = {
+export class DutyService implements IDutyService {
+  constructor(private readonly taskRepository: ITaskRepository) {}
+
   /**
    * Claim a task
    * Emits: TASK_CLAIMED
    */
   async claimTask(taskId: string, profileId: string) {
-    const { taskRepository } = getContainer();
-
     // 1. Fetch to check status and execution limit
-    const task = await taskRepository.findById(taskId);
+    const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Task not found.");
     }
@@ -40,7 +41,7 @@ export const DutyService = {
       updates.due_at = due.toISOString();
     }
 
-    const result = await taskRepository.update(taskId, updates);
+    const result = await this.taskRepository.update(taskId, updates);
 
     // Emit Event
     await DomainEventBus.publish(TaskEvents.TASK_CLAIMED, {
@@ -50,17 +51,15 @@ export const DutyService = {
     });
 
     return result;
-  },
+  }
 
   /**
    * Submit proof for a task
    * Emits: TASK_SUBMITTED
    */
   async submitProof(taskId: string, profileId: string, s3Key: string) {
-    const { taskRepository } = getContainer();
-
     // 1. Verify Ownership
-    const task = await taskRepository.findById(taskId);
+    const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Task not found.");
     }
@@ -74,8 +73,8 @@ export const DutyService = {
       throw new Error("Task is expired. You cannot submit late.");
     }
 
-    const result = await taskRepository.update(taskId, {
-      status: "pending",
+    const result = await this.taskRepository.update(taskId, {
+      status: "pending", // Waiting for approval
       proof_s3_key: s3Key,
     });
 
@@ -87,17 +86,15 @@ export const DutyService = {
     });
 
     return result;
-  },
+  }
 
   /**
    * Unclaim a task (release it back to pool)
    * Emits: TASK_UNASSIGNED
    */
   async unclaimTask(taskId: string, profileId: string) {
-    const { taskRepository } = getContainer();
-
     // Fetch to verify ownership
-    const task = await taskRepository.findById(taskId);
+    const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Task not found.");
     }
@@ -106,7 +103,7 @@ export const DutyService = {
       throw new Error("You are not assigned to this task.");
     }
 
-    const result = await taskRepository.update(taskId, {
+    const result = await this.taskRepository.update(taskId, {
       status: "open",
       assigned_to: undefined,
       due_at: undefined,
@@ -120,16 +117,13 @@ export const DutyService = {
     });
 
     return result;
-  },
+  }
 
   /**
    * Get tasks assigned to current user, with lazy evaluation for expiry/recurrence.
    */
   async getMyTasks(userId: string) {
-    const { taskRepository } = getContainer();
-
-    const allAssigned = await taskRepository.findByAssignee(userId);
-    const now = new Date();
+    const allAssigned = await this.taskRepository.findByAssignee(userId);
     const filtered: HousingTask[] = [];
 
     // Lazy Logic: Now handled by MaintenanceService. Just filter the view.
@@ -145,5 +139,5 @@ export const DutyService = {
     }
 
     return { documents: filtered, total: filtered.length };
-  },
-};
+  }
+}

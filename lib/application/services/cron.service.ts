@@ -8,8 +8,9 @@
 import { getContainer } from "@/lib/infrastructure/container";
 import { HousingTask } from "@/lib/domain/entities";
 import { NotificationService } from "./notification.service";
-import { PointsService } from "./points.service";
-import { TasksService } from "./task";
+
+import { PointsService } from "@/lib/application/services/points.service";
+import { ScheduleService } from "./task";
 
 // Helper function to safely get error message
 function getErrorMessage(error: unknown): string {
@@ -199,7 +200,8 @@ export const CronService = {
           });
 
           if (task.assigned_to) {
-            await PointsService.awardPoints(task.assigned_to, {
+            const { pointsService } = getContainer();
+            await pointsService.awardPoints(task.assigned_to, {
               amount: -50,
               reason: `Missed Duty: ${task.title}`,
               category: "fine",
@@ -208,7 +210,10 @@ export const CronService = {
 
           if (task.schedule_id) {
             try {
-              await TasksService.triggerNextInstance(task.schedule_id, task);
+              await ScheduleService.triggerNextInstance(
+                task.schedule_id,
+                task as any,
+              );
             } catch (e) {
               console.error(
                 `Failed to trigger next instance for ${task.$id}:`,

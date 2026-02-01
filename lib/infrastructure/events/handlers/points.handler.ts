@@ -4,8 +4,8 @@ import {
   LibraryUploadedEvent,
   TaskApprovedEvent,
 } from "../dispatcher";
-import { PointsService } from "@/lib/application/services/points.service";
 import { logger } from "@/lib/utils/logger";
+import { getContainer } from "@/lib/infrastructure/container";
 
 /**
  * PointsHandler
@@ -20,7 +20,8 @@ export const PointsHandler = {
         logger.log(
           `[PointsHandler] Awarding points for Library Upload: ${payload.fileName}`,
         );
-        await PointsService.awardPoints(payload.userId, {
+        const { pointsService } = getContainer();
+        await pointsService.awardPoints(payload.userId, {
           amount: 10,
           reason: "Uploaded Exam",
           category: "event", // Keeping 'event' as per legacy, or could use 'task'
@@ -35,7 +36,8 @@ export const PointsHandler = {
         logger.log(
           `[PointsHandler] Awarding points for Task Approved: ${payload.taskTitle}`,
         );
-        await PointsService.awardPoints(payload.userId, {
+        const { pointsService } = getContainer();
+        await pointsService.awardPoints(payload.userId, {
           amount: payload.points,
           reason: payload.taskTitle,
           category: "task",

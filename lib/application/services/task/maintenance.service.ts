@@ -8,7 +8,6 @@
 import { getContainer } from "@/lib/infrastructure/container";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents } from "@/lib/domain/events";
-import { DutyService } from "./duty.service";
 
 export const MaintenanceService = {
   /**
@@ -73,7 +72,8 @@ export const MaintenanceService = {
         now > new Date(task.due_at)
       ) {
         // Expired Claim -> Unclaim
-        await DutyService.unclaimTask(task.$id, userId);
+        const { dutyService } = getContainer();
+        await dutyService.unclaimTask(task.$id, userId);
         continue;
       }
     }
