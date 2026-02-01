@@ -20,6 +20,7 @@ global.fetch = fetchMock;
 describe("AuthService", () => {
   const mockIdentity = MockFactory.createIdentityProvider();
   const mockUserRepo = MockFactory.createUserRepository();
+  let authService: AuthService;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -31,6 +32,9 @@ describe("AuthService", () => {
 
     vi.stubEnv("DISCORD_GUILD_ID", "test_guild");
     vi.stubEnv("DISCORD_BOT_TOKEN", "test_token");
+
+    // Instantiate Service
+    authService = new AuthService(mockUserRepo, mockIdentity);
 
     // Default Discord API Mock
     fetchMock.mockResolvedValue({
@@ -64,7 +68,7 @@ describe("AuthService", () => {
         json: async () => ({ roles: ["target_role", "other_role"] }),
       });
 
-      const result = await AuthService.verifyRole("auth_1", ["target_role"]);
+      const result = await authService.verifyRole("auth_1", ["target_role"]);
       expect(result).toBe(true);
       expect(mockIdentity.getIdentity).toHaveBeenCalledWith(
         "auth_1",
@@ -75,7 +79,7 @@ describe("AuthService", () => {
     it("should return false if Identity Provider returns null (No Discord Link)", async () => {
       mockIdentity.getIdentity = vi.fn().mockResolvedValue(null);
 
-      const result = await AuthService.verifyRole("auth_1", ["target_role"]);
+      const result = await authService.verifyRole("auth_1", ["target_role"]);
       expect(result).toBe(false);
     });
   });
@@ -96,7 +100,7 @@ describe("AuthService", () => {
         auth_id: "auth_new",
       } as Member);
 
-      await AuthService.syncUser("auth_new");
+      await authService.syncUser("auth_new");
 
       expect(mockUserRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -117,11 +121,12 @@ describe("AuthService", () => {
 
       // 2. Repo Mock (Found)
       const existingUser = {
+        id: "doc_1", // Use id alias if base entity supports it, or $id. Using id as per clean arch.
         $id: "doc_1",
         auth_id: "auth_old",
         discord_handle: "old_handle",
         full_name: "old_name",
-      } as Member;
+      } as unknown as Member;
 
       mockUserRepo.findByDiscordId = vi.fn().mockResolvedValue(existingUser);
 
@@ -134,7 +139,7 @@ describe("AuthService", () => {
         }),
       });
 
-      await AuthService.syncUser("auth_old");
+      await authService.syncUser("auth_old");
 
       expect(mockUserRepo.update).toHaveBeenCalledWith(
         "doc_1",

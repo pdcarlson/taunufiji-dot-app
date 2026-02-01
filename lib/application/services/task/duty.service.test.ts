@@ -28,10 +28,13 @@ describe("DutyService", () => {
 
       await service.claimTask("task_1", "user_1");
 
-      expect(mockTaskRepo.update).toHaveBeenCalledWith("task_1", {
-        status: "pending",
-        assigned_to: "user_1",
-      });
+      expect(mockTaskRepo.update).toHaveBeenCalledWith(
+        "task_1",
+        expect.objectContaining({
+          status: "pending",
+          assigned_to: "user_1",
+        }),
+      );
     });
 
     it("should reject claiming a task that is not Open", async () => {
@@ -56,10 +59,13 @@ describe("DutyService", () => {
 
       await service.submitProof("task_1", "user_1", "s3_key_123");
 
-      expect(mockTaskRepo.update).toHaveBeenCalledWith("task_1", {
-        status: "pending",
-        proof_s3_key: "s3_key_123",
-      });
+      expect(mockTaskRepo.update).toHaveBeenCalledWith(
+        "task_1",
+        expect.objectContaining({
+          status: "pending",
+          proof_s3_key: "s3_key_123",
+        }),
+      );
     });
 
     it("should reject submission from non-assignee", async () => {

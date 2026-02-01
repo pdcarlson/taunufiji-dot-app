@@ -1,7 +1,6 @@
 "use client";
 
 import { AuthService } from "@/lib/application/services/auth.service";
-import { syncUserAction } from "@/lib/presentation/actions/auth.actions";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
@@ -31,14 +30,8 @@ export default function DashboardShell({
     if (!loading) {
       if (!user) {
         router.push("/login");
-      } else if (user) {
-        // Trigger Sync (Idempotent)
-        syncUserAction(user.$id);
-
-        // Security Check: Redirect if unauthorized
-        if (profile && profile.isAuthorized === false) {
-          router.push("/unauthorized");
-        }
+      } else if (profile && profile.isAuthorized === false) {
+        router.push("/unauthorized");
       }
     }
   }, [user, profile, loading, router]);

@@ -19,3 +19,13 @@
   - **Testing**: Installed missing Vitest dependencies (`vitest`, `jsdom`, `@testing-library/*`) to fix build-time type checks.
   - **Refactor**: Completed DI migration for `Discord Handlers` and `CronService`, removing all static service calls.
 - **Impact**: `npm run build` is now passing. Zero high-severity vulnerabilities reported by `npm audit`.
+
+## 2026-02-01: System Repair & Stability Fixes
+
+- **Context**: Resolved critical runtime crashes preventing local development and fixed an infinite recursion bug in the authentication flow.
+- **Technical Changes**:
+  - **Infrastructure**: Verified and started `redis` container via `docker-compose` to resolve `ECONNREFUSED`.
+  - **Data Integrity**: Relaxed `BaseEntitySchema` date validation (`z.string().datetime()` -> `z.string()`) to accommodate Appwrite's irregular ISO timestamp formats.
+  - **Stability**: Removed redundant `syncUserAction` call in `DashboardShell.tsx` which was causing an infinite `Sync -> Update -> Render` loop on the client side.
+  - **Testing**: Fixed `setup` and `teardown` in `library.service.test.ts`, `duty.service.test.ts`, and `points.service.test.ts` to use proper Dependency Injection and robust assertions.
+- **Impact**: Application is now stable locally. `npm run dev`, `npm run build`, and `npm test` all pass.

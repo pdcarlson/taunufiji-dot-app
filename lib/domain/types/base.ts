@@ -8,8 +8,8 @@ import { z } from "zod";
 
 export const BaseEntitySchema = z.object({
   id: z.string(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 export type BaseEntity = z.infer<typeof BaseEntitySchema>;

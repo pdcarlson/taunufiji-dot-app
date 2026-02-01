@@ -27,8 +27,9 @@ describe("PointsService", () => {
       // 1. Setup User
       const mockUser = {
         $id: "user_doc_1",
+        id: "user_doc_1",
         details_points_current: 50,
-      } as Member;
+      } as unknown as Member;
 
       mockUserRepo.findByDiscordId = vi.fn().mockResolvedValue(mockUser);
       mockUserRepo.updatePoints = vi.fn().mockResolvedValue(true);
@@ -49,13 +50,14 @@ describe("PointsService", () => {
           user_id: "discord_123",
           amount: 10,
           reason: "Test Award",
+          category: "task",
           is_debit: false,
         }),
       );
     });
 
     it("should handle deductions (negative amount)", async () => {
-      const mockUser = { $id: "u1" } as Member;
+      const mockUser = { $id: "u1", id: "u1" } as unknown as Member;
       mockUserRepo.findByDiscordId = vi.fn().mockResolvedValue(mockUser);
 
       await service.awardPoints("discord_123", {
@@ -68,6 +70,7 @@ describe("PointsService", () => {
       expect(mockLedgerRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           amount: 5, // Stored as positive
+          category: "fine",
           is_debit: true, // Flagged as debit
         }),
       );

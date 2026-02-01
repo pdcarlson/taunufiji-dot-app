@@ -1,68 +1,61 @@
-"use client";
-
-import { useAuth } from "@/components/auth/AuthProvider";
-import { useEffect, useState } from "react";
+import { createSessionClient } from "@/lib/presentation/server/appwrite";
+import { getContainer } from "@/lib/infrastructure/container";
+import { redirect } from "next/navigation";
+import { getDashboardStatsAction } from "@/lib/presentation/actions/dashboard.actions";
 import HousingWidget from "@/components/dashboard/HousingWidget";
 import LibraryWidget from "@/components/dashboard/LibraryWidget";
 import LeaderboardWidget from "@/components/dashboard/LeaderboardWidget";
-import { getDashboardStatsAction } from "@/lib/presentation/actions/dashboard.actions";
+import MyDutiesWidget from "@/components/features/housing/MyDutiesWidget";
+import { HousingTask } from "@/lib/domain/types/task";
 
-import { DashboardStats } from "@/lib/domain/entities/dashboard.dto";
+export default async function DashboardHome() {
+  // 1. Auth & Session
+  let user;
+  try {
+    const { account } = await createSessionClient();
+    user = await account.get();
+  } catch (error) {
+    redirect("/login");
+  }
 
-export default function DashboardHome() {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<DashboardStats>({
-    points: 0,
-    activeTasks: 0,
-    pendingReviews: 0,
-    fullName: "",
-    housingHistory: [],
-    libraryHistory: [],
-  });
+  // 2. Fetch Data (Parallel)
+  const container = getContainer();
 
-  // Fetch Stats
-  useEffect(() => {
-    async function load() {
-      if (!user) return;
-      const data = await getDashboardStatsAction(user.$id);
-      setStats(data);
-      setLoading(false);
-    }
-    load();
-  }, [user?.$id]);
+  // Resolve Profile first
+  const profile = await container.authService.getProfile(user.$id);
+  if (!profile) {
+    return <div>Error loading profile.</div>;
+  }
 
-  // Dynamic Greeting Logic
+  const [stats, myTasksRes] = await Promise.all([
+    getDashboardStatsAction(user.$id),
+    container.dutyService.getMyTasks(profile.discord_id),
+  ]);
+
+  const myTasks = (myTasksRes?.documents || []) as HousingTask[];
+
+  // 3. Greeting Logic
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Good Morning" : hour < 18 ? "Good Afternoon" : "Good Evening";
 
-  // Name Logic: Smart Last Name Extractor
   const getLastName = (nameProp: string) => {
-    if (!nameProp || nameProp === "Brother") return ""; // Return empty to avoid "Brother Brother"
-
+    if (!nameProp || nameProp === "Brother") return "";
     const clean = nameProp.trim();
-
-    // Case 1: "Pierce Carlson" -> "Carlson"
     if (clean.includes(" ")) {
       const parts = clean.split(" ");
       return parts[parts.length - 1];
     }
-
-    // Case 2: "p.carlson" -> "Carlson" (Handle/Email format)
     if (clean.includes(".")) {
       const parts = clean.split(".");
       const last = parts[parts.length - 1];
-      // Ensure capitalization
       return last.charAt(0).toUpperCase() + last.slice(1);
     }
-
-    // Case 3: "Pierce" -> "Pierce"
     return clean;
   };
 
-  const lastName = getLastName(loading ? "" : stats.fullName);
-  const displayName = lastName ? `Brother ${lastName}` : "Brother"; // Handles "Brother Carlson" or just "Brother"
+  const lastName = getLastName(stats.fullName);
+  const displayName = lastName ? `Brother ${lastName}` : "Brother";
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -88,10 +81,13 @@ export default function DashboardHome() {
         </div>
       </div>
 
+      {/* NEW: MY DUTIES WIDGET */}
+      <MyDutiesWidget initialTasks={myTasks} userId={user.$id} />
+
       {/* WIDGET GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* 1. Housing */}
-        <HousingWidget stats={stats} loading={loading} />
+        {/* 1. Housing Stats (Old Widget kept for Stats/Admin) */}
+        <HousingWidget stats={stats} loading={false} />
         {/* 2. Library (Static) */}
         <LibraryWidget stats={stats} />
         {/* 3. Leaderboard */}
