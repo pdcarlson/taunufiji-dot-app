@@ -7,7 +7,7 @@ import LibraryWidget from "@/components/dashboard/LibraryWidget";
 import LeaderboardWidget from "@/components/dashboard/LeaderboardWidget";
 import { getDashboardStatsAction } from "@/lib/presentation/actions/dashboard.actions";
 
-import { DashboardStats } from "@/lib/domain/entities/dashboard";
+import { DashboardStats } from "@/lib/domain/entities/dashboard.dto";
 
 export default function DashboardHome() {
   const { user } = useAuth();

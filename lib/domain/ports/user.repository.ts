@@ -5,8 +5,8 @@
  * Implementations should handle the specifics of the data store.
  */
 
-import { Member } from "@/lib/domain/entities/models";
-import { UserSchema } from "@/lib/domain/entities/schema";
+import { Member } from "@/lib/domain/entities";
+import { UserSchema } from "@/lib/domain/entities/appwrite.schema";
 
 /**
  * Query options for listing users

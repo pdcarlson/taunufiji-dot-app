@@ -5,7 +5,7 @@
  */
 
 import { getContainer } from "@/lib/infrastructure/container";
-import { Member } from "@/lib/domain/entities/models";
+import { Member } from "@/lib/domain/entities";
 
 // Re-export type for backwards compatibility
 export type UserDocument = Member;

@@ -8,7 +8,7 @@ import { LibraryService } from "@/lib/application/services/library.service";
 import { logger } from "@/lib/utils/logger";
 import { Client, Databases, Query } from "node-appwrite";
 import { env } from "@/lib/infrastructure/config/env";
-import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/schema";
+import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/appwrite.schema";
 
 const client = new Client()
   .setEndpoint(env.NEXT_PUBLIC_APPWRITE_ENDPOINT)
@@ -17,7 +17,7 @@ const client = new Client()
 
 const db = new Databases(client);
 
-import { DashboardStats } from "@/lib/domain/entities/dashboard";
+import { DashboardStats } from "@/lib/domain/entities/dashboard.dto";
 
 export async function getDashboardStatsAction(
   userId: string,
@@ -45,6 +45,9 @@ export async function getDashboardStatsAction(
     // <--- KEY FIX: Use discord_id (Stable) instead of $id (Random after migration)
     let activeCount = 0;
     if (profile) {
+      // Ensure tasks are up-to-date (expire overdue, unlock scheduled)
+      await TasksService.performMaintenance(profile.discord_id);
+
       const myTasksRes = await TasksService.getMyTasks(profile.discord_id);
       if (myTasksRes && Array.isArray(myTasksRes.documents)) {
         activeCount = myTasksRes.documents.filter(

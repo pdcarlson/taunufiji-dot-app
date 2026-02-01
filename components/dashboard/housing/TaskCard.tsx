@@ -6,7 +6,7 @@ import {
   unclaimTaskAction,
   submitProofAction,
 } from "@/lib/presentation/actions/housing.actions";
-import { account } from "@/lib/infrastructure/client/appwrite";
+import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import { Loader } from "@/components/ui/Loader";
 import {
   Clock,
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-import { HousingTask } from "@/lib/domain/entities/models";
+import { HousingTask } from "@/lib/domain/entities";
 
 // Types (Ideally move to shared types file)
 type Task = HousingTask;

@@ -3,7 +3,7 @@ import { env } from "@/lib/infrastructure/config/env";
 
 const DISCORD_API = "https://discord.com/api/v10";
 
-export class DiscordAdapter implements INotificationProvider {
+export class DiscordProvider implements INotificationProvider {
   /**
    * Send a direct message to a user
    */

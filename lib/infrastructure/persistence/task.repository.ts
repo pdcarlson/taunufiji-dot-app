@@ -6,13 +6,13 @@
 
 import { Query, ID } from "node-appwrite";
 import { getDatabase } from "./client";
-import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/schema";
+import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/appwrite.schema";
 import {
   ITaskRepository,
   TaskQueryOptions,
 } from "@/lib/domain/ports/task.repository";
-import { HousingTask, HousingSchedule } from "@/lib/domain/entities/models";
-import { AssignmentSchema, ScheduleSchema } from "@/lib/domain/entities/schema";
+import { HousingTask, HousingSchedule } from "@/lib/domain/entities";
+import { AssignmentSchema, ScheduleSchema } from "@/lib/domain/entities/appwrite.schema";
 import { NotFoundError, DatabaseError } from "@/lib/domain/errors";
 
 export class AppwriteTaskRepository implements ITaskRepository {

@@ -3,10 +3,10 @@ import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import { X, Calendar, User, FileText, Check, Clock } from "lucide-react";
 import { createScheduleAction } from "@/lib/presentation/actions/housing.actions";
-import { account } from "@/lib/infrastructure/client/appwrite";
+import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import toast from "react-hot-toast";
 
-import { Member } from "@/lib/domain/entities/models";
+import { Member } from "@/lib/domain/entities";
 
 interface Props {
   onClose: () => void;

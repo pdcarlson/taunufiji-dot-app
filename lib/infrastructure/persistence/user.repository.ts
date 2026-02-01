@@ -6,12 +6,12 @@
 
 import { Query, ID } from "node-appwrite";
 import { getDatabase } from "./client";
-import { DB_ID, COLLECTIONS, UserSchema } from "@/lib/domain/entities/schema";
+import { DB_ID, COLLECTIONS, UserSchema } from "@/lib/domain/entities/appwrite.schema";
 import {
   IUserRepository,
   UserQueryOptions,
 } from "@/lib/domain/ports/user.repository";
-import { Member } from "@/lib/domain/entities/models";
+import { Member } from "@/lib/domain/entities";
 import { NotFoundError, DatabaseError } from "@/lib/domain/errors";
 
 export class AppwriteUserRepository implements IUserRepository {

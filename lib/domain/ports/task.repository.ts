@@ -5,8 +5,8 @@
  * Implementations should handle the specifics of the data store.
  */
 
-import { HousingTask, HousingSchedule } from "@/lib/domain/entities/models";
-import { AssignmentSchema, ScheduleSchema } from "@/lib/domain/entities/schema";
+import { HousingTask, HousingSchedule } from "@/lib/domain/entities";
+import { AssignmentSchema, ScheduleSchema } from "@/lib/domain/entities/appwrite.schema";
 
 /**
  * Query options for listing tasks

@@ -1,113 +1,91 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PointsService } from "./points.service";
-
-const mocks = vi.hoisted(() => ({
-  mockUpdateDocument: vi.fn(),
-  mockCreateDocument: vi.fn(),
-  mockListDocuments: vi.fn(),
-  mockGetDocument: vi.fn(),
-}));
-
-vi.mock("node-appwrite", () => {
-  return {
-    Client: class {
-      setEndpoint = vi.fn().mockReturnThis();
-      setProject = vi.fn().mockReturnThis();
-      setKey = vi.fn().mockReturnThis();
-    },
-    Databases: class {
-      updateDocument = mocks.mockUpdateDocument;
-      createDocument = mocks.mockCreateDocument;
-      listDocuments = mocks.mockListDocuments;
-      getDocument = mocks.mockGetDocument;
-    },
-    Query: {
-      equal: vi.fn(),
-      orderDesc: vi.fn(),
-    },
-    ID: {
-      unique: vi.fn().mockReturnValue("unique_id"),
-    },
-  };
-});
-
-// Mock Env
-vi.mock("@/lib/infrastructure/config/env", () => ({
-  env: {
-    NEXT_PUBLIC_APPWRITE_ENDPOINT: "http://localhost/v1",
-    NEXT_PUBLIC_APPWRITE_PROJECT_ID: "test-project",
-    APPWRITE_API_KEY: "test-key",
-  },
-}));
+import { MockFactory } from "@/lib/test/mock-factory";
+import { setContainer, resetContainer } from "@/lib/infrastructure/container";
+import { Member } from "@/lib/domain/entities";
 
 // Mock Logger
 vi.mock("@/lib/utils/logger", () => ({
   logger: {
-    info: vi.fn(),
-    error: vi.fn(),
     log: vi.fn(),
-  },
-}));
-
-// Mock UserService
-vi.mock("./user.service", () => ({
-  UserService: {
-    getByDiscordId: vi.fn(),
-    // awardPoints now uses resolving? No, it takes profileId (Discord ID) usually.
-    // Let's check points.service.ts source if needed.
-    // Assuming it does:
-    resolveUser: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
 describe("PointsService", () => {
+  const mockUserRepo = MockFactory.createUserRepository();
+  const mockLedgerRepo = MockFactory.createLedgerRepository();
+
   beforeEach(() => {
     vi.clearAllMocks();
+    resetContainer();
+    setContainer({
+      userRepository: mockUserRepo,
+      ledgerRepository: mockLedgerRepo,
+    });
   });
 
-  it("should award points correctly", async () => {
-    // Setup User State
-    const mockUser = {
-      $id: "user123",
-      details_points_current: 50,
-      details_points_lifetime: 100,
-    };
+  describe("awardPoints", () => {
+    it("should award points and create ledger entry", async () => {
+      // 1. Setup User
+      const mockUser = {
+        $id: "user_doc_1",
+        details_points_current: 50,
+      } as Member;
 
-    // Mock UserService Resolution (if used)
-    // Actually, looking at points.service.ts (I assume), it probably calls `UserService.getByDiscordId(userId)`.
-    const { UserService } = await import("./user.service");
-    vi.mocked(UserService.getByDiscordId).mockResolvedValue(mockUser as any);
-    // NOTE: If PointsService.awardPoints takes a "Discord ID", it resolves it.
-    // If it takes a "Doc ID", it just updates.
-    // Based on previous context, we moved to UserService resolution.
+      mockUserRepo.findByDiscordId = vi.fn().mockResolvedValue(mockUser);
+      mockUserRepo.updatePoints = vi.fn().mockResolvedValue(true);
+      mockLedgerRepo.create = vi.fn().mockResolvedValue({} as any);
 
-    await PointsService.awardPoints("user123", {
-      amount: 10,
-      reason: "Test Reason",
-      category: "task",
+      // 2. Execute
+      await PointsService.awardPoints("discord_123", {
+        amount: 10,
+        reason: "Test Award",
+        category: "task",
+      });
+
+      // 3. Verify
+      expect(mockUserRepo.findByDiscordId).toHaveBeenCalledWith("discord_123");
+      expect(mockUserRepo.updatePoints).toHaveBeenCalledWith("user_doc_1", 10);
+      expect(mockLedgerRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: "discord_123",
+          amount: 10,
+          reason: "Test Award",
+          is_debit: false,
+        }),
+      );
     });
 
-    // Expect User Update
-    expect(mocks.mockUpdateDocument).toHaveBeenCalledWith(
-      expect.any(String), // DB
-      expect.any(String), // Collection
-      "user123",
-      {
-        details_points_current: 60,
-        details_points_lifetime: 110,
-      },
-    );
+    it("should handle deductions (negative amount)", async () => {
+      const mockUser = { $id: "u1" } as Member;
+      mockUserRepo.findByDiscordId = vi.fn().mockResolvedValue(mockUser);
 
-    // Expect Ledger Creation
-    expect(mocks.mockCreateDocument).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      expect.any(String),
-      expect.objectContaining({
-        user_id: "user123", // Internal ID
-        amount: 10,
-        reason: "Test Reason",
-      }),
-    );
+      await PointsService.awardPoints("discord_123", {
+        amount: -5,
+        reason: "Fine",
+        category: "fine",
+      });
+
+      expect(mockUserRepo.updatePoints).toHaveBeenCalledWith("u1", -5);
+      expect(mockLedgerRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 5, // Stored as positive
+          is_debit: true, // Flagged as debit
+        }),
+      );
+    });
+
+    it("should throw if user not found", async () => {
+      mockUserRepo.findByDiscordId = vi.fn().mockResolvedValue(null);
+
+      await expect(
+        PointsService.awardPoints("unknown", {
+          amount: 10,
+          reason: "",
+          category: "manual",
+        }),
+      ).rejects.toThrow("not found");
+    });
   });
 });

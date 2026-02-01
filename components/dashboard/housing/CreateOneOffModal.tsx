@@ -1,13 +1,13 @@
 "use client";
 
 import { createTaskAction } from "@/lib/presentation/actions/housing.actions";
-import { account } from "@/lib/infrastructure/client/appwrite";
+import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import toast from "react-hot-toast";
 
-import { Member } from "@/lib/domain/entities/models";
+import { Member } from "@/lib/domain/entities";
 import { CreateAssignmentDTO } from "@/lib/application/services/task";
 
 interface CreateOneOffModalProps {

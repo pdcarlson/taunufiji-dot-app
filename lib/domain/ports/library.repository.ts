@@ -1,4 +1,4 @@
-import { LibraryResource } from "../entities/models";
+import { LibraryResource } from "../entities";
 
 export interface LibrarySearchFilters {
   department?: string;

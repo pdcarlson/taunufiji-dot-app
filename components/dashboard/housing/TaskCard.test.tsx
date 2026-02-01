@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import TaskCard from "./TaskCard";
-import { HousingTask } from "@/lib/domain/entities/models";
+import { HousingTask } from "@/lib/domain/entities";
 
 // Mock dependencies
-vi.mock("@/lib/infrastructure/client/appwrite", () => ({
+vi.mock("@/lib/infrastructure/persistence/appwrite.web", () => ({
   account: {
     createJWT: vi.fn().mockResolvedValue({ jwt: "mock_jwt" }),
   },
@@ -47,7 +47,7 @@ describe("TaskCard", () => {
         userName="Tester"
         isAdmin={false}
         onRefresh={vi.fn()}
-      />
+      />,
     );
 
     expect(screen.getByText("Fix Door")).toBeDefined();
@@ -71,7 +71,7 @@ describe("TaskCard", () => {
         userName="Tester"
         isAdmin={false}
         onRefresh={vi.fn()}
-      />
+      />,
     );
 
     expect(screen.getByText("Weekly Clean")).toBeDefined();
@@ -97,7 +97,7 @@ describe("TaskCard", () => {
         userName="Tester"
         isAdmin={false}
         onRefresh={vi.fn()}
-      />
+      />,
     );
 
     expect(screen.getByText("Trash")).toBeDefined();

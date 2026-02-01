@@ -6,7 +6,7 @@
  */
 
 import { getContainer } from "@/lib/infrastructure/container";
-import { HousingTask } from "@/lib/domain/entities/models";
+import { HousingTask } from "@/lib/domain/entities";
 import { NotificationService } from "./notification.service";
 import { PointsService } from "./points.service";
 import { TasksService } from "./task";

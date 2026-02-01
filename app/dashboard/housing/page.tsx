@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { account } from "@/lib/infrastructure/client/appwrite";
+import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import { Loader } from "@/components/ui/Loader";
 import {
   getOpenTasksAction,
@@ -26,7 +26,7 @@ import EditTaskModal from "@/components/dashboard/housing/EditTaskModal";
 import { ListTodo, Users, CalendarClock, Loader2, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
-import { HousingTask, HousingSchedule, Member } from "@/lib/domain/entities/models";
+import { HousingTask, HousingSchedule, Member } from "@/lib/domain/entities";
 
 export default function HousingPage() {
   const { user, profile } = useAuth();

@@ -7,7 +7,7 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { account } from "@/lib/infrastructure/client/appwrite";
+import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import { Models, OAuthProvider } from "appwrite";
 import { useRouter, usePathname } from "next/navigation";
 import { getProfileAction } from "@/lib/presentation/actions/auth.actions";

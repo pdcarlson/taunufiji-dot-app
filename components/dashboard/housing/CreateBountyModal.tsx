@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import { X, Clock, DollarSign, FileText, Check } from "lucide-react";
 import { createTaskAction } from "@/lib/presentation/actions/housing.actions";
-import { account } from "@/lib/infrastructure/client/appwrite";
+import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import toast from "react-hot-toast";
 import { CreateAssignmentDTO } from "@/lib/application/services/task";
 

@@ -6,7 +6,7 @@
  */
 
 import { getContainer } from "@/lib/infrastructure/container";
-import { HousingTask } from "@/lib/domain/entities/models";
+import { HousingTask } from "@/lib/domain/entities";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents } from "@/lib/domain/events";
 
@@ -132,65 +132,14 @@ export const DutyService = {
     const now = new Date();
     const filtered: HousingTask[] = [];
 
-    // Lazy Logic: Iterate and update tasks if needed
+    // Lazy Logic: Now handled by MaintenanceService. Just filter the view.
     for (const task of allAssigned) {
-      // Filter A: Approved (Hidden)
       if (task.status === "approved" || task.status === "expired") {
         continue;
       }
 
-      // Lazy Check B: Stuck in "Locked" but Time Passed
-      if (
-        task.status === "locked" &&
-        task.unlock_at &&
-        now >= new Date(task.unlock_at)
-      ) {
-        await taskRepository.update(task.$id, {
-          status: "open",
-          notification_level: "unlocked",
-        });
-        task.status = "open";
-        filtered.push(task);
-        continue;
-      }
-
-      // Lazy Check C: Open/Pending but Expired (Duty)
-      if (
-        task.status !== "rejected" &&
-        task.type !== "bounty" &&
-        task.due_at &&
-        now > new Date(task.due_at) &&
-        !task.proof_s3_key
-      ) {
-        // IT IS EXPIRED
-        await taskRepository.update(task.$id, {
-          status: "expired",
-        });
-
-        // Emit Event (Handles Points Fine + Notifications)
-        await DomainEventBus.publish(TaskEvents.TASK_EXPIRED, {
-          taskId: task.$id,
-          title: task.title,
-          userId: userId,
-          fineAmount: 50,
-        });
-
-        // Recur
-        // Handled by TaskExpiredHandler listening to TASK_EXPIRED event
-        continue;
-      }
-
-      // Lazy Check D: Open Bounty but Expired (Assigned)
-      if (
-        task.type === "bounty" &&
-        task.status !== "open" &&
-        task.due_at &&
-        now > new Date(task.due_at)
-      ) {
-        // Expired Claim -> Unclaim
-        await this.unclaimTask(task.$id, userId);
-        continue;
-      }
+      // If it looks expired but isn't updated yet, we hide it or show it as is.
+      // Ideally Maintenance runs BEFORE this, so the data is fresh.
 
       filtered.push(task);
     }

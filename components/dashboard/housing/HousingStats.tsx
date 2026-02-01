@@ -9,7 +9,7 @@ import {
 } from "@/lib/presentation/actions/dashboard.actions";
 import { Trophy, Medal } from "lucide-react";
 // import { Skeleton } from "@/components/ui/Skeleton"; // Use loader if Skeleton missing
-import { LeaderboardEntry } from "@/lib/domain/entities/models";
+import { LeaderboardEntry } from "@/lib/domain/entities";
 
 export default function HousingStats() {
   const { user, profile } = useAuth();

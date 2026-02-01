@@ -5,8 +5,8 @@
  * Implementations should handle the specifics of the data store.
  */
 
-import { LedgerSchema } from "@/lib/domain/entities/schema";
-import { LedgerEntry } from "@/lib/domain/entities/models";
+import { LedgerSchema } from "@/lib/domain/entities/appwrite.schema";
+import { LedgerEntry } from "@/lib/domain/entities";
 
 export type { LedgerEntry };
 

@@ -2,7 +2,7 @@ import { SlashCommand, DiscordInteraction } from "./types";
 import { COMMANDS } from "./commands";
 import * as core from "./handlers/core";
 import * as admin from "./handlers/admin";
-import { HOUSING_ADMIN_ROLES } from "../config/roles";
+import { HOUSING_ADMIN_ROLES } from "../../config/roles";
 import { createEphemeralResponse } from "./utils";
 
 // map handler functions to command names

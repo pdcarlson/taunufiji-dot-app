@@ -5,7 +5,7 @@ import {
   createSessionClient,
   createJWTClient,
 } from "@/lib/presentation/server/appwrite";
-import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/schema";
+import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/appwrite.schema";
 
 export const dynamic = "force-dynamic";
 

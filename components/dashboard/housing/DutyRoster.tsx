@@ -9,7 +9,7 @@ import {
   Briefcase,
   Pen,
 } from "lucide-react";
-import { HousingTask, Member } from "@/lib/domain/entities/models";
+import { HousingTask, Member } from "@/lib/domain/entities";
 
 interface DutyRosterProps {
   tasks: HousingTask[];

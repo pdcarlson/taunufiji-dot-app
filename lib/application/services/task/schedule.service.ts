@@ -6,7 +6,7 @@
  */
 
 import { getContainer } from "@/lib/infrastructure/container";
-import { HousingTask } from "@/lib/domain/entities/models";
+import { HousingTask } from "@/lib/domain/entities";
 import { CreateScheduleDTO } from "./types";
 import { calculateNextInstance } from "@/lib/utils/scheduler";
 

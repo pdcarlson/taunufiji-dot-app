@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
 import { Search, Filter, Loader2 } from "lucide-react";
-import { account } from "@/lib/infrastructure/client/appwrite";
+import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import toast from "react-hot-toast";
 
 interface FilterProps {

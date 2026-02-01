@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download, FileText, AlertCircle, ShieldCheck, GraduationCap, Calendar, User } from "lucide-react";
-import { account } from "@/lib/infrastructure/client/appwrite";
+import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 
 export default function LibraryFileCard({ file }: { file: any }) {
   const [loading, setLoading] = useState(false);

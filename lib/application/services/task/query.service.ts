@@ -6,7 +6,7 @@
  */
 
 import { getContainer } from "@/lib/infrastructure/container";
-import { HousingTask, Member } from "@/lib/domain/entities/models";
+import { HousingTask, Member } from "@/lib/domain/entities";
 
 export const QueryService = {
   async getTask(taskId: string) {

@@ -1,7 +1,7 @@
 import { getLeaderboardAction } from "@/lib/presentation/actions/dashboard.actions";
 import { Medal, Trophy } from "lucide-react";
 
-import { LeaderboardEntry } from "@/lib/domain/entities/models";
+import { LeaderboardEntry } from "@/lib/domain/entities";
 
 export const dynamic = "force-dynamic";
 

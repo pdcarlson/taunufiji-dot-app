@@ -2,7 +2,7 @@
 
 import { Models } from "appwrite";
 import { CheckCircle, Clock, AlertCircle, ArrowRight } from "lucide-react";
-import { AssignmentSchema } from "@/lib/domain/entities/schema";
+import { AssignmentSchema } from "@/lib/domain/entities/appwrite.schema";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 

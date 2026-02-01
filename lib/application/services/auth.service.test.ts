@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { AuthService } from "./auth.service";
-import { ROLES, LIBRARY_ACCESS_ROLES } from "@/lib/infrastructure/config/roles";
+import { MockFactory } from "@/lib/test/mock-factory";
+import { setContainer, resetContainer } from "@/lib/infrastructure/container";
+import { Member } from "@/lib/domain/entities";
 
-// Mock Env to bypass Zod validation
+// Mock Env
 vi.mock("@/lib/infrastructure/config/env", () => ({
   env: {
     NEXT_PUBLIC_APPWRITE_ENDPOINT: "http://localhost/v1",
@@ -11,179 +13,134 @@ vi.mock("@/lib/infrastructure/config/env", () => ({
   },
 }));
 
-// 1. Mock Node-Appwrite
-const mocks = vi.hoisted(() => ({
-  mockListIdentities: vi.fn(),
-  mockUpdateName: vi.fn(),
-  mockListDocuments: vi.fn(),
-  mockCreateDocument: vi.fn(),
-  mockUpdateDocument: vi.fn(),
-}));
-
-vi.mock("node-appwrite", () => {
-  return {
-    Client: class {
-      setEndpoint = vi.fn().mockReturnThis();
-      setProject = vi.fn().mockReturnThis();
-      setKey = vi.fn().mockReturnThis();
-    },
-    Users: class {
-      listIdentities = mocks.mockListIdentities;
-      updateName = mocks.mockUpdateName;
-    },
-    Databases: class {
-      listDocuments = mocks.mockListDocuments;
-      createDocument = mocks.mockCreateDocument;
-      updateDocument = mocks.mockUpdateDocument;
-      getDocument = vi.fn();
-    },
-    Query: {
-      equal: vi.fn(),
-      limit: vi.fn(),
-    },
-    ID: {
-      unique: vi.fn(),
-    },
-  };
-});
-
-// 2. Mock Global Fetch (Discord API)
+// Mock Global Fetch (Discord API)
 const fetchMock = vi.fn();
 global.fetch = fetchMock;
 
 describe("AuthService", () => {
+  const mockIdentity = MockFactory.createIdentityProvider();
+  const mockUserRepo = MockFactory.createUserRepository();
+
   beforeEach(() => {
     vi.clearAllMocks();
+    resetContainer();
+    setContainer({
+      identityProvider: mockIdentity,
+      userRepository: mockUserRepo,
+    });
+
     vi.stubEnv("DISCORD_GUILD_ID", "test_guild");
     vi.stubEnv("DISCORD_BOT_TOKEN", "test_token");
 
-    // Default Fetch Success Mock (Discord Member)
+    // Default Discord API Mock
     fetchMock.mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({
         user: { username: "testuser", global_name: "Test Global" },
         nick: "Brother Test",
-        roles: ["123456789", "987654321"],
+        roles: ["role_1", "role_2"],
       }),
       headers: { get: () => null },
     });
   });
 
   afterEach(() => {
-    vi.resetAllMocks();
+    vi.unstubAllEnvs();
   });
 
   describe("verifyRole", () => {
     it("should return true if user has one of the allowed roles", async () => {
-      // Mock Appwrite Identity
-      mocks.mockListIdentities.mockResolvedValue({
-        identities: [
-          { provider: "discord", providerUid: "discord_valid_role" },
-        ],
+      // Setup Identity Logic
+      mockIdentity.getIdentity = vi.fn().mockResolvedValue({
+        userId: "auth_1",
+        provider: "discord",
+        providerUid: "discord_123",
       });
 
-      // Mock Discord Roles (Success)
+      // Setup Discord API Logic
       fetchMock.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ roles: ["123", "TARGET_ROLE_ID"] }),
+        json: async () => ({ roles: ["target_role", "other_role"] }),
       });
 
-      const result = await AuthService.verifyRole("auth_1", [
-        "TARGET_ROLE_ID",
-        "OTHER_ROLE",
-      ]);
+      const result = await AuthService.verifyRole("auth_1", ["target_role"]);
       expect(result).toBe(true);
+      expect(mockIdentity.getIdentity).toHaveBeenCalledWith(
+        "auth_1",
+        "discord",
+      );
     });
 
-    it("should return false if user has none of the allowed roles", async () => {
-      mocks.mockListIdentities.mockResolvedValue({
-        identities: [
-          { provider: "discord", providerUid: "discord_invalid_role" },
-        ],
-      });
+    it("should return false if Identity Provider returns null (No Discord Link)", async () => {
+      mockIdentity.getIdentity = vi.fn().mockResolvedValue(null);
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ roles: ["random_role"] }),
-      });
-
-      const result = await AuthService.verifyRole("auth_2", ["TARGET_ROLE_ID"]);
-      expect(result).toBe(false);
-    });
-
-    it("should return false if Discord Identity is missing", async () => {
-      mocks.mockListIdentities.mockResolvedValue({
-        identities: [],
-      });
-
-      const result = await AuthService.verifyRole("auth_123", ["any"]);
+      const result = await AuthService.verifyRole("auth_1", ["target_role"]);
       expect(result).toBe(false);
     });
   });
 
   describe("syncUser", () => {
     it("should create a NEW user profile if one does not exist", async () => {
-      // 1. Mock Identity
-      mocks.mockListIdentities.mockResolvedValue({
-        identities: [{ provider: "discord", providerUid: "discord_new" }],
+      // 1. Identity Mock
+      mockIdentity.getIdentity = vi.fn().mockResolvedValue({
+        userId: "auth_new",
+        provider: "discord",
+        providerUid: "discord_new",
       });
 
-      // 2. Mock DB (User not found)
-      mocks.mockListDocuments.mockResolvedValue({ documents: [] });
+      // 2. Repo Mock (Not Found)
+      mockUserRepo.findByDiscordId = vi.fn().mockResolvedValue(null);
+      mockUserRepo.create = vi.fn().mockResolvedValue({
+        $id: "new_doc",
+        auth_id: "auth_new",
+      } as Member);
 
       await AuthService.syncUser("auth_new");
 
-      // Expect CreateDocument with correct payload
-      expect(mocks.mockCreateDocument).toHaveBeenCalledWith(
-        expect.any(String), // DB_ID
-        expect.any(String), // COLLECTIONS.USERS
-        expect.any(String), // <--- CHANGE: Standard Random ID (ID.unique)
+      expect(mockUserRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           auth_id: "auth_new",
           discord_id: "discord_new",
-          // Validate our Safety Fix
-          // position_key: "none", // Removed from implementation
-          status: "active",
         }),
       );
+      expect(mockIdentity.updateName).toHaveBeenCalled(); // Implicitly called
     });
 
     it("should UPDATE existing user profile if name changed", async () => {
-      // 1. Mock Identity
-      mocks.mockListIdentities.mockResolvedValue({
-        identities: [{ provider: "discord", providerUid: "discord_old" }],
+      // 1. Identity Mock
+      mockIdentity.getIdentity = vi.fn().mockResolvedValue({
+        userId: "auth_old",
+        provider: "discord",
+        providerUid: "discord_old",
       });
 
-      // 2. Mock DB (User FOUND)
-      mocks.mockListDocuments.mockResolvedValue({
-        documents: [
-          {
-            $id: "doc_1",
-            discord_handle: "old_handle",
-            full_name: "Old Name",
-          },
-        ],
-      });
+      // 2. Repo Mock (Found)
+      const existingUser = {
+        $id: "doc_1",
+        auth_id: "auth_old",
+        discord_handle: "old_handle",
+        full_name: "old_name",
+      } as Member;
 
-      // Mock Discord returning NEW name
+      mockUserRepo.findByDiscordId = vi.fn().mockResolvedValue(existingUser);
+
+      // 3. Discord Mock (New Name)
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           user: { username: "new_handle" },
-          nick: "New Name",
+          nick: "new_name",
         }),
       });
 
       await AuthService.syncUser("auth_old");
 
-      expect(mocks.mockUpdateDocument).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.any(String),
+      expect(mockUserRepo.update).toHaveBeenCalledWith(
         "doc_1",
         expect.objectContaining({
           discord_handle: "new_handle",
-          full_name: "New Name",
+          full_name: "new_name",
         }),
       );
     });

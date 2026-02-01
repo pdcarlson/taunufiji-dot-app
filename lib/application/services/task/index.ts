@@ -14,6 +14,15 @@ import { DutyService } from "./duty.service";
 import { AdminService } from "./admin.service";
 import { ScheduleService } from "./schedule.service";
 import { QueryService } from "./query.service";
+import { MaintenanceService } from "./maintenance.service"; // New
+
+export {
+  DutyService,
+  AdminService,
+  ScheduleService,
+  QueryService,
+  MaintenanceService,
+};
 
 // Facade for backwards compatibility and ease of use/import
 export const TasksService = {
@@ -21,4 +30,5 @@ export const TasksService = {
   ...AdminService,
   ...ScheduleService,
   ...QueryService,
+  ...MaintenanceService,
 };

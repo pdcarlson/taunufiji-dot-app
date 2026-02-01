@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import {
   verifyInteractionSignature,
   createResponse,
-} from "@/lib/infrastructure/discord/utils";
-import { dispatchCommand } from "@/lib/infrastructure/discord/registry";
-import { InteractionType, InteractionResponseType } from "@/lib/infrastructure/discord/types";
+} from "@/lib/infrastructure/messaging/discord-api/utils";
+import { dispatchCommand } from "@/lib/infrastructure/messaging/discord-api/registry";
+import { InteractionType, InteractionResponseType } from "@/lib/infrastructure/messaging/discord-api/types";
 
 export const maxDuration = 60; // Allow longer execution if needed (vercel)
 
