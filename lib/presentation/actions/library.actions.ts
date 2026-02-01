@@ -1,44 +1,39 @@
 "use server";
 
-import { LibraryService } from "@/lib/application/services/library.service";
-
 import { StorageService } from "@/lib/infrastructure/storage/storage";
-import { AuthService } from "@/lib/application/services/auth.service";
 import { logger } from "@/lib/utils/logger";
-import { ID, Client, Account } from "node-appwrite";
-import { env } from "@/lib/infrastructure/config/env";
+import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 
 /**
  * Uploads a file to S3 and returns the Key/ID
  */
-// server-only import to avoid client bundle issues
-import { createJWTClient, createSessionClient } from "@/lib/presentation/server/appwrite";
-
 export async function uploadFileAction(formData: FormData) {
   try {
-    // 1. Security Check (JWT)
     const jwt = formData.get("jwt") as string;
-    if (!jwt) throw new Error("No auth token provided");
 
-    const { account } = createJWTClient(jwt);
-    const user = await account.get();
-    if (!user) throw new Error("Unauthorized");
+    // We treat upload as an action requiring at least Brother status
+    // Note: wrapper usually takes jwt in options.
+    // But wrapper also gets session/jwt inside.
+    const result = await actionWrapper(
+      async ({ container }) => {
+        // 2. Process File
+        const file = formData.get("file") as File;
+        if (!file) throw new Error("No file uploaded");
 
-    const isAuthorized = await AuthService.verifyBrother(user.$id);
-    if (!isAuthorized) throw new Error("Forbidden");
+        const buffer = Buffer.from(await file.arrayBuffer());
+        // Use 'library/' folder and keep original filename (sanitized)
+        const key = `library/${file.name.replace(/\s+/g, "_")}`;
 
-    // 2. Process File
-    const file = formData.get("file") as File;
-    if (!file) throw new Error("No file uploaded");
+        await StorageService.uploadFile(buffer, key, file.type);
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    // Use 'library/' folder and keep original filename (sanitized)
-    const key = `library/${file.name.replace(/\s+/g, "_")}`;
+        // Return an ID-like object to satisfy UI
+        return { $id: key, key: key };
+      },
+      { jwt },
+    );
 
-    await StorageService.uploadFile(buffer, key, file.type);
-
-    // Return an ID-like object to satisfy UI
-    return { $id: key, key: key };
+    if (result.success && result.data) return result.data;
+    throw new Error(result.error || "Upload failed");
   } catch (e) {
     logger.error("Upload Failed", e);
     throw new Error("Failed to upload file");
@@ -63,116 +58,77 @@ interface CreateResourceDTO {
   };
 }
 
-/**
- * Creates the metadata record in DB
- */
 export async function createLibraryResourceAction(
   data: CreateResourceDTO,
   jwt: string,
 ) {
-  try {
-    // 1. Verify Authentication via JWT
-    const client = new Client()
-      .setEndpoint(env.NEXT_PUBLIC_APPWRITE_ENDPOINT)
-      .setProject(env.NEXT_PUBLIC_APPWRITE_PROJECT_ID)
-      .setJWT(jwt);
-    const account = new Account(client);
-    const user = await account.get();
+  const result = await actionWrapper(
+    async ({ container, userId }) => {
+      // 3. Ensure User Profile (Discord ID)
+      const profile = await container.userService.getByAuthId(userId);
+      if (!profile) throw new Error("Profile not found");
 
-    if (!user) throw new Error("Invalid Session");
-
-    // 2. Authorization Check (Discord Roles)
-    // We use the authenticated user's ID to check roles in our DB/Discord
-    const isAuthorized = await AuthService.verifyBrother(user.$id);
-    if (!isAuthorized) throw new Error("Unauthorized Access");
-
-    // 3. Ensure User Profile (Discord ID)
-    const UserService = (await import("@/lib/application/services/user.service"))
-      .UserService;
-    // We get auth user ID -> Sync calls syncUser -> creates/updates doc.
-    // AuthService.getProfile uses "auth_id" attribute. UserService has getByAuthId.
-    // Let's use UserService.getByAuthId(auth_id) to be consistent.
-    const profile = await UserService.getByAuthId(user.$id);
-    if (!profile) throw new Error("Profile not found");
-
-    // 4. Ensure Dependents (Course/Professor) exist
-    await LibraryService.ensureMetadata({
-      department: data.metadata.department,
-      course_number: data.metadata.courseNumber,
-      course_name: data.metadata.courseName,
-      professor: data.metadata.professor,
-    });
-
-    // 2. Create Record
-    const result = await LibraryService.createResource({
-      department: data.metadata.department,
-      course_number: data.metadata.courseNumber,
-      course_name: data.metadata.courseName,
-      professor: data.metadata.professor,
-      semester: data.metadata.semester,
-      year:
-        typeof data.metadata.year === "string"
-          ? parseInt(data.metadata.year)
-          : data.metadata.year,
-      type: data.metadata.assessmentType,
-      version: data.metadata.version,
-      original_filename: data.metadata.standardizedFilename,
-      file_s3_key: data.fileId, // This is the Key from uploadFileAction
-      uploaded_by: profile.discord_id, // FIX: Use Discord ID (Stable Attribute)
-    });
-
-    // 3. Dispatch Event (Event Architecture)
-    // Synchronously awaited so points are awarded before we return
-    try {
-      const { DomainEventBus } = await import("@/lib/infrastructure/events/dispatcher");
-      const { LibraryEvents } = await import("@/lib/domain/events");
-      await DomainEventBus.publish(LibraryEvents.LIBRARY_UPLOADED, {
-        userId: profile.discord_id,
-        resourceId: result.$id,
-        fileName: data.metadata.standardizedFilename,
+      // 4. Ensure Dependents (Course/Professor) exist
+      await container.libraryService.ensureMetadata({
+        department: data.metadata.department,
+        course_number: data.metadata.courseNumber,
+        course_name: data.metadata.courseName,
+        professor: data.metadata.professor,
       });
-    } catch (e) {
-      logger.error("Failed to dispatch LIBRARY_UPLOADED event", e);
-      // Non-blocking error
-    }
 
-    return result;
-  } catch (e) {
-    logger.error("Create Resource Failed", e);
-    throw new Error("Failed to create record");
-  }
+      // 2. Create Record
+      const record = await container.libraryService.createResource({
+        department: data.metadata.department,
+        course_number: data.metadata.courseNumber,
+        course_name: data.metadata.courseName,
+        professor: data.metadata.professor,
+        semester: data.metadata.semester,
+        year:
+          typeof data.metadata.year === "string"
+            ? parseInt(data.metadata.year)
+            : data.metadata.year,
+        type: data.metadata.assessmentType,
+        version: data.metadata.version,
+        original_filename: data.metadata.standardizedFilename,
+        file_s3_key: data.fileId,
+        uploaded_by: profile.discord_id,
+      });
+
+      // 3. Dispatch Event (Event Architecture)
+      try {
+        const { DomainEventBus } =
+          await import("@/lib/infrastructure/events/dispatcher");
+        const { LibraryEvents } = await import("@/lib/domain/events");
+        await DomainEventBus.publish(LibraryEvents.LIBRARY_UPLOADED, {
+          userId: profile.discord_id,
+          resourceId: record.$id,
+          fileName: data.metadata.standardizedFilename,
+        });
+      } catch (e) {
+        logger.error("Failed to dispatch LIBRARY_UPLOADED event", e);
+      }
+
+      return record;
+    },
+    { jwt },
+  );
+
+  if (result.success && result.data) return result.data;
+  throw new Error(result.error || "Failed to create record");
 }
 
-/**
- * Fetches Metadata for dropdowns
- */
 export async function getMetadataAction(jwt?: string) {
-  try {
-    // Security Guard
-    let user;
+  const result = await actionWrapper(
+    async ({ container }) => {
+      return await container.libraryService.getSearchMetadata();
+    },
+    { jwt },
+  );
 
-    if (jwt) {
-      const { account } = createJWTClient(jwt);
-      user = await account.get();
-    } else {
-      const { account } = await createSessionClient();
-      user = await account.get();
-    }
-
-    if (!(await AuthService.verifyBrother(user.$id))) {
-      return { courses: {}, professors: [] };
-    }
-
-    return await LibraryService.getSearchMetadata();
-  } catch (e) {
-    logger.error("Get Metadata Failed", e);
-    return { courses: {}, professors: [] };
-  }
+  if (result.success && result.data) return result.data;
+  return { courses: {}, professors: [] };
 }
 
-/**
- * Checks if a resource already exists
- */
 export async function checkDuplicateResourceAction(
   data: {
     department: string;
@@ -182,28 +138,25 @@ export async function checkDuplicateResourceAction(
     year: string | number;
     version: string;
   },
-  jwt: string, // JWT for authentication
+  jwt: string,
 ) {
-  try {
-    const year =
-      typeof data.year === "string" ? parseInt(data.year) : data.year;
+  const result = await actionWrapper(
+    async ({ container }) => {
+      const year =
+        typeof data.year === "string" ? parseInt(data.year) : data.year;
 
-    // Use JWT client like other actions
-    const { account } = await createJWTClient(jwt);
-    const user = await account.get();
-    if (!user) return false; // Fail safe
+      return await container.libraryService.checkDuplicate({
+        department: data.department,
+        course_number: data.courseNumber,
+        type: data.assessmentType,
+        semester: data.semester,
+        year: year,
+        version: data.version,
+      });
+    },
+    { jwt },
+  );
 
-    return await LibraryService.checkDuplicate({
-      department: data.department,
-      course_number: data.courseNumber,
-      type: data.assessmentType,
-      semester: data.semester,
-      year: year,
-      version: data.version,
-    });
-  } catch (e) {
-    logger.error("Check Duplicate Failed", e);
-    // If check fails, assume not duplicate to minimize friction
-    return false;
-  }
+  if (result.success) return result.data ?? false;
+  return false;
 }

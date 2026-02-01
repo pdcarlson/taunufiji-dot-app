@@ -5,19 +5,21 @@
  * Uses repository pattern for data access.
  */
 
-import { getContainer } from "@/lib/infrastructure/container";
-import { HousingTask } from "@/lib/domain/entities";
-import { CreateScheduleDTO } from "./types";
+import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { HousingTask } from "@/lib/domain/types/task";
+import { CreateScheduleDTO } from "@/lib/domain/types/schedule";
 import { calculateNextInstance } from "@/lib/utils/scheduler";
+import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
+import { TaskEvents } from "@/lib/domain/events";
 
-export const ScheduleService = {
+export class ScheduleService {
+  constructor(private readonly taskRepository: ITaskRepository) {}
+
   /**
    * Create a new recurring schedule
    */
   async createSchedule(data: CreateScheduleDTO) {
-    const { taskRepository } = getContainer();
-
-    const schedule = await taskRepository.createSchedule({
+    const schedule = await this.taskRepository.createSchedule({
       ...data,
       active: true,
       last_generated_at: new Date().toISOString(),
@@ -32,7 +34,7 @@ export const ScheduleService = {
 
     if (nextInstance) {
       const isLocked = nextInstance.unlockAt.getTime() > Date.now();
-      const task = await taskRepository.create({
+      const task = await this.taskRepository.create({
         title: schedule.title,
         description: schedule.description,
         points_value: schedule.points_value,
@@ -47,8 +49,6 @@ export const ScheduleService = {
 
       // Emit Event only if visible
       if (!isLocked) {
-        const { DomainEventBus } = await import("@/lib/infrastructure/events/dispatcher");
-        const { TaskEvents } = await import("@/lib/domain/events");
         await DomainEventBus.publish(TaskEvents.TASK_CREATED, {
           taskId: task.$id,
           title: task.title,
@@ -59,15 +59,13 @@ export const ScheduleService = {
     }
 
     return schedule;
-  },
+  }
 
   /**
    * Trigger the next instance of a schedule
    */
   async triggerNextInstance(scheduleId: string, previousTask: HousingTask) {
-    const { taskRepository } = getContainer();
-
-    const schedule = await taskRepository.findScheduleById(scheduleId);
+    const schedule = await this.taskRepository.findScheduleById(scheduleId);
     if (!schedule || !schedule.active) return;
 
     // Calculate Next based on completion or due date
@@ -93,7 +91,7 @@ export const ScheduleService = {
     const isLocked = nextInstance.unlockAt.getTime() > Date.now();
 
     // Create Task
-    await taskRepository.create({
+    await this.taskRepository.create({
       title: schedule.title,
       description: schedule.description,
       points_value: schedule.points_value,
@@ -107,38 +105,29 @@ export const ScheduleService = {
     });
 
     // Update Schedule
-    await taskRepository.updateSchedule(schedule.$id, {
+    await this.taskRepository.updateSchedule(schedule.$id, {
       last_generated_at: new Date().toISOString(),
     });
-  },
+  }
 
   /**
    * Get all schedules
    */
   async getSchedules() {
-    const { taskRepository } = getContainer();
-    return await taskRepository.findActiveSchedules();
-  },
+    return await this.taskRepository.findActiveSchedules();
+  }
 
   /**
    * Get single schedule
    */
   async getSchedule(scheduleId: string) {
-    const { taskRepository } = getContainer();
-    return await taskRepository.findScheduleById(scheduleId);
-  },
+    return await this.taskRepository.findScheduleById(scheduleId);
+  }
 
   /**
    * Update schedule
    */
-  async updateSchedule(
-    scheduleId: string,
-    data: Partial<CreateScheduleDTO> & {
-      active?: boolean;
-      lead_time_hours?: number;
-    },
-  ) {
-    const { taskRepository } = getContainer();
-    return await taskRepository.updateSchedule(scheduleId, data);
-  },
-};
+  async updateSchedule(scheduleId: string, data: Partial<CreateScheduleDTO>) {
+    return await this.taskRepository.updateSchedule(scheduleId, data);
+  }
+}

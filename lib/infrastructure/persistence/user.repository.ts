@@ -6,12 +6,12 @@
 
 import { Query, ID } from "node-appwrite";
 import { getDatabase } from "./client";
-import { DB_ID, COLLECTIONS, UserSchema } from "@/lib/domain/entities/appwrite.schema";
+import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 import {
   IUserRepository,
   UserQueryOptions,
 } from "@/lib/domain/ports/user.repository";
-import { Member } from "@/lib/domain/entities";
+import { User, CreateUserDTO } from "@/lib/domain/types/user";
 import { NotFoundError, DatabaseError } from "@/lib/domain/errors";
 
 export class AppwriteUserRepository implements IUserRepository {
@@ -19,11 +19,11 @@ export class AppwriteUserRepository implements IUserRepository {
   // Queries
   // =========================================================================
 
-  async findById(id: string): Promise<Member | null> {
+  async findById(id: string): Promise<User | null> {
     try {
       const db = getDatabase();
       const doc = await db.getDocument(DB_ID, COLLECTIONS.USERS, id);
-      return doc as unknown as Member;
+      return doc as unknown as User;
     } catch (error: unknown) {
       if (this.isNotFoundError(error)) {
         return null;
@@ -32,7 +32,7 @@ export class AppwriteUserRepository implements IUserRepository {
     }
   }
 
-  async findByAuthId(authId: string): Promise<Member | null> {
+  async findByAuthId(authId: string): Promise<User | null> {
     try {
       const db = getDatabase();
       const result = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
@@ -44,13 +44,13 @@ export class AppwriteUserRepository implements IUserRepository {
         return null;
       }
 
-      return result.documents[0] as unknown as Member;
+      return result.documents[0] as unknown as User;
     } catch (error: unknown) {
       throw new DatabaseError(`findByAuthId(${authId})`, error);
     }
   }
 
-  async findByDiscordId(discordId: string): Promise<Member | null> {
+  async findByDiscordId(discordId: string): Promise<User | null> {
     try {
       const db = getDatabase();
       const result = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
@@ -62,13 +62,13 @@ export class AppwriteUserRepository implements IUserRepository {
         return null;
       }
 
-      return result.documents[0] as unknown as Member;
+      return result.documents[0] as unknown as User;
     } catch (error: unknown) {
       throw new DatabaseError(`findByDiscordId(${discordId})`, error);
     }
   }
 
-  async findTopByPoints(limit: number): Promise<Member[]> {
+  async findTopByPoints(limit: number): Promise<User[]> {
     try {
       const db = getDatabase();
       const result = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
@@ -77,19 +77,19 @@ export class AppwriteUserRepository implements IUserRepository {
         Query.limit(limit),
       ]);
 
-      return result.documents as unknown as Member[];
+      return result.documents as unknown as User[];
     } catch (error: unknown) {
       throw new DatabaseError(`findTopByPoints(${limit})`, error);
     }
   }
 
-  async findMany(options: UserQueryOptions): Promise<Member[]> {
+  async findMany(options: UserQueryOptions): Promise<User[]> {
     try {
       const db = getDatabase();
       const queries = this.buildUserQueries(options);
 
       const result = await db.listDocuments(DB_ID, COLLECTIONS.USERS, queries);
-      return result.documents as unknown as Member[];
+      return result.documents as unknown as User[];
     } catch (error: unknown) {
       throw new DatabaseError("findMany", error);
     }
@@ -99,7 +99,7 @@ export class AppwriteUserRepository implements IUserRepository {
   // Commands
   // =========================================================================
 
-  async create(data: UserSchema): Promise<Member> {
+  async create(data: CreateUserDTO): Promise<User> {
     try {
       const db = getDatabase();
       const doc = await db.createDocument(
@@ -108,17 +108,17 @@ export class AppwriteUserRepository implements IUserRepository {
         ID.unique(),
         data,
       );
-      return doc as unknown as Member;
+      return doc as unknown as User;
     } catch (error: unknown) {
       throw new DatabaseError("create", error);
     }
   }
 
-  async update(id: string, data: Partial<UserSchema>): Promise<Member> {
+  async update(id: string, data: Partial<CreateUserDTO>): Promise<User> {
     try {
       const db = getDatabase();
       const doc = await db.updateDocument(DB_ID, COLLECTIONS.USERS, id, data);
-      return doc as unknown as Member;
+      return doc as unknown as User;
     } catch (error: unknown) {
       if (this.isNotFoundError(error)) {
         throw new NotFoundError("User", id);
@@ -127,7 +127,7 @@ export class AppwriteUserRepository implements IUserRepository {
     }
   }
 
-  async updatePoints(id: string, delta: number): Promise<Member> {
+  async updatePoints(id: string, delta: number): Promise<User> {
     // First fetch current user to get current points
     const user = await this.findById(id);
     if (!user) {

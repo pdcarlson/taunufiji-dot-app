@@ -3,7 +3,7 @@ import { createResponse, createEphemeralResponse } from "../utils";
 import { Query } from "node-appwrite";
 import { getDatabase } from "@/lib/infrastructure/persistence";
 import { env } from "@/lib/infrastructure/config/env";
-import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/appwrite.schema";
+import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 import { CommandHandler } from "../types";
 
 // helper for Appwrite (read-only for profile lookup)

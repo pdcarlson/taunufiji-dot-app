@@ -5,16 +5,15 @@
  * Implementations should handle the specifics of the data store.
  */
 
-import { Member } from "@/lib/domain/entities";
-import { UserSchema } from "@/lib/domain/entities/appwrite.schema";
+import { User, CreateUserDTO } from "@/lib/domain/types/user";
 
 /**
  * Query options for listing users
  */
 export interface UserQueryOptions {
-  status?: UserSchema["status"];
+  status?: User["status"];
   limit?: number;
-  orderBy?: "points" | "createdAt";
+  orderBy?: "details_points_current" | "details_points_lifetime" | "$createdAt";
   orderDirection?: "asc" | "desc";
 }
 
@@ -29,28 +28,28 @@ export interface IUserRepository {
   /**
    * Find a user by document ID
    */
-  findById(id: string): Promise<Member | null>;
+  findById(id: string): Promise<User | null>;
 
   /**
    * Find a user by their auth ID (Appwrite Auth)
    */
-  findByAuthId(authId: string): Promise<Member | null>;
+  findByAuthId(authId: string): Promise<User | null>;
 
   /**
    * Find a user by their Discord ID
    */
-  findByDiscordId(discordId: string): Promise<Member | null>;
+  findByDiscordId(discordId: string): Promise<User | null>;
 
   /**
    * Find top users by points
    * @param limit Maximum number of users to return
    */
-  findTopByPoints(limit: number): Promise<Member[]>;
+  findTopByPoints(limit: number): Promise<User[]>;
 
   /**
    * Find users matching query options
    */
-  findMany(options: UserQueryOptions): Promise<Member[]>;
+  findMany(options: UserQueryOptions): Promise<User[]>;
 
   // =========================================================================
   // Commands
@@ -59,17 +58,17 @@ export interface IUserRepository {
   /**
    * Create a new user
    */
-  create(data: Omit<UserSchema, never>): Promise<Member>;
+  create(data: CreateUserDTO): Promise<User>;
 
   /**
    * Update an existing user
    */
-  update(id: string, data: Partial<UserSchema>): Promise<Member>;
+  update(id: string, data: Partial<CreateUserDTO>): Promise<User>;
 
   /**
    * Update user points (convenience method with proper calculation)
    * @param id User document ID
    * @param delta Points to add (positive) or subtract (negative)
    */
-  updatePoints(id: string, delta: number): Promise<Member>;
+  updatePoints(id: string, delta: number): Promise<User>;
 }

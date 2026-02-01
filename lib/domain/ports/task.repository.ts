@@ -5,22 +5,25 @@
  * Implementations should handle the specifics of the data store.
  */
 
-import { HousingTask, HousingSchedule } from "@/lib/domain/entities";
-import { AssignmentSchema, ScheduleSchema } from "@/lib/domain/entities/appwrite.schema";
+import { HousingTask, CreateAssignmentDTO } from "@/lib/domain/types/task";
+import {
+  HousingSchedule,
+  CreateScheduleDTO,
+} from "@/lib/domain/types/schedule";
 
 /**
  * Query options for listing tasks
  */
 export interface TaskQueryOptions {
-  status?: AssignmentSchema["status"] | AssignmentSchema["status"][];
-  type?: AssignmentSchema["type"] | AssignmentSchema["type"][];
+  status?: HousingTask["status"] | HousingTask["status"][];
+  type?: HousingTask["type"] | HousingTask["type"][];
   assignedTo?: string;
   scheduleId?: string;
-  notificationLevel?: AssignmentSchema["notification_level"];
+  notificationLevel?: HousingTask["notification_level"];
   dueBefore?: Date;
   unlockBefore?: Date;
   limit?: number;
-  orderBy?: "createdAt" | "dueAt";
+  orderBy?: "$createdAt" | "due_at";
   orderDirection?: "asc" | "desc";
 }
 
@@ -65,12 +68,12 @@ export interface ITaskRepository {
   /**
    * Create a new task
    */
-  create(data: Omit<AssignmentSchema, never>): Promise<HousingTask>;
+  create(data: CreateAssignmentDTO): Promise<HousingTask>;
 
   /**
    * Update an existing task
    */
-  update(id: string, data: Partial<AssignmentSchema>): Promise<HousingTask>;
+  update(id: string, data: Partial<CreateAssignmentDTO>): Promise<HousingTask>;
 
   /**
    * Delete a task by ID
@@ -98,13 +101,13 @@ export interface ITaskRepository {
   /**
    * Create a new schedule
    */
-  createSchedule(data: Omit<ScheduleSchema, never>): Promise<HousingSchedule>;
+  createSchedule(data: CreateScheduleDTO): Promise<HousingSchedule>;
 
   /**
    * Update an existing schedule
    */
   updateSchedule(
     id: string,
-    data: Partial<ScheduleSchema>,
+    data: Partial<CreateScheduleDTO>,
   ): Promise<HousingSchedule>;
 }

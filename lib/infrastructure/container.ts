@@ -31,6 +31,13 @@ import { AppwriteIdentityProvider } from "./auth/appwrite.identity";
 import { getRedisClient } from "./persistence/redis.client";
 import { DutyService } from "@/lib/application/services/task/duty.service";
 import { PointsService } from "@/lib/application/services/points.service";
+import { UserService } from "@/lib/application/services/user.service";
+import { AuthService } from "@/lib/application/services/auth.service";
+import { ScheduleService } from "@/lib/application/services/task/schedule.service";
+import { QueryService } from "@/lib/application/services/task/query.service";
+import { MaintenanceService } from "@/lib/application/services/task/maintenance.service";
+import { AdminService } from "@/lib/application/services/task/admin.service";
+import { LibraryService } from "@/lib/application/services/library.service";
 
 // ...
 
@@ -42,8 +49,15 @@ export interface Container {
   notificationProvider: INotificationProvider;
   identityProvider: IIdentityProvider;
   // Services
+  userService: UserService;
   dutyService: IDutyService;
   pointsService: IPointsService;
+  authService: AuthService;
+  scheduleService: ScheduleService;
+  queryService: QueryService;
+  maintenanceService: MaintenanceService;
+  adminService: AdminService;
+  libraryService: LibraryService;
 }
 
 // Singleton container instance
@@ -55,25 +69,51 @@ let container: Container | null = null;
  */
 export function getContainer(): Container {
   if (!container) {
+    // 1. Repositories
     const taskRepository = new AppwriteTaskRepository();
     const userRepository = new AppwriteUserRepository();
     const ledgerRepository = new AppwriteLedgerRepository();
     const libraryRepository = new AppwriteLibraryRepository();
+
+    // 2. Providers
+    const notificationProvider = new DiscordProvider();
+    const identityProvider = new AppwriteIdentityProvider();
+
+    // 3. Services (Order matters!)
+    const userService = new UserService(userRepository);
+    const authService = new AuthService(userRepository, identityProvider);
+    const dutyService = new DutyService(taskRepository);
+    const pointsService = new PointsService(
+      userRepository,
+      ledgerRepository,
+      getRedisClient(),
+    );
+    const scheduleService = new ScheduleService(taskRepository);
+    const queryService = new QueryService(taskRepository, userRepository);
+    const maintenanceService = new MaintenanceService(
+      taskRepository,
+      dutyService,
+    );
+    const adminService = new AdminService(taskRepository, scheduleService);
+    const libraryService = new LibraryService(libraryRepository);
 
     container = {
       taskRepository,
       userRepository,
       ledgerRepository,
       libraryRepository,
-      notificationProvider: new DiscordProvider(),
-      identityProvider: new AppwriteIdentityProvider(),
+      notificationProvider,
+      identityProvider,
       // Services
-      dutyService: new DutyService(taskRepository),
-      pointsService: new PointsService(
-        userRepository,
-        ledgerRepository,
-        getRedisClient(),
-      ),
+      userService,
+      dutyService,
+      pointsService,
+      authService,
+      scheduleService,
+      queryService,
+      maintenanceService,
+      adminService,
+      libraryService,
     };
   }
   return container!;

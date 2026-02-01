@@ -1,13 +1,13 @@
 import { Query, Models } from "node-appwrite";
 import { getDatabase } from "./client";
-import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/appwrite.schema";
+import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 import {
   ILibraryRepository,
   LibrarySearchFilters,
   CreateResourceParams,
   LibraryMetadata,
 } from "@/lib/domain/ports/library.repository";
-import { LibraryResource } from "@/lib/domain/entities";
+import { LibraryResource } from "@/lib/domain/types/library";
 
 interface Course extends Models.Document {
   department: string;

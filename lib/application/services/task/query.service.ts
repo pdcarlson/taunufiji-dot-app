@@ -5,28 +5,34 @@
  * Uses repository pattern for data access.
  */
 
-import { getContainer } from "@/lib/infrastructure/container";
-import { HousingTask, Member } from "@/lib/domain/entities";
+import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { IUserRepository } from "@/lib/domain/ports/user.repository";
+import { HousingTask } from "@/lib/domain/types/task";
+import { User } from "@/lib/domain/types/user";
+import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
+import { TaskEvents } from "@/lib/domain/events";
 
-export const QueryService = {
+export class QueryService {
+  constructor(
+    private readonly taskRepository: ITaskRepository,
+    private readonly userRepository: IUserRepository,
+  ) {}
+
   async getTask(taskId: string) {
-    const { taskRepository } = getContainer();
-    return await taskRepository.findById(taskId);
-  },
+    return await this.taskRepository.findById(taskId);
+  }
 
   async getOpenTasks() {
-    const { taskRepository } = getContainer();
-
     // Fetch Open AND Locked tasks (to check for unlocking)
     const [openTasks, lockedTasks] = await Promise.all([
-      taskRepository.findMany({
+      this.taskRepository.findMany({
         status: "open",
-        orderBy: "createdAt",
+        orderBy: "$createdAt",
         orderDirection: "desc",
       }),
-      taskRepository.findMany({
+      this.taskRepository.findMany({
         status: "locked",
-        orderBy: "createdAt",
+        orderBy: "$createdAt",
         orderDirection: "desc",
       }),
     ]);
@@ -42,14 +48,12 @@ export const QueryService = {
         task.unlock_at &&
         now >= new Date(task.unlock_at)
       ) {
-        await taskRepository.update(task.$id, {
+        await this.taskRepository.update(task.$id, {
           status: "open",
           notification_level: "unlocked",
         });
 
         // Notify via domain event
-        const { DomainEventBus } = await import("@/lib/infrastructure/events/dispatcher");
-        const { TaskEvents } = await import("@/lib/domain/events");
         await DomainEventBus.publish(TaskEvents.TASK_UNLOCKED, {
           taskId: task.$id,
           title: task.title,
@@ -70,39 +74,35 @@ export const QueryService = {
     }
 
     return cleanRows;
-  },
+  }
 
   async getPendingReviews() {
-    const { taskRepository } = getContainer();
-    return await taskRepository.findPending();
-  },
+    return await this.taskRepository.findPending();
+  }
 
   async getHistory(profileId: string) {
-    const { taskRepository } = getContainer();
-    return await taskRepository.findMany({
+    return await this.taskRepository.findMany({
       assignedTo: profileId,
       status: "approved",
-      orderBy: "createdAt",
+      orderBy: "$createdAt",
       orderDirection: "desc",
     });
-  },
+  }
 
-  async getMembers(): Promise<Member[]> {
-    const { userRepository } = getContainer();
-    return await userRepository.findMany({
+  async getMembers(): Promise<User[]> {
+    return await this.userRepository.findMany({
       limit: 100,
-      orderBy: "createdAt",
+      orderBy: "$createdAt",
       orderDirection: "asc",
     });
-  },
+  }
 
   async getUserProfile(profileId: string) {
-    const { userRepository } = getContainer();
     try {
-      return await userRepository.findByDiscordId(profileId);
+      return await this.userRepository.findByDiscordId(profileId);
     } catch {
       console.warn(`QueryService: User ${profileId} not found.`);
       return null;
     }
-  },
-};
+  }
+}

@@ -6,13 +6,16 @@
 
 import { Query, ID } from "node-appwrite";
 import { getDatabase } from "./client";
-import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/appwrite.schema";
+import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 import {
   ITaskRepository,
   TaskQueryOptions,
 } from "@/lib/domain/ports/task.repository";
-import { HousingTask, HousingSchedule } from "@/lib/domain/entities";
-import { AssignmentSchema, ScheduleSchema } from "@/lib/domain/entities/appwrite.schema";
+import { HousingTask, CreateAssignmentDTO } from "@/lib/domain/types/task";
+import {
+  HousingSchedule,
+  CreateScheduleDTO,
+} from "@/lib/domain/types/schedule";
 import { NotFoundError, DatabaseError } from "@/lib/domain/errors";
 
 export class AppwriteTaskRepository implements ITaskRepository {
@@ -37,7 +40,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
   async findOpen(): Promise<HousingTask[]> {
     return this.findMany({
       status: "open",
-      orderBy: "createdAt",
+      orderBy: "$createdAt",
       orderDirection: "desc",
     });
   }
@@ -45,7 +48,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
   async findPending(): Promise<HousingTask[]> {
     return this.findMany({
       status: "pending",
-      orderBy: "createdAt",
+      orderBy: "$createdAt",
       orderDirection: "desc",
     });
   }
@@ -53,7 +56,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
   async findByAssignee(userId: string): Promise<HousingTask[]> {
     return this.findMany({
       assignedTo: userId,
-      orderBy: "createdAt",
+      orderBy: "$createdAt",
       orderDirection: "desc",
     });
   }
@@ -78,7 +81,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
   // Task Commands
   // =========================================================================
 
-  async create(data: AssignmentSchema): Promise<HousingTask> {
+  async create(data: CreateAssignmentDTO): Promise<HousingTask> {
     try {
       const db = getDatabase();
       const doc = await db.createDocument(
@@ -95,7 +98,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
 
   async update(
     id: string,
-    data: Partial<AssignmentSchema>,
+    data: Partial<CreateAssignmentDTO>,
   ): Promise<HousingTask> {
     try {
       const db = getDatabase();
@@ -159,7 +162,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
   // Schedule Commands
   // =========================================================================
 
-  async createSchedule(data: ScheduleSchema): Promise<HousingSchedule> {
+  async createSchedule(data: CreateScheduleDTO): Promise<HousingSchedule> {
     try {
       const db = getDatabase();
       const doc = await db.createDocument(
@@ -176,7 +179,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
 
   async updateSchedule(
     id: string,
-    data: Partial<ScheduleSchema>,
+    data: Partial<CreateScheduleDTO>,
   ): Promise<HousingSchedule> {
     try {
       const db = getDatabase();
@@ -245,7 +248,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
     }
 
     // Ordering
-    if (options.orderBy === "dueAt") {
+    if (options.orderBy === "due_at") {
       queries.push(
         options.orderDirection === "asc"
           ? Query.orderAsc("due_at")

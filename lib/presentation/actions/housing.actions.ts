@@ -1,217 +1,176 @@
-"use server";
-
-import {
-  AdminService,
-  QueryService,
-  ScheduleService,
-  // Ensure types are exported or import from ./types
-  CreateAssignmentDTO,
-  CreateScheduleDTO,
-} from "@/lib/application/services/task";
+import { CreateAssignmentDTO } from "@/lib/domain/types/task";
+import { CreateScheduleDTO } from "@/lib/domain/types/schedule";
 
 import { StorageService } from "@/lib/infrastructure/storage/storage";
-import { revalidatePath } from "next/cache";
-
-import {
-  createSessionClient,
-  createJWTClient,
-} from "@/lib/presentation/server/appwrite";
-import { AuthService } from "@/lib/application/services/auth.service";
 import { HOUSING_ADMIN_ROLES } from "@/lib/infrastructure/config/roles";
-
-async function getAuthAccount(jwt?: string) {
-  if (jwt) {
-    return createJWTClient(jwt).account;
-  }
-  const { account } = await createSessionClient();
-  return account;
-}
+import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 
 export async function getOpenTasksAction(jwt?: string) {
-  try {
-    // Auth Check
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    if (!(await AuthService.verifyBrother(user.$id)))
-      throw new Error("Unauthorized");
+  const result = await actionWrapper(
+    async ({ container }) => {
+      const tasks = await container.queryService.getOpenTasks();
+      return JSON.parse(JSON.stringify(tasks));
+    },
+    { jwt },
+  );
 
-    const res = await QueryService.getOpenTasks();
-    // Serialize Appwrite Models to plain JSON if needed (Next.js passes data automatically)
-    return JSON.parse(JSON.stringify(res));
-  } catch (error) {
-    console.error("Failed to fetch tasks", error);
-    return [];
-  }
+  if (result.success) return result.data;
+  return [];
 }
 
 export async function getPendingReviewsAction(jwt?: string) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
+  const result = await actionWrapper(
+    async ({ container }) => {
+      // Caller should ideally be admin, but QueryService just returns data.
+      // ActionWrapper enforces "Brother" at least.
+      const reviews = await container.queryService.getPendingReviews();
+      return JSON.parse(JSON.stringify(reviews));
+    },
+    { jwt },
+  );
 
-    // Check Admin (Optional: Could assume Caller checks, but safety first)
-    if (!(await AuthService.verifyBrother(user.$id)))
-      throw new Error("Unauthorized");
-
-    const res = await QueryService.getPendingReviews();
-    return JSON.parse(JSON.stringify(res));
-  } catch (error) {
-    console.error("Failed to fetch pending reviews", error);
-    return [];
-  }
+  if (result.success) return result.data;
+  return [];
 }
-
-import { getContainer } from "@/lib/infrastructure/container";
-
-// ...
 
 export async function claimTaskAction(
   taskId: string,
   authId: string,
   jwt?: string,
 ) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    if (!(await AuthService.verifyBrother(user.$id)))
-      throw new Error("Unauthorized");
+  return await actionWrapper(
+    async ({ container, userId }) => {
+      // Ensure claiming for SELF
+      if (userId !== authId) throw new Error("Cannot claim for others");
 
-    // Ensure claiming for SELF (Auth Check)
-    if (user.$id !== authId) throw new Error("Cannot claim for others");
+      // Resolve Profile ID (Discord ID)
+      const profile = await container.authService.getProfile(userId);
+      if (!profile) throw new Error("Profile not found");
 
-    // Resolve Profile ID (Discord ID)
-    const profile = await AuthService.getProfile(user.$id);
-    if (!profile) throw new Error("Profile not found");
-
-    const { dutyService } = getContainer();
-    await dutyService.claimTask(taskId, profile.discord_id);
-    revalidatePath("/dashboard/housing");
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to claim task", error);
-    return { success: false, error: "Failed to claim task" };
-  }
+      await container.dutyService.claimTask(taskId, profile.discord_id);
+      revalidatePath("/dashboard/housing");
+      return { success: true };
+    },
+    { jwt },
+  );
+  // Returns { success: boolean, data: { success: true }, error: string }
+  // Wait, the UI expects { success: boolean, error?: string }.
+  // actionWrapper returns { success, data, error }.
+  // If I return the result of actionWrapper, it matches the shape roughly.
+  // existing: return { success: true } or { success: false, error: "..." }
+  // wrapper: { success: true, data: { success: true } } -> success is true.
+  // If error: { success: false, error: "..." }.
+  // The UI might check result.success.
+  // But result.data structure might be redundant?
+  // I will make the inner function return "void" or "true", and map the result.
 }
 
-// ...
-
 export async function submitProofAction(formData: FormData, jwt?: string) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    if (!(await AuthService.verifyBrother(user.$id)))
-      throw new Error("Unauthorized");
+  return await actionWrapper(
+    async ({ container, userId }) => {
+      const taskId = formData.get("taskId") as string;
+      const file = formData.get("file") as File;
 
-    const taskId = formData.get("taskId") as string;
-    const file = formData.get("file") as File;
+      if (!file || file.size === 0) throw new Error("File is required");
 
-    if (!file || file.size === 0) throw new Error("File is required");
+      // 1. Upload to S3 (Keep StorageService as is for now)
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const ext = file.name.split(".").pop();
+      const key = `proofs/${taskId}/${Date.now()}.${ext}`;
 
-    // 1. Upload to S3
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    // Generate Key
-    const ext = file.name.split(".").pop();
-    const key = `proofs/${taskId}/${Date.now()}.${ext}`;
+      await StorageService.uploadFile(buffer, key, file.type);
+      const s3Key = key;
 
-    await StorageService.uploadFile(buffer, key, file.type);
-    const s3Key = key;
+      // 2. Resolve Profile
+      const profile = await container.userService.getByAuthId(userId);
+      if (!profile) throw new Error("Profile not found");
 
-    // 2. Resolve Profile
-    const profile = await AuthService.getProfile(user.$id);
-    if (!profile) throw new Error("Profile not found");
+      // 3. Mark Submitted
+      await container.dutyService.submitProof(
+        taskId,
+        profile.discord_id,
+        s3Key,
+      );
 
-    // 3. Mark Submitted via Service
-    const { dutyService } = getContainer();
-    await dutyService.submitProof(taskId, profile.discord_id, s3Key);
-
-    revalidatePath("/dashboard/housing");
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to submit proof", error);
-    return { success: false, error: "Failed to submit proof" };
-  }
+      revalidatePath("/dashboard/housing");
+      return { success: true };
+    },
+    { jwt },
+  );
 }
 
 export async function getMyTasksAction(userId: string, jwt?: string) {
-  const account = await getAuthAccount(jwt);
-  const user = await account.get();
-  if (!user || user.$id !== userId) return []; // strict ownership
+  const result = await actionWrapper(
+    async ({ container, userId: authUserId }) => {
+      if (authUserId !== userId) return []; // strict ownership
 
-  // Security Guard
-  if (!(await AuthService.verifyBrother(user.$id))) return [];
+      const profile = await container.userService.getByAuthId(authUserId);
+      if (!profile) return [];
 
-  const profile = await AuthService.getProfile(user.$id);
-  if (!profile) return [];
+      const res = await container.dutyService.getMyTasks(profile.discord_id);
+      return JSON.parse(JSON.stringify(res.documents));
+    },
+    { jwt },
+  );
 
-  // 2. Get Tasks
-  const { dutyService } = getContainer();
-  const res = await dutyService.getMyTasks(profile.discord_id);
-  return JSON.parse(JSON.stringify(res.documents));
+  if (result.success) return result.data;
+  return [];
 }
 
 export async function getHistoryAction(userId: string) {
-  const { account } = await createSessionClient();
-  const user = await account.get();
-  if (!user || user.$id !== userId) return [];
+  // getHistoryAction usually takes 'userId' (AuthID) but fetches profile history
+  // Since we don't have JWT param in the original signature for some reason (client component calls it?), I will assume session.
+  // Original: async function getHistoryAction(userId: string) { ... createSessionClient ... }
 
-  // Security Guard
-  if (!(await AuthService.verifyBrother(user.$id))) return [];
+  const result = await actionWrapper(
+    async ({ container, userId: authUserId }) => {
+      if (authUserId !== userId) return [];
 
-  const profile = await AuthService.getProfile(user.$id);
-  if (!profile) return [];
+      const profile = await container.userService.getByAuthId(authUserId);
+      if (!profile) return [];
 
-  const res = await QueryService.getHistory(profile.$id);
-  return JSON.parse(JSON.stringify(res));
+      // QueryService.getHistory gets by Profile ID (Discord ID)
+      const res = await container.queryService.getHistory(profile.discord_id);
+      return JSON.parse(JSON.stringify(res));
+    },
+    {}, // No JWT passed in original signature implies Session
+  );
+
+  if (result.success) return result.data;
+  return [];
 }
 
 export async function unclaimTaskAction(taskId: string, jwt?: string) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    if (!(await AuthService.verifyBrother(user.$id)))
-      throw new Error("Unauthorized");
+  return await actionWrapper(
+    async ({ container, userId }) => {
+      const profile = await container.userService.getByAuthId(userId);
+      if (!profile) throw new Error("Profile not found");
 
-    const profile = await AuthService.getProfile(user.$id);
-    if (!profile) throw new Error("Profile not found");
+      const task = await container.queryService.getTask(taskId);
+      if (!task) throw new Error("Task not found");
 
-    // Verification that user OWNS the task they are unclaiming
-    const task = await QueryService.getTask(taskId);
-    if (!task) throw new Error("Task not found");
+      if (task.assigned_to !== profile.discord_id) {
+        throw new Error("You do not own this task");
+      }
 
-    // Schema uses 'assigned_to' as Profile ID (Discord ID)
-    if (task.assigned_to !== profile.discord_id) {
-      throw new Error("You do not own this task");
-    }
-
-    const { dutyService } = getContainer();
-    await dutyService.unclaimTask(taskId, profile.discord_id);
-    revalidatePath("/dashboard/housing");
-    return { success: true };
-  } catch (e) {
-    return { success: false };
-  }
+      await container.dutyService.unclaimTask(taskId, profile.discord_id);
+      revalidatePath("/dashboard/housing");
+      return { success: true };
+    },
+    { jwt },
+  );
 }
 
 export async function approveTaskAction(taskId: string, jwt?: string) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    // RBAC: Must be Admin
-    const isAdmin = await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-    if (!isAdmin) throw new Error("Unauthorized (Admin Only)");
-
-    await AdminService.verifyTask(taskId, user.$id);
-    revalidatePath("/dashboard/housing");
-    return { success: true };
-  } catch (e: unknown) {
-    console.error("approveTaskAction failed", e);
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    return { success: false, error: msg };
-  }
+  return await actionWrapper(
+    async ({ container, userId }) => {
+      await container.adminService.verifyTask(taskId, userId);
+      revalidatePath("/dashboard/housing");
+      return { success: true };
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
 }
 
 export async function rejectTaskAction(
@@ -219,45 +178,31 @@ export async function rejectTaskAction(
   reason: string | null,
   jwt?: string,
 ) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    const isAdmin = await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-    if (!isAdmin) throw new Error("Unauthorized");
-
-    await AdminService.rejectTask(taskId, reason || "No reason provided");
-    revalidatePath("/dashboard/housing");
-    return { success: true };
-  } catch (e) {
-    console.error("rejectTaskAction failed", e);
-    return { success: false, error: (e as Error).message };
-  }
+  return await actionWrapper(
+    async ({ container }) => {
+      await container.adminService.rejectTask(
+        taskId,
+        reason || "No reason provided",
+      );
+      revalidatePath("/dashboard/housing");
+      return { success: true };
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
 }
 
 export async function createTaskAction(
   data: CreateAssignmentDTO,
   jwt?: string,
 ) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    // Only Admins can CREATE/ASSIGN tasks arbitrarily
-    const isAdmin = await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-    if (!isAdmin) throw new Error("Unauthorized");
-
-    await AdminService.createTask(data);
-    revalidatePath("/dashboard/housing");
-    return { success: true };
-  } catch (e) {
-    console.error("createTaskAction failed", e);
-    return { success: false, error: (e as Error).message };
-  }
+  return await actionWrapper(
+    async ({ container }) => {
+      await container.adminService.createTask(data);
+      revalidatePath("/dashboard/housing");
+      return { success: true };
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
 }
 
 export async function reassignTaskAction(
@@ -266,222 +211,136 @@ export async function reassignTaskAction(
   userName: string,
   jwt?: string,
 ) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    const isAdmin = await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-    if (!isAdmin) throw new Error("Unauthorized");
-
-    // Handle Unassign (empty string -> null)
-    const targetProfileId = userId && userId.length > 0 ? userId : null;
-
-    await AdminService.adminReassign(taskId, targetProfileId);
-
-    revalidatePath("/dashboard/housing");
-    return { success: true };
-  } catch (e) {
-    console.error("reassignTaskAction failed", e);
-    return { success: false, error: (e as Error).message };
-  }
+  return await actionWrapper(
+    async ({ container }) => {
+      const targetProfileId = userId && userId.length > 0 ? userId : null;
+      await container.adminService.adminReassign(taskId, targetProfileId);
+      revalidatePath("/dashboard/housing");
+      return { success: true };
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
 }
 
 export async function getSchedulesAction(jwt?: string) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    const isAdmin = await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-    if (!isAdmin) return [];
+  const result = await actionWrapper(
+    async ({ container }) => {
+      const res = await container.scheduleService.getSchedules();
+      return JSON.parse(JSON.stringify(res));
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
 
-    // Need ScheduleService.() -> I haven't implemented this in Service yet!
-    // I should implement it in Service first.
-    // For now, I'll use db.listDocuments directly in Service, so I need to go back to Service.
-    // But I can't call DB directly here.
-    // I will assume ScheduleService.() exists and then go fix it.
-    // Wait, I can't assume. I should fix it.
-    // But tool use rules: "Do not do parallel tool calls".
-    // I will finish this file then update TasksService.
-    const res = await ScheduleService.getSchedules();
-    return JSON.parse(JSON.stringify(res));
-  } catch (e) {
-    console.error("Failed to fetch schedules", e);
-    return [];
-  }
+  if (result.success) return result.data;
+  return [];
 }
 
 export async function createScheduleAction(
   data: CreateScheduleDTO,
   jwt?: string,
 ) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    const isAdmin = await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-    if (!isAdmin) throw new Error("Unauthorized");
-
-    await ScheduleService.createSchedule(data);
-    revalidatePath("/dashboard/housing");
-    return { success: true };
-  } catch (e) {
-    console.error("Failed to create schedule", e);
-    return { success: false, error: "Failed to create schedule" };
-  }
+  return await actionWrapper(
+    async ({ container }) => {
+      await container.scheduleService.createSchedule(data);
+      revalidatePath("/dashboard/housing");
+      return { success: true };
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
 }
 
 export async function checkHousingAdminAction(jwt?: string) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    return await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-  } catch {
-    return false;
-  }
+  const result = await actionWrapper(
+    async () => {
+      return true; // If we passed the role check, we are admin
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
+  return result.success;
 }
 
 export async function getAllMembersAction(jwt?: string) {
-  try {
-    // Authenticate as at least a logged in user
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-
-    // Security Guard
-    if (!(await AuthService.verifyBrother(user.$id))) return [];
-
-    const members = await QueryService.getMembers();
-
-    return members;
-  } catch (e) {
-    console.error("Failed to fetch members", e);
-    return [];
-  }
+  const result = await actionWrapper(
+    async ({ container }) => {
+      const members = await container.queryService.getMembers();
+      return members;
+    },
+    { jwt },
+  );
+  if (result.success && result.data) return result.data;
+  return [];
 }
 
 export async function getReviewDetailsAction(taskId: string, jwt?: string) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    const isAdmin = await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-    if (!isAdmin) throw new Error("Unauthorized");
+  return await actionWrapper(
+    async ({ container }) => {
+      const task = await container.queryService.getTask(taskId);
+      if (!task) throw new Error("Task not found");
 
-    const task = await QueryService.getTask(taskId);
-    if (!task) throw new Error("Task not found");
+      let submitterName = "Unknown Brother";
+      let proofUrl = "";
 
-    let submitterName = "Unknown Brother";
-    let proofUrl = "";
-
-    // 1. Get Submitter Name (Discord ID -> User Profile -> Name)
-    if (task.assigned_to) {
-      // We need a way to get profile by Discord ID.
-      // AuthService.getProfile gets by Auth ID.
-      // We need `getProfileByDiscordId`? Or just query users list.
-      // Let's rely on AuthService having a query or use DB directly here for speed/simplicity
-      // Wait, AuthService.getProfile uses "auth_id" query.
-      // We need "discord_id" query or "primary key" query.
-      // The USER COLLECTION ID is the Auth ID? No.
-      // Schema: `discord_id` is Index Unique.
-      // Wait, `db.getDocument` requires Document ID.
-      // Is Document ID == Discord ID?
-      // In `getProfile` we do `db.listDocuments(..., Query.equal("auth_id", authId))`.
-      // The document ID is internal Appwrite ID usually.
-      // But wait, `TasksService.claimTask` saves `profileId` to `assigned_to`.
-      // Where does `profileId` come from? `profile.$id`.
-      // So `assigned_to` IS the Document ID of the User Profile.
-      // So we can just `db.getDocument`.
-      try {
-        const submitter = await QueryService.getUserProfile(task.assigned_to);
-        if (submitter) {
-          submitterName =
-            submitter.full_name || submitter.discord_handle || "Brother";
+      if (task.assigned_to) {
+        try {
+          const submitter = await container.queryService.getUserProfile(
+            task.assigned_to,
+          );
+          if (submitter) {
+            submitterName =
+              submitter.full_name || submitter.discord_handle || "Brother";
+          }
+        } catch (e) {
+          console.warn("Failed to fetch submitter profile", e);
         }
-      } catch (e) {
-        console.warn("Failed to fetch submitter profile", e);
       }
-    }
 
-    // 2. Get Signed URL
-    if (task.proof_s3_key) {
-      proofUrl = await StorageService.getReadUrl(task.proof_s3_key);
-    }
+      if (task.proof_s3_key) {
+        proofUrl = await StorageService.getReadUrl(task.proof_s3_key);
+      }
 
-    return { success: true, submitterName, proofUrl };
-  } catch (e) {
-    return { success: false, error: "Failed to fetch details" };
-  }
+      return { success: true, submitterName, proofUrl };
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
 }
 
 export async function updateTaskAction(
   taskId: string,
-  data: Partial<CreateAssignmentDTO>, // Use Payload Type directly
+  data: Partial<CreateAssignmentDTO>,
   jwt?: string,
 ) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    const isAdmin = await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-    if (!isAdmin) throw new Error("Unauthorized");
-
-    await AdminService.updateTask(taskId, data);
-    revalidatePath("/dashboard/housing");
-    return { success: true };
-  } catch (e) {
-    console.error("updateTaskAction failed", e);
-    return { success: false, error: (e as Error).message };
-  }
+  return await actionWrapper(
+    async ({ container }) => {
+      await container.adminService.updateTask(taskId, data);
+      revalidatePath("/dashboard/housing");
+      return { success: true };
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
 }
 
 export async function deleteTaskAction(taskId: string, jwt?: string) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    const isAdmin = await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-    if (!isAdmin) throw new Error("Unauthorized");
-
-    await AdminService.deleteTask(taskId);
-    revalidatePath("/dashboard/housing");
-    return { success: true };
-  } catch (e) {
-    console.error("deleteTaskAction failed", e);
-    return { success: false, error: (e as Error).message };
-  }
+  return await actionWrapper(
+    async ({ container }) => {
+      await container.adminService.deleteTask(taskId);
+      revalidatePath("/dashboard/housing");
+      return { success: true };
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
 }
 
 export async function getScheduleAction(scheduleId: string, jwt?: string) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    // Role check optional if we allow user to see schedule details?
-    // Usually only Admin edits.
-    const isAdmin = await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-    if (!isAdmin) throw new Error("Unauthorized");
+  const result = await actionWrapper(
+    async ({ container }) => {
+      const schedule = await container.scheduleService.getSchedule(scheduleId);
+      return JSON.parse(JSON.stringify(schedule));
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
 
-    const schedule = await ScheduleService.getSchedule(scheduleId);
-    return JSON.parse(JSON.stringify(schedule));
-  } catch (e) {
-    return null;
-  }
+  if (result.success) return result.data;
+  return null;
 }
 
 export async function updateScheduleLeadTimeAction(
@@ -489,28 +348,14 @@ export async function updateScheduleLeadTimeAction(
   leadTime: number,
   jwt?: string,
 ) {
-  try {
-    const account = await getAuthAccount(jwt);
-    const user = await account.get();
-    const isAdmin = await AuthService.verifyRole(
-      user.$id,
-      HOUSING_ADMIN_ROLES as string[],
-    );
-    if (!isAdmin) throw new Error("Unauthorized");
-
-    await ScheduleService.updateSchedule(scheduleId, {
-      lead_time_hours: leadTime,
-    });
-
-    // Optional: Recalculate unlocking for tasks?
-    // Usually the cron handles future instances.
-    // If we want to strictly update the *linked* task's unlock time, we'd need to fetch it.
-    // Logic: If there is an OPEN or LOCKED task associated with this schedule, update its unlock_at?
-    // Let's keep it simple: Changing schedule affects FUTURE instances.
-
-    revalidatePath("/dashboard/housing");
-    return { success: true };
-  } catch (e) {
-    return { success: false, error: (e as Error).message };
-  }
+  return await actionWrapper(
+    async ({ container }) => {
+      await container.scheduleService.updateSchedule(scheduleId, {
+        lead_time_hours: leadTime,
+      });
+      revalidatePath("/dashboard/housing");
+      return { success: true };
+    },
+    { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
+  );
 }

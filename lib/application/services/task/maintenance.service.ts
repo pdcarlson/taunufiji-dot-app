@@ -5,11 +5,17 @@
  * Previously hidden inside DutyService.getMyTasks (Lazy Eval).
  */
 
-import { getContainer } from "@/lib/infrastructure/container";
+import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { IDutyService } from "@/lib/domain/ports/services/duty.service.port";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents } from "@/lib/domain/events";
 
-export const MaintenanceService = {
+export class MaintenanceService {
+  constructor(
+    private readonly taskRepository: ITaskRepository,
+    private readonly dutyService: IDutyService,
+  ) {}
+
   /**
    * Run maintenance checks for a specific user's assignments.
    * Checks for:
@@ -18,8 +24,7 @@ export const MaintenanceService = {
    * 3. Overdue bounties that should unclaim.
    */
   async performMaintenance(userId: string): Promise<void> {
-    const { taskRepository } = getContainer();
-    const allAssigned = await taskRepository.findByAssignee(userId);
+    const allAssigned = await this.taskRepository.findByAssignee(userId);
     const now = new Date();
 
     for (const task of allAssigned) {
@@ -34,7 +39,7 @@ export const MaintenanceService = {
         task.unlock_at &&
         now >= new Date(task.unlock_at)
       ) {
-        await taskRepository.update(task.$id, {
+        await this.taskRepository.update(task.$id, {
           status: "open",
           notification_level: "unlocked",
         });
@@ -50,7 +55,7 @@ export const MaintenanceService = {
         !task.proof_s3_key
       ) {
         // IT IS EXPIRED
-        await taskRepository.update(task.$id, {
+        await this.taskRepository.update(task.$id, {
           status: "expired",
         });
 
@@ -72,10 +77,9 @@ export const MaintenanceService = {
         now > new Date(task.due_at)
       ) {
         // Expired Claim -> Unclaim
-        const { dutyService } = getContainer();
-        await dutyService.unclaimTask(task.$id, userId);
+        await this.dutyService.unclaimTask(task.$id, userId);
         continue;
       }
     }
-  },
-};
+  }
+}

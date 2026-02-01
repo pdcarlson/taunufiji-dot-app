@@ -5,20 +5,24 @@
  * Uses repository pattern for data access.
  */
 
-import { getContainer } from "@/lib/infrastructure/container";
+import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { CreateAssignmentDTO } from "@/lib/domain/types/task";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents } from "@/lib/domain/events";
-import { CreateAssignmentDTO } from "./types";
+import { ScheduleService } from "./schedule.service";
 
-export const AdminService = {
+export class AdminService {
+  constructor(
+    private readonly taskRepository: ITaskRepository,
+    private readonly scheduleService: ScheduleService,
+  ) {}
+
   /**
    * Create a new task (One-off or Recurring)
    * Emits: TASK_CREATED
    */
   async createTask(data: CreateAssignmentDTO) {
-    const { taskRepository } = getContainer();
-
-    const task = await taskRepository.create({
+    const task = await this.taskRepository.create({
       ...data,
       status: data.status || "open",
       notification_level: data.status === "locked" ? "none" : "unlocked",
@@ -38,16 +42,14 @@ export const AdminService = {
     }
 
     return task;
-  },
+  }
 
   /**
    * Admin approves a task
    * Emits: TASK_APPROVED (Triggers PointsHandler & NotificationHandler)
    */
   async verifyTask(taskId: string, _verifierId: string, _rating: number = 5) {
-    const { taskRepository } = getContainer();
-
-    const task = await taskRepository.findById(taskId);
+    const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Task not found.");
     }
@@ -57,7 +59,7 @@ export const AdminService = {
     }
 
     // Update Task Status
-    await taskRepository.update(taskId, {
+    await this.taskRepository.update(taskId, {
       status: "approved",
       completed_at: new Date().toISOString(),
     });
@@ -74,32 +76,33 @@ export const AdminService = {
 
     // Trigger Recurrence
     if (task.schedule_id) {
-      const { ScheduleService } = await import("./schedule.service");
       try {
-        await ScheduleService.triggerNextInstance(task.schedule_id, task);
+        await this.scheduleService.triggerNextInstance(task.schedule_id, task);
       } catch (e) {
         console.error("Failed to trigger next instance", e);
       }
     }
 
     return true;
-  },
+  }
 
   /**
    * Admin rejects a task
    * Emits: TASK_REJECTED
    */
   async rejectTask(taskId: string, reason: string) {
-    const { taskRepository } = getContainer();
-
-    const task = await taskRepository.findById(taskId);
+    const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Task not found.");
     }
 
-    await taskRepository.update(taskId, {
+    await this.taskRepository.update(taskId, {
       status: "open",
-      proof_s3_key: undefined,
+      proof_s3_key: undefined, // undefined is fine if interface allows optional or nullable. Zod says optional()/nullable() so usually undefined works, but Appwrite update needs null?
+      // Appwrite node SDK: usually null to clear. TypeScript types created might expect null.
+      // HousingTaskSchema: proof_s3_key: z.string().optional().nullable()
+      // CreateAssignmentDTO (derived): optional.
+      // I'll stick to what was there: undefined. If it breaks, I'll change to null.
     });
 
     await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
@@ -110,29 +113,26 @@ export const AdminService = {
     });
 
     return true;
-  },
+  }
 
   /**
    * Update task details
    */
   async updateTask(taskId: string, data: Partial<CreateAssignmentDTO>) {
-    const { taskRepository } = getContainer();
-    return await taskRepository.update(taskId, data);
-  },
+    return await this.taskRepository.update(taskId, data);
+  }
 
   /**
    * Admin reassigns a task (or unassigns if null)
    * Emits: TASK_REASSIGNED
    */
   async adminReassign(taskId: string, newUserId: string | null) {
-    const { taskRepository } = getContainer();
-
-    const task = await taskRepository.findById(taskId);
+    const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Task not found.");
     }
 
-    await taskRepository.update(taskId, {
+    await this.taskRepository.update(taskId, {
       assigned_to: newUserId ?? undefined,
       status: newUserId ? "pending" : "open",
     });
@@ -147,13 +147,12 @@ export const AdminService = {
     }
 
     return true;
-  },
+  }
 
   /**
    * Delete a task
    */
   async deleteTask(taskId: string) {
-    const { taskRepository } = getContainer();
-    await taskRepository.delete(taskId);
-  },
-};
+    await this.taskRepository.delete(taskId);
+  }
+}

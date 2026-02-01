@@ -5,17 +5,14 @@
  * Implementations should handle the specifics of the data store.
  */
 
-import { LedgerSchema } from "@/lib/domain/entities/appwrite.schema";
-import { LedgerEntry } from "@/lib/domain/entities";
-
-export type { LedgerEntry };
+import { LedgerEntry, CreateLedgerDTO } from "@/lib/domain/types/ledger";
 
 /**
  * Query options for listing ledger entries
  */
 export interface LedgerQueryOptions {
   userId?: string;
-  category?: LedgerSchema["category"];
+  category?: LedgerEntry["category"];
   limit?: number;
   startDate?: Date;
   endDate?: Date;
@@ -42,7 +39,7 @@ export interface ILedgerRepository {
    */
   findByUser(
     userId: string,
-    category?: LedgerSchema["category"],
+    category?: LedgerEntry["category"],
     limit?: number,
   ): Promise<LedgerEntry[]>;
 
@@ -64,5 +61,5 @@ export interface ILedgerRepository {
   /**
    * Create a new ledger entry
    */
-  create(data: Omit<LedgerSchema, never>): Promise<LedgerEntry>;
+  create(data: CreateLedgerDTO): Promise<LedgerEntry>;
 }

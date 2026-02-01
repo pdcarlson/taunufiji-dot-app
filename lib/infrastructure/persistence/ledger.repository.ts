@@ -6,13 +6,12 @@
 
 import { Query, ID } from "node-appwrite";
 import { getDatabase } from "./client";
-import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/appwrite.schema";
+import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 import {
   ILedgerRepository,
   LedgerQueryOptions,
 } from "@/lib/domain/ports/ledger.repository";
-import { LedgerEntry } from "@/lib/domain/entities";
-import { LedgerSchema } from "@/lib/domain/entities/appwrite.schema";
+import { LedgerEntry, CreateLedgerDTO } from "@/lib/domain/types/ledger";
 import { NotFoundError, DatabaseError } from "@/lib/domain/errors";
 
 export class AppwriteLedgerRepository implements ILedgerRepository {
@@ -35,7 +34,7 @@ export class AppwriteLedgerRepository implements ILedgerRepository {
 
   async findByUser(
     userId: string,
-    category?: LedgerSchema["category"],
+    category?: LedgerEntry["category"],
     limit?: number,
   ): Promise<LedgerEntry[]> {
     const queries: string[] = [
@@ -88,7 +87,7 @@ export class AppwriteLedgerRepository implements ILedgerRepository {
   // Commands
   // =========================================================================
 
-  async create(data: LedgerSchema): Promise<LedgerEntry> {
+  async create(data: CreateLedgerDTO): Promise<LedgerEntry> {
     try {
       const db = getDatabase();
       const doc = await db.createDocument(

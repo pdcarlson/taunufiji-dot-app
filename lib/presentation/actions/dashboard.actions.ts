@@ -3,13 +3,11 @@
 import { createSessionClient } from "@/lib/presentation/server/appwrite";
 
 import { getContainer } from "@/lib/infrastructure/container";
-import { MaintenanceService } from "@/lib/application/services/task";
-import { AuthService } from "@/lib/application/services/auth.service";
 
 import { logger } from "@/lib/utils/logger";
 import { Client, Databases, Query } from "node-appwrite";
 import { env } from "@/lib/infrastructure/config/env";
-import { DB_ID, COLLECTIONS } from "@/lib/domain/entities/appwrite.schema";
+import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 
 const client = new Client()
   .setEndpoint(env.NEXT_PUBLIC_APPWRITE_ENDPOINT)
@@ -24,8 +22,10 @@ export async function getDashboardStatsAction(
   userId: string,
 ): Promise<DashboardStats> {
   try {
+    const { dutyService, authService, maintenanceService } = getContainer();
+
     // 1. Authorization Guard
-    const isAuthorized = await AuthService.verifyBrother(userId);
+    const isAuthorized = await authService.verifyBrother(userId);
     if (!isAuthorized) {
       // Return empty/safe status if unauthorized (fail secure)
       return {
@@ -39,22 +39,19 @@ export async function getDashboardStatsAction(
     }
 
     // 2. Get My Tasks (active)
-    // 2. Get My Tasks (active)
     // Ensure we query by Profile ID, not Auth ID
-    const profile = await AuthService.getProfile(userId);
-
-    const { dutyService } = getContainer();
+    const profile = await authService.getProfile(userId);
 
     // <--- KEY FIX: Use discord_id (Stable) instead of $id (Random after migration)
     let activeCount = 0;
     if (profile) {
       // Ensure tasks are up-to-date (expire overdue, unlock scheduled)
-      await MaintenanceService.performMaintenance(profile.discord_id);
+      await maintenanceService.performMaintenance(profile.discord_id);
 
       const myTasksRes = await dutyService.getMyTasks(profile.discord_id);
       if (myTasksRes && Array.isArray(myTasksRes.documents)) {
         activeCount = myTasksRes.documents.filter(
-          (d: any) =>
+          (d) =>
             d.status === "pending" ||
             d.status === "open" ||
             d.status === "rejected",
@@ -171,9 +168,11 @@ export async function getLeaderboardAction(userId?: string) {
     // Session Verification is flaky on some setups (Cookie issues).
     // Failing gracefully or using Admin Client logic if userId is provided.
 
+    const { pointsService, authService } = getContainer();
+
     // If we have a userId, verify role using Admin Client
     if (userId) {
-      const isAuthorized = await AuthService.verifyBrother(userId);
+      const isAuthorized = await authService.verifyBrother(userId);
       if (!isAuthorized) {
         return [];
       }
@@ -183,7 +182,7 @@ export async function getLeaderboardAction(userId?: string) {
       try {
         const { account } = await createSessionClient();
         const user = await account.get();
-        if (!(await AuthService.verifyBrother(user.$id))) {
+        if (!(await authService.verifyBrother(user.$id))) {
           return [];
         }
       } catch (_sessionError) {
@@ -191,11 +190,10 @@ export async function getLeaderboardAction(userId?: string) {
       }
     }
 
-    const { pointsService } = getContainer();
     const leaderboard = await pointsService.getLeaderboard(5);
 
     // Map to View Model
-    return leaderboard.map((entry: any, i: number) => ({
+    return leaderboard.map((entry, i) => ({
       id: entry.id, // Discord ID or Doc ID
       name: entry.name,
       points: entry.points,
@@ -236,7 +234,8 @@ export async function getMyRankAction(userId: string) {
     }
 
     // Verify using Auth ID attached to the profile
-    const isAuthorized = await AuthService.verifyBrother(userDoc.auth_id);
+    const { authService } = getContainer();
+    const isAuthorized = await authService.verifyBrother(userDoc.auth_id);
     if (!isAuthorized) {
       return null;
     }
