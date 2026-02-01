@@ -19,12 +19,9 @@ export const UserSchema = BaseEntitySchema.extend({
 export type User = z.infer<typeof UserSchema>;
 
 export const CreateUserDTOSchema = UserSchema.omit({
-  $id: true,
-  $collectionId: true,
-  $databaseId: true,
-  $createdAt: true,
-  $updatedAt: true,
-  $permissions: true,
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export type CreateUserDTO = z.infer<typeof CreateUserDTOSchema>;

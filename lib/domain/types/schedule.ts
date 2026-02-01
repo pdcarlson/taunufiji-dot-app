@@ -18,12 +18,9 @@ export const HousingScheduleSchema = BaseEntitySchema.extend({
 export type HousingSchedule = z.infer<typeof HousingScheduleSchema>;
 
 export const CreateScheduleDTOSchema = HousingScheduleSchema.omit({
-  $id: true,
-  $collectionId: true,
-  $databaseId: true,
-  $createdAt: true,
-  $updatedAt: true,
-  $permissions: true,
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export type CreateScheduleDTO = z.infer<typeof CreateScheduleDTOSchema>;

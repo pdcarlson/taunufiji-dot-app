@@ -1,33 +1,25 @@
 "use server";
 
 import { createSessionClient } from "@/lib/presentation/server/appwrite";
-
 import { getContainer } from "@/lib/infrastructure/container";
-
 import { logger } from "@/lib/utils/logger";
-import { Client, Databases, Query } from "node-appwrite";
-import { env } from "@/lib/infrastructure/config/env";
-import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
-
-const client = new Client()
-  .setEndpoint(env.NEXT_PUBLIC_APPWRITE_ENDPOINT)
-  .setProject(env.NEXT_PUBLIC_APPWRITE_PROJECT_ID)
-  .setKey(env.APPWRITE_API_KEY!);
-
-const db = new Databases(client);
-
 import { DashboardStats } from "@/lib/domain/entities/dashboard.dto";
 
 export async function getDashboardStatsAction(
   userId: string,
 ): Promise<DashboardStats> {
   try {
-    const { dutyService, authService, maintenanceService } = getContainer();
+    const {
+      dutyService,
+      authService,
+      maintenanceService,
+      pointsService,
+      ledgerRepository,
+    } = getContainer();
 
     // 1. Authorization Guard
     const isAuthorized = await authService.verifyBrother(userId);
     if (!isAuthorized) {
-      // Return empty/safe status if unauthorized (fail secure)
       return {
         points: 0,
         activeTasks: 0,
@@ -38,16 +30,24 @@ export async function getDashboardStatsAction(
       };
     }
 
-    // 2. Get My Tasks (active)
-    // Ensure we query by Profile ID, not Auth ID
+    // 2. Resolve Profile (Discord ID)
     const profile = await authService.getProfile(userId);
+    if (!profile) {
+      // If no profile, we can't do much
+      return {
+        points: 0,
+        activeTasks: 0,
+        pendingReviews: 0,
+        fullName: "Brother",
+        housingHistory: [],
+        libraryHistory: [],
+      };
+    }
 
-    // <--- KEY FIX: Use discord_id (Stable) instead of $id (Random after migration)
+    // 3. Maintenance & Active Tasks
     let activeCount = 0;
-    if (profile) {
-      // Ensure tasks are up-to-date (expire overdue, unlock scheduled)
+    try {
       await maintenanceService.performMaintenance(profile.discord_id);
-
       const myTasksRes = await dutyService.getMyTasks(profile.discord_id);
       if (myTasksRes && Array.isArray(myTasksRes.documents)) {
         activeCount = myTasksRes.documents.filter(
@@ -57,82 +57,49 @@ export async function getDashboardStatsAction(
             d.status === "rejected",
         ).length;
       }
+    } catch (e) {
+      logger.error("Maintenance or Task Fetch Failed", e);
     }
 
-    // const myTasks = await TasksService.getMyTasks(userId);
-    // const activeCount = myTasks.documents.filter(d => d.status === "pending" || d.status === "open").length;
+    // 4. Pending Reviews (Placeholder)
+    const pendingReviewsCount = 0;
 
-    // 2. Get Pending Reviews (for Admins - Housing Chair etc.)
-    // This is expensive if we don't have a specific query.
-    // Assuming 'pending' status means 'needs review' if proof is attached.
-    // Or if status is 'pending_review' (need to verify schema).
-    // For now, let's just get All Open/Pending tasks count or mock it if we can't filter easily.
-    // Logically: TasksService.getOpenTasks() returns "open" tasks.
-    // TasksService.claimTask sets status="pending".
-    // So "pending" tasks are the ones to review? Or are they just claimed?
-    // Let's assume 'pending' counts as active for user, and maybe pending reviews are distinct.
-    // Based on public-site: `t.status === "pending_review"`.
-    // So we should check for "pending_review".
+    // 5. Points & Full Name (from User Entity)
+    // We already invoked getProfile (which calls userRepository.findByAuthId or similar)
+    // But getProfile returns User entity.
+    // So 'profile' IS the strict Domain User.
+    const points = profile.details_points_current || 0;
+    const fullName = profile.full_name || "Brother";
 
-    // Let's try to get pending reviews count.
-    // We'll expose a method in TasksService later if needed.
-    const pendingReviewsCount = 0; // Placeholder until mapped correctly to schema
-
-    // 3. Get Points (Real)
-    // Note: DB Documents are keyed by Discord ID, but we have Auth ID.
-    // We must query by auth_id.
-    const userDocs = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
-      Query.equal("auth_id", userId),
-      Query.limit(1),
-    ]);
-
-    const userDoc = userDocs.documents[0];
-
-    if (!userDoc) {
-      return {
-        points: 0,
-        activeTasks: activeCount,
-        pendingReviews: 0,
-        fullName: "Brother",
-        housingHistory: [],
-        libraryHistory: [],
-      };
-    }
-
-    // 4. Get Recent History (Last 3)
-    // 4. Get Distributed History
+    // 6. History
     let housingHistory: any[] = [];
     let libraryHistory: any[] = [];
 
     try {
-      // Parallel fetch for efficiency
-      const [housingDocs, libraryDocs] = await Promise.all([
-        db.listDocuments(DB_ID, COLLECTIONS.LEDGER, [
-          Query.equal("user_id", userDoc.discord_id),
-          // Housing uses Categories: 'task', 'fine' (and maybe 'manual' if related)
-          Query.equal("category", ["task", "fine"]),
-          Query.orderDesc("timestamp"),
-          Query.limit(3),
-        ]),
-        db.listDocuments(DB_ID, COLLECTIONS.LEDGER, [
-          Query.equal("user_id", userDoc.discord_id),
-          // Library uses Category: 'event' (for uploads)
-          Query.equal("category", "event"),
-          Query.orderDesc("timestamp"),
-          Query.limit(3),
-        ]),
+      // Parallel fetch using Service/Repo
+      // Housing: categories 'task', 'fine'
+      // Library: category 'event'
+      const [housingEntries, libraryEntries] = await Promise.all([
+        pointsService.getHistory(profile.discord_id, ["task", "fine"]),
+        ledgerRepository.findMany({
+          userId: profile.discord_id,
+          category: "event",
+          limit: 3,
+          orderBy: "timestamp",
+          orderDirection: "desc",
+        }),
       ]);
 
-      housingHistory = housingDocs.documents.map((d) => ({
-        id: d.$id,
+      housingHistory = housingEntries.slice(0, 3).map((d) => ({
+        id: d.id,
         reason: d.reason,
         amount: d.amount,
         category: d.category,
         timestamp: d.timestamp,
       }));
 
-      libraryHistory = libraryDocs.documents.map((d) => ({
-        id: d.$id,
+      libraryHistory = libraryEntries.map((d) => ({
+        id: d.id,
         reason: d.reason,
         amount: d.amount,
         category: d.category,
@@ -143,10 +110,10 @@ export async function getDashboardStatsAction(
     }
 
     return {
-      points: userDoc.details_points_current || 0,
+      points,
       activeTasks: activeCount,
       pendingReviews: pendingReviewsCount,
-      fullName: userDoc.full_name || "Brother",
+      fullName,
       housingHistory,
       libraryHistory,
     };
@@ -165,24 +132,21 @@ export async function getDashboardStatsAction(
 
 export async function getLeaderboardAction(userId?: string) {
   try {
-    // Session Verification is flaky on some setups (Cookie issues).
-    // Failing gracefully or using Admin Client logic if userId is provided.
-
     const { pointsService, authService } = getContainer();
 
-    // If we have a userId, verify role using Admin Client
+    // If we have a userId, verify role
     if (userId) {
       const isAuthorized = await authService.verifyBrother(userId);
       if (!isAuthorized) {
         return [];
       }
     } else {
-      // Fallback: Try Session Client (Strict mode)
-      // If this fails (No session), we return empty to be safe
+      // Fallback: Try Session Client
       try {
         const { account } = await createSessionClient();
         const user = await account.get();
         if (!(await authService.verifyBrother(user.$id))) {
+          // user.$id is safe here, strictly typed from Appwrite Node SDK Account
           return [];
         }
       } catch (_sessionError) {
@@ -194,7 +158,7 @@ export async function getLeaderboardAction(userId?: string) {
 
     // Map to View Model
     return leaderboard.map((entry, i) => ({
-      id: entry.id, // Discord ID or Doc ID
+      id: entry.id,
       name: entry.name,
       points: entry.points,
       rank: i + 1,
@@ -207,56 +171,33 @@ export async function getLeaderboardAction(userId?: string) {
 
 export async function getMyRankAction(userId: string) {
   try {
-    // Use Admin Client (db) directly since we verify authorization manually below.
-    // This avoids "No session" errors if cookies are flaky.
+    // 1. Resolve User (Doc ID or Discord ID)
+    const { userRepository, authService, pointsService } = getContainer();
 
-    // 1. Authorization Guard
-    // Note: userId here might be Document ID (Random) OR Discord ID (Legacy/Client logic).
-    // We need to fetch the document either way.
-
-    let userDoc;
-    try {
-      // Try as Document ID first
-      userDoc = await db.getDocument(DB_ID, COLLECTIONS.USERS, userId);
-    } catch {
-      // Try as Discord ID (Attribute)
-      // This handles cases where the client passes profile.discord_id or thinks ID is Discord ID
-      const list = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
-        Query.equal("discord_id", userId),
-        Query.limit(1),
-      ]);
-      userDoc = list.documents[0];
+    let user = await userRepository.findById(userId);
+    if (!user) {
+      user = await userRepository.findByDiscordId(userId);
     }
 
-    if (!userDoc) {
+    if (!user) {
       console.warn(`[getMyRank] User not found for ID: ${userId}`);
       return null;
     }
 
-    // Verify using Auth ID attached to the profile
-    const { authService } = getContainer();
-    const isAuthorized = await authService.verifyBrother(userDoc.auth_id);
+    // 2. Authorization
+    const isAuthorized = await authService.verifyBrother(user.auth_id);
     if (!isAuthorized) {
       return null;
     }
 
-    const myPoints = userDoc.details_points_current || 0;
+    // 3. Get Rank via Service
+    const rankData = await pointsService.getUserRank(user.discord_id);
 
-    // Count users with strictly more points
-    const betterPlayers = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
-      Query.greaterThan("details_points_current", myPoints),
-      Query.limit(1), // We only need count, but 'total' is what matters
-    ]);
-
-    // Query.limit(1) with total gives us the count of matches?
-    // Wait, createSessionClient was doing 'account.get()' which returns the Auth User.
-    // If we use Admin, we trust 'userId' (Profile ID).
-
-    const rank = betterPlayers.total + 1;
+    if (!rankData) return null;
 
     return {
-      rank,
-      points: myPoints,
+      rank: rankData.rank,
+      points: rankData.points,
     };
   } catch (e) {
     logger.error("My Rank fetch failed", e);

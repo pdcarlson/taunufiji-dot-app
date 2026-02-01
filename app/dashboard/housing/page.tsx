@@ -187,7 +187,7 @@ export default function HousingPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {pendingReviews.map((t) => (
                   <TaskCard
-                    key={t.$id}
+                    key={t.id}
                     task={t}
                     userId={user?.$id || ""}
                     profileId={profile?.discord_id || ""}
@@ -222,7 +222,7 @@ export default function HousingPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {myResponsibilities.map((t) => (
                   <TaskCard
-                    key={t.$id}
+                    key={t.id}
                     task={t}
                     userId={user?.$id || ""}
                     profileId={profile?.discord_id || ""}
@@ -258,7 +258,7 @@ export default function HousingPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {availableBounties.map((t) => (
                   <TaskCard
-                    key={t.$id}
+                    key={t.id}
                     task={t}
                     userId={user?.$id || ""}
                     profileId={profile?.discord_id || ""}

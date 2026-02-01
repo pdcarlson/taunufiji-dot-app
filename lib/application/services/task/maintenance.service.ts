@@ -39,7 +39,7 @@ export class MaintenanceService {
         task.unlock_at &&
         now >= new Date(task.unlock_at)
       ) {
-        await this.taskRepository.update(task.$id, {
+        await this.taskRepository.update(task.id, {
           status: "open",
           notification_level: "unlocked",
         });
@@ -55,13 +55,13 @@ export class MaintenanceService {
         !task.proof_s3_key
       ) {
         // IT IS EXPIRED
-        await this.taskRepository.update(task.$id, {
+        await this.taskRepository.update(task.id, {
           status: "expired",
         });
 
         // Emit Event
         await DomainEventBus.publish(TaskEvents.TASK_EXPIRED, {
-          taskId: task.$id,
+          taskId: task.id,
           title: task.title,
           userId: userId,
           fineAmount: 50,
@@ -77,7 +77,7 @@ export class MaintenanceService {
         now > new Date(task.due_at)
       ) {
         // Expired Claim -> Unclaim
-        await this.dutyService.unclaimTask(task.$id, userId);
+        await this.dutyService.unclaimTask(task.id, userId);
         continue;
       }
     }

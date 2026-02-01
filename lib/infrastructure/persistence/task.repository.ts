@@ -4,17 +4,22 @@
  * Implements ITaskRepository using Appwrite as the data store.
  */
 
-import { Query, ID } from "node-appwrite";
+import { Query, ID, Models } from "node-appwrite";
 import { getDatabase } from "./client";
 import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 import {
   ITaskRepository,
   TaskQueryOptions,
 } from "@/lib/domain/ports/task.repository";
-import { HousingTask, CreateAssignmentDTO } from "@/lib/domain/types/task";
+import {
+  HousingTask,
+  CreateAssignmentDTO,
+  HousingTaskSchema,
+} from "@/lib/domain/types/task";
 import {
   HousingSchedule,
   CreateScheduleDTO,
+  HousingScheduleSchema,
 } from "@/lib/domain/types/schedule";
 import { NotFoundError, DatabaseError } from "@/lib/domain/errors";
 
@@ -27,7 +32,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
     try {
       const db = getDatabase();
       const doc = await db.getDocument(DB_ID, COLLECTIONS.ASSIGNMENTS, id);
-      return doc as unknown as HousingTask;
+      return this.toTaskDomain(doc);
     } catch (error: unknown) {
       // Handle 404 as null return
       if (this.isNotFoundError(error)) {
@@ -40,7 +45,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
   async findOpen(): Promise<HousingTask[]> {
     return this.findMany({
       status: "open",
-      orderBy: "$createdAt",
+      orderBy: "createdAt",
       orderDirection: "desc",
     });
   }
@@ -48,7 +53,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
   async findPending(): Promise<HousingTask[]> {
     return this.findMany({
       status: "pending",
-      orderBy: "$createdAt",
+      orderBy: "createdAt",
       orderDirection: "desc",
     });
   }
@@ -56,7 +61,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
   async findByAssignee(userId: string): Promise<HousingTask[]> {
     return this.findMany({
       assignedTo: userId,
-      orderBy: "$createdAt",
+      orderBy: "createdAt",
       orderDirection: "desc",
     });
   }
@@ -71,7 +76,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
         COLLECTIONS.ASSIGNMENTS,
         queries,
       );
-      return result.documents as unknown as HousingTask[];
+      return result.documents.map((doc) => this.toTaskDomain(doc));
     } catch (error: unknown) {
       throw new DatabaseError("findMany", error);
     }
@@ -90,7 +95,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
         ID.unique(),
         data,
       );
-      return doc as unknown as HousingTask;
+      return this.toTaskDomain(doc);
     } catch (error: unknown) {
       throw new DatabaseError("create", error);
     }
@@ -108,7 +113,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
         id,
         data,
       );
-      return doc as unknown as HousingTask;
+      return this.toTaskDomain(doc);
     } catch (error: unknown) {
       if (this.isNotFoundError(error)) {
         throw new NotFoundError("Task", id);
@@ -137,7 +142,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
     try {
       const db = getDatabase();
       const doc = await db.getDocument(DB_ID, COLLECTIONS.SCHEDULES, id);
-      return doc as unknown as HousingSchedule;
+      return this.toScheduleDomain(doc);
     } catch (error: unknown) {
       if (this.isNotFoundError(error)) {
         return null;
@@ -152,7 +157,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
       const result = await db.listDocuments(DB_ID, COLLECTIONS.SCHEDULES, [
         Query.equal("active", true),
       ]);
-      return result.documents as unknown as HousingSchedule[];
+      return result.documents.map((doc) => this.toScheduleDomain(doc));
     } catch (error: unknown) {
       throw new DatabaseError("findActiveSchedules", error);
     }
@@ -171,7 +176,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
         ID.unique(),
         data,
       );
-      return doc as unknown as HousingSchedule;
+      return this.toScheduleDomain(doc);
     } catch (error: unknown) {
       throw new DatabaseError("createSchedule", error);
     }
@@ -189,7 +194,7 @@ export class AppwriteTaskRepository implements ITaskRepository {
         id,
         data,
       );
-      return doc as unknown as HousingSchedule;
+      return this.toScheduleDomain(doc);
     } catch (error: unknown) {
       if (this.isNotFoundError(error)) {
         throw new NotFoundError("Schedule", id);
@@ -201,6 +206,32 @@ export class AppwriteTaskRepository implements ITaskRepository {
   // =========================================================================
   // Private Helpers
   // =========================================================================
+
+  /**
+   * Maps Appwrite Document to HousingTask
+   */
+  private toTaskDomain(doc: Models.Document): HousingTask {
+    const domainTask = {
+      ...doc,
+      id: doc.$id,
+      createdAt: doc.$createdAt,
+      updatedAt: doc.$updatedAt,
+    };
+    return HousingTaskSchema.parse(domainTask);
+  }
+
+  /**
+   * Maps Appwrite Document to HousingSchedule
+   */
+  private toScheduleDomain(doc: Models.Document): HousingSchedule {
+    const domainSchedule = {
+      ...doc,
+      id: doc.$id,
+      createdAt: doc.$createdAt,
+      updatedAt: doc.$updatedAt,
+    };
+    return HousingScheduleSchema.parse(domainSchedule);
+  }
 
   private buildTaskQueries(options: TaskQueryOptions): string[] {
     const queries: string[] = [];
@@ -248,19 +279,16 @@ export class AppwriteTaskRepository implements ITaskRepository {
     }
 
     // Ordering
-    if (options.orderBy === "due_at") {
-      queries.push(
-        options.orderDirection === "asc"
-          ? Query.orderAsc("due_at")
-          : Query.orderDesc("due_at"),
-      );
+    const orderBy = options.orderBy || "createdAt";
+    const orderDir = options.orderDirection || "desc";
+
+    let dbField: string = orderBy;
+    if (orderBy === "createdAt") dbField = "$createdAt";
+
+    if (orderDir === "asc") {
+      queries.push(Query.orderAsc(dbField));
     } else {
-      // Default to createdAt
-      queries.push(
-        options.orderDirection === "asc"
-          ? Query.orderAsc("$createdAt")
-          : Query.orderDesc("$createdAt"),
-      );
+      queries.push(Query.orderDesc(dbField));
     }
 
     // Limit

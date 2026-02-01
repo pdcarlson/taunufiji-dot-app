@@ -43,11 +43,11 @@ export default function ProofReviewModal({
     const fetchDetails = async () => {
       try {
         const { jwt } = await account.createJWT();
-        const res = await getReviewDetailsAction(task.$id, jwt);
-        if (res.success) {
+        const res = await getReviewDetailsAction(task.id, jwt);
+        if (res.success && res.data) {
           setDetails({
-            name: res.submitterName || "Brother",
-            url: res.proofUrl || "",
+            name: res.data.submitterName || "Brother",
+            url: res.data.proofUrl || "",
             loading: false,
           });
         } else {
@@ -76,7 +76,7 @@ export default function ProofReviewModal({
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
-      await approveTaskAction(task.$id, jwt);
+      await approveTaskAction(task.id, jwt);
       toast.success("Task Approved! Points Awarded.");
       onSuccess();
       onClose();
@@ -95,7 +95,7 @@ export default function ProofReviewModal({
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
-      await rejectTaskAction(task.$id, reason, jwt);
+      await rejectTaskAction(task.id, reason, jwt);
       toast.error("Proof Rejected.");
       onSuccess();
       onClose();

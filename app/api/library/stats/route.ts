@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { AuthService } from "@/lib/application/services/auth.service";
-import { LibraryService } from "@/lib/application/services/library.service";
-import { createSessionClient, createJWTClient } from "@/lib/presentation/server/appwrite";
+import { getContainer } from "@/lib/infrastructure/container";
+import {
+  createSessionClient,
+  createJWTClient,
+} from "@/lib/presentation/server/appwrite";
 
 export const dynamic = "force-dynamic";
 
@@ -24,16 +26,17 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // 2. Verify Access
-    const isBrother = await AuthService.verifyBrother(user.$id);
+    const { authService, libraryService } = getContainer();
+    const isBrother = await authService.verifyBrother(user.$id);
     if (!isBrother)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     // 3. Get Stats (using Discord ID)
-    const profile = await AuthService.getProfile(user.$id);
+    const profile = await authService.getProfile(user.$id);
     if (!profile)
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
 
-    const stats = await LibraryService.getStats(profile.discord_id);
+    const stats = await libraryService.getStats(profile.discord_id);
 
     return NextResponse.json(stats);
   } catch (e: any) {

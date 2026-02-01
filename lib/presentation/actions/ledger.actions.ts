@@ -34,10 +34,12 @@ export async function getTransactionHistoryAction(
       throw new Error("Unauthorized access to ledger");
     }
 
-    const profile = await AuthService.getProfile(userId);
+    const { pointsService, authService } = getContainer();
+
+    // 3. Resolve Profile ID
+    const profile = await authService.getProfile(userId);
     if (!profile) return [];
 
-    const { pointsService } = getContainer();
     const res = await pointsService.getHistory(profile.discord_id);
     return JSON.parse(JSON.stringify(res));
   } catch (error) {

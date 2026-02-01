@@ -38,7 +38,7 @@ export default function DutyRoster({
       return true;
 
     // For approved/expired, only show if recent
-    const updatedAt = new Date(t.$updatedAt);
+    const updatedAt = new Date(t.updatedAt);
     return updatedAt > sevenDaysAgo;
   });
 
@@ -173,7 +173,7 @@ export default function DutyRoster({
               )}
               {sortedTasks.map((task) => (
                 <tr
-                  key={task.$id}
+                  key={task.id}
                   className="hover:bg-stone-50 transition-colors group"
                 >
                   <td className="p-4 font-bold text-stone-800">{task.title}</td>

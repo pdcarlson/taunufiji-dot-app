@@ -23,7 +23,7 @@ export interface TaskQueryOptions {
   dueBefore?: Date;
   unlockBefore?: Date;
   limit?: number;
-  orderBy?: "$createdAt" | "due_at";
+  orderBy?: "createdAt" | "due_at";
   orderDirection?: "asc" | "desc";
 }
 

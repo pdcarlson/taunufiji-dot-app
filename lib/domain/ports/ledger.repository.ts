@@ -6,6 +6,7 @@
  */
 
 import { LedgerEntry, CreateLedgerDTO } from "@/lib/domain/types/ledger";
+export type { LedgerEntry };
 
 /**
  * Query options for listing ledger entries
@@ -16,6 +17,8 @@ export interface LedgerQueryOptions {
   limit?: number;
   startDate?: Date;
   endDate?: Date;
+  orderBy?: string;
+  orderDirection?: "asc" | "desc";
 }
 
 /**

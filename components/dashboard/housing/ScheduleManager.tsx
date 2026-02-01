@@ -60,7 +60,7 @@ export default function ScheduleManager({ schedules, members }: Props) {
         ) : (
           schedules.map((sched) => (
             <div
-              key={sched.$id}
+              key={sched.id}
               className="group relative bg-[#111111] hover:bg-[#161616] border border-white/5 hover:border-white/10 rounded-2xl p-5 transition-all duration-200"
             >
               <div className="flex justify-between items-start mb-4">
@@ -94,7 +94,7 @@ export default function ScheduleManager({ schedules, members }: Props) {
                   <Users size={14} />
                   <span>
                     {sched.assigned_to
-                      ? members.find((m) => m.$id === sched.assigned_to)
+                      ? members.find((m) => m.id === sched.assigned_to)
                           ?.full_name || sched.assigned_to
                       : "Rotating / Open"}
                   </span>

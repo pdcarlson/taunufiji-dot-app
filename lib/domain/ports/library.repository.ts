@@ -1,4 +1,4 @@
-import { LibraryResource } from "../entities";
+import { LibraryResource } from "@/lib/domain/types/library";
 
 export interface LibrarySearchFilters {
   department?: string;

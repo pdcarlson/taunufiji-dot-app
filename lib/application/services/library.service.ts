@@ -25,11 +25,7 @@ export class LibraryService {
     const doc = await this.libraryRepository.findById(documentId);
 
     if (!doc) throw new Error("Document not found");
-    // Cast to access custom attributes
-    const fileData = doc as typeof doc & {
-      file_s3_key: string;
-      original_filename: string;
-    };
+    const fileData = doc;
 
     if (!fileData.file_s3_key) {
       throw new Error("File S3 Key missing in metadata");

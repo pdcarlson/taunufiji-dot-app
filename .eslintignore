@@ -1,6 +1,0 @@
-
-scripts/
-*.test.ts
-__tests__/
-.next/
-node_modules/

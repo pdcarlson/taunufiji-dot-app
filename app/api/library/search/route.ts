@@ -1,9 +1,10 @@
-
 import { NextResponse } from "next/server";
-import { AuthService } from "@/lib/application/services/auth.service";
-import { LibraryService, LibrarySearchFilters } from "@/lib/application/services/library.service";
-import { createSessionClient, createJWTClient } from "@/lib/presentation/server/appwrite";
-
+import { getContainer } from "@/lib/infrastructure/container";
+import { LibrarySearchFilters } from "@/lib/application/services/library.service";
+import {
+  createSessionClient,
+  createJWTClient,
+} from "@/lib/presentation/server/appwrite";
 
 import { logger } from "@/lib/utils/logger";
 
@@ -14,13 +15,13 @@ export async function POST(req: Request) {
     // 1. Authenticate
     let user;
 
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const { account } = createJWTClient(authHeader.split(' ')[1]);
-        user = await account.get();
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const { account } = createJWTClient(authHeader.split(" ")[1]);
+      user = await account.get();
     } else {
-        const { account } = await createSessionClient();
-        user = await account.get();
+      const { account } = await createSessionClient();
+      user = await account.get();
     }
 
     if (!user) {
@@ -28,14 +29,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    logger.log(`Library Search: User ${user.$id} attempting search. Roles: ${user.labels}`);
+    logger.log(
+      `Library Search: User ${user.$id} attempting search. Roles: ${user.labels}`,
+    );
 
-    const isBrother = await AuthService.verifyBrother(user.$id);
-    
-    logger.log(`Library Search: verifyBrother result for ${user.$id}: ${isBrother}`);
+    const { authService, libraryService } = getContainer();
+    const isBrother = await authService.verifyBrother(user.$id);
+
+    logger.log(
+      `Library Search: verifyBrother result for ${user.$id}: ${isBrother}`,
+    );
 
     if (!isBrother) {
-      logger.error(`Library Search: User ${user.$id} failed brother verification.`);
+      logger.error(
+        `Library Search: User ${user.$id} failed brother verification.`,
+      );
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -44,13 +52,15 @@ export async function POST(req: Request) {
     const filters: LibrarySearchFilters = body.filters || {};
 
     // 3. Execute Search
-    const result = await LibraryService.search(filters);
-    
-    return NextResponse.json(result);
+    const result = await libraryService.search(filters);
 
+    return NextResponse.json(result);
   } catch (e: unknown) {
     const err = e as Error;
     console.error("Library Search Error:", err.message);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

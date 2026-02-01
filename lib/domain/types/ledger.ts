@@ -18,12 +18,9 @@ export const LedgerEntrySchema = BaseEntitySchema.extend({
 export type LedgerEntry = z.infer<typeof LedgerEntrySchema>;
 
 export const CreateLedgerDTOSchema = LedgerEntrySchema.omit({
-  $id: true,
-  $collectionId: true,
-  $databaseId: true,
-  $createdAt: true,
-  $updatedAt: true,
-  $permissions: true,
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export type CreateLedgerDTO = z.infer<typeof CreateLedgerDTOSchema>;

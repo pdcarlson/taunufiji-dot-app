@@ -1,8 +1,8 @@
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents, TaskExpiredEvent } from "@/lib/domain/events";
+import { getContainer } from "@/lib/infrastructure/container";
 import { ScheduleService } from "@/lib/application/services/task/schedule.service";
 import { logger } from "@/lib/utils/logger";
-import { getContainer } from "@/lib/infrastructure/container";
 
 export const TaskExpiredHandler = {
   init: () => {
@@ -25,10 +25,8 @@ export const TaskExpiredHandler = {
             logger.log(
               `[TaskExpiredHandler] Triggering next instance for schedule ${task.schedule_id}`,
             );
-            await ScheduleService.triggerNextInstance(
-              task.schedule_id,
-              task as any,
-            );
+            const { scheduleService } = getContainer();
+            await scheduleService.triggerNextInstance(task.schedule_id, task);
           }
         } catch (e) {
           logger.error("[TaskExpiredHandler] Failed to handle expiry", e);

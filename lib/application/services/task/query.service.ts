@@ -27,12 +27,12 @@ export class QueryService {
     const [openTasks, lockedTasks] = await Promise.all([
       this.taskRepository.findMany({
         status: "open",
-        orderBy: "$createdAt",
+        orderBy: "createdAt",
         orderDirection: "desc",
       }),
       this.taskRepository.findMany({
         status: "locked",
-        orderBy: "$createdAt",
+        orderBy: "createdAt",
         orderDirection: "desc",
       }),
     ]);
@@ -48,14 +48,14 @@ export class QueryService {
         task.unlock_at &&
         now >= new Date(task.unlock_at)
       ) {
-        await this.taskRepository.update(task.$id, {
+        await this.taskRepository.update(task.id, {
           status: "open",
           notification_level: "unlocked",
         });
 
         // Notify via domain event
         await DomainEventBus.publish(TaskEvents.TASK_UNLOCKED, {
-          taskId: task.$id,
+          taskId: task.id,
           title: task.title,
           userId: task.assigned_to || "",
         });
@@ -84,7 +84,7 @@ export class QueryService {
     return await this.taskRepository.findMany({
       assignedTo: profileId,
       status: "approved",
-      orderBy: "$createdAt",
+      orderBy: "createdAt",
       orderDirection: "desc",
     });
   }
@@ -92,7 +92,7 @@ export class QueryService {
   async getMembers(): Promise<User[]> {
     return await this.userRepository.findMany({
       limit: 100,
-      orderBy: "$createdAt",
+      orderBy: "createdAt",
       orderDirection: "asc",
     });
   }

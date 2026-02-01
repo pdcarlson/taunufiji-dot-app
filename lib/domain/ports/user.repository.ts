@@ -13,7 +13,7 @@ import { User, CreateUserDTO } from "@/lib/domain/types/user";
 export interface UserQueryOptions {
   status?: User["status"];
   limit?: number;
-  orderBy?: "details_points_current" | "details_points_lifetime" | "$createdAt";
+  orderBy?: "details_points_current" | "details_points_lifetime" | "createdAt";
   orderDirection?: "asc" | "desc";
 }
 
@@ -71,4 +71,8 @@ export interface IUserRepository {
    * @param delta Points to add (positive) or subtract (negative)
    */
   updatePoints(id: string, delta: number): Promise<User>;
+  /**
+   * Count users with points greater than a certain value
+   */
+  countWithPointsGreaterThan(points: number): Promise<number>;
 }

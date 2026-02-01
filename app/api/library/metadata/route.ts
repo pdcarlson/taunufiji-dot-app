@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { AuthService } from "@/lib/application/services/auth.service";
-import { LibraryService } from "@/lib/application/services/library.service";
+import { getContainer } from "@/lib/infrastructure/container";
 import {
   createSessionClient,
   createJWTClient,
@@ -38,7 +37,9 @@ export async function GET(req: Request) {
     console.log(
       `[API] Metadata: Checkpoint 3 - User ${user.$id} Found. Verifying Brother Status...`,
     );
-    const isBrother = await AuthService.verifyBrother(user.$id);
+    const { authService, libraryService } = getContainer();
+
+    const isBrother = await authService.verifyBrother(user.$id);
     if (!isBrother) {
       console.log(`[API] Metadata: User ${user.$id} is not a brother.`);
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
     console.log("[API] Metadata: Checkpoint 4 - Calling Service");
 
     // 2. Fetch Data using Service (Admin Privileges)
-    const metadata = await LibraryService.getSearchMetadata();
+    const metadata = await libraryService.getSearchMetadata();
 
     console.log("[API] Metadata: Checkpoint 5 - Success");
     return NextResponse.json(metadata);

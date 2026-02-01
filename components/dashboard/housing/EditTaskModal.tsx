@@ -130,7 +130,7 @@ export default function EditTaskModal({
       }
 
       // Parallel Actions
-      const promises = [updateTaskAction(task.$id, payload, jwt)];
+      const promises = [updateTaskAction(task.id, payload, jwt)];
 
       // If Recurring & Lead Time Changed, update Schedule
       if (isRecurring && task.schedule_id) {
@@ -166,7 +166,7 @@ export default function EditTaskModal({
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
-      const result = await deleteTaskAction(task.$id, jwt);
+      const result = await deleteTaskAction(task.id, jwt);
       if (result.success) {
         toast.success("Task deleted");
         onRefresh();
@@ -195,7 +195,7 @@ export default function EditTaskModal({
                   ? "Recurring Duty"
                   : "One-Off Duty"}
             </h2>
-            <p className="text-xs text-stone-500 font-mono">{task.$id}</p>
+            <p className="text-xs text-stone-500 font-mono">{task.id}</p>
           </div>
           <button
             onClick={onClose}
@@ -332,7 +332,7 @@ export default function EditTaskModal({
                 >
                   <option value="">-- Unassigned --</option>
                   {members.map((m) => (
-                    <option key={m.$id} value={m.discord_id}>
+                    <option key={m.id} value={m.discord_id}>
                       {m.full_name || m.discord_handle}
                     </option>
                   ))}

@@ -40,7 +40,7 @@ export class PointsService implements IPointsService {
       // 2. Update User Points via Repository
       // We calculate new points locally for Redis since Appwrite return is not guaranteed in repository contract
       const newPoints = (user.details_points_current || 0) + tx.amount;
-      await this.userRepository.updatePoints(user.$id, tx.amount);
+      await this.userRepository.updatePoints(user.id, tx.amount);
 
       // 3. Create Ledger Record
       const isDebit = tx.amount < 0;
@@ -83,8 +83,45 @@ export class PointsService implements IPointsService {
   /**
    * Get transaction history for a user
    */
-  async getHistory(userId: string) {
-    return await this.ledgerRepository.findByUser(userId, undefined, 50);
+  async getHistory(userId: string, category?: string | string[]) {
+    // Mapping: ledgerRepository.findByUser(userId, category, limit)
+    // LedgerRepository.findByUser currently: findByUser(userId, limit). It might not accept category as 2nd arg.
+    // Let's check LedgerRepository interface.
+    // If it doesn't, we use findMany directly.
+    // Sanitize category
+    let validCategory: "task" | "fine" | "event" | "manual" | undefined;
+    if (typeof category === "string") {
+      if (["task", "fine", "event", "manual"].includes(category)) {
+        validCategory = category as "task" | "fine" | "event" | "manual";
+      }
+    }
+
+    return await this.ledgerRepository.findMany({
+      userId,
+      category: validCategory,
+      limit: 50,
+      orderBy: "timestamp",
+      orderDirection: "desc",
+    });
+  }
+
+  async getUserRank(
+    userId: string,
+  ): Promise<{ rank: number; points: number } | null> {
+    const user = await this.userRepository.findByDiscordId(userId);
+    if (!user) return null;
+
+    const points = user.details_points_current || 0;
+
+    // Count users with strictly more points
+    // We add 1 to get the rank (e.g. 0 better -> Rank 1)
+    const betterCount =
+      await this.userRepository.countWithPointsGreaterThan(points);
+
+    return {
+      rank: betterCount + 1,
+      points,
+    };
   }
 
   async getLeaderboard(limit = 20) {
@@ -123,7 +160,7 @@ export class PointsService implements IPointsService {
     // Fallback to Appwrite
     const members = await this.userRepository.findTopByPoints(limit);
     return members.map((m, i) => ({
-      id: m.$id,
+      id: m.id,
       name: m.full_name || m.discord_handle || "Unknown",
       points: m.details_points_current || 0,
       rank: i + 1,

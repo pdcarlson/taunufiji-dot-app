@@ -8,7 +8,10 @@ export interface PointsTransaction {
 
 export interface IPointsService {
   awardPoints(discordUserId: string, tx: PointsTransaction): Promise<boolean>;
-  getHistory(userId: string): Promise<LedgerEntry[]>;
+  getHistory(
+    userId: string,
+    category?: string | string[],
+  ): Promise<LedgerEntry[]>;
   getLeaderboard(limit?: number): Promise<
     {
       id: string;
@@ -17,4 +20,5 @@ export interface IPointsService {
       rank: number;
     }[]
   >;
+  getUserRank(userId: string): Promise<{ rank: number; points: number } | null>;
 }

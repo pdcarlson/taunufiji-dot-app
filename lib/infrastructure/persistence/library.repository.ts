@@ -7,7 +7,10 @@ import {
   CreateResourceParams,
   LibraryMetadata,
 } from "@/lib/domain/ports/library.repository";
-import { LibraryResource } from "@/lib/domain/types/library";
+import {
+  LibraryResource,
+  LibraryResourceSchema,
+} from "@/lib/domain/types/library";
 
 interface Course extends Models.Document {
   department: string;
@@ -28,7 +31,7 @@ export class AppwriteLibraryRepository implements ILibraryRepository {
   async findById(id: string): Promise<LibraryResource | null> {
     try {
       const doc = await this.db.getDocument(DB_ID, COLLECTIONS.LIBRARY, id);
-      return doc as unknown as LibraryResource;
+      return this.toDomain(doc);
     } catch (error: any) {
       if (error.code === 404) return null;
       throw error;
@@ -57,7 +60,7 @@ export class AppwriteLibraryRepository implements ILibraryRepository {
       queries,
     );
     return {
-      documents: res.documents as unknown as LibraryResource[],
+      documents: res.documents.map((doc) => this.toDomain(doc)),
       total: res.total,
     };
   }
@@ -69,7 +72,7 @@ export class AppwriteLibraryRepository implements ILibraryRepository {
       "unique()",
       data,
     );
-    return doc as unknown as LibraryResource;
+    return this.toDomain(doc);
   }
 
   async exists(criteria: {
@@ -192,5 +195,15 @@ export class AppwriteLibraryRepository implements ILibraryRepository {
         });
       }
     }
+  }
+
+  private toDomain(doc: Models.Document): LibraryResource {
+    const domainResource = {
+      ...doc,
+      id: doc.$id,
+      createdAt: doc.$createdAt,
+      updatedAt: doc.$updatedAt,
+    };
+    return LibraryResourceSchema.parse(domainResource);
   }
 }

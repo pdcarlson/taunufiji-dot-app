@@ -4,14 +4,14 @@
  * Implements IUserRepository using Appwrite as the data store.
  */
 
-import { Query, ID } from "node-appwrite";
+import { Query, ID, Models } from "node-appwrite";
 import { getDatabase } from "./client";
 import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 import {
   IUserRepository,
   UserQueryOptions,
 } from "@/lib/domain/ports/user.repository";
-import { User, CreateUserDTO } from "@/lib/domain/types/user";
+import { User, CreateUserDTO, UserSchema } from "@/lib/domain/types/user";
 import { NotFoundError, DatabaseError } from "@/lib/domain/errors";
 
 export class AppwriteUserRepository implements IUserRepository {
@@ -23,7 +23,7 @@ export class AppwriteUserRepository implements IUserRepository {
     try {
       const db = getDatabase();
       const doc = await db.getDocument(DB_ID, COLLECTIONS.USERS, id);
-      return doc as unknown as User;
+      return this.toDomain(doc);
     } catch (error: unknown) {
       if (this.isNotFoundError(error)) {
         return null;
@@ -44,7 +44,7 @@ export class AppwriteUserRepository implements IUserRepository {
         return null;
       }
 
-      return result.documents[0] as unknown as User;
+      return this.toDomain(result.documents[0]);
     } catch (error: unknown) {
       throw new DatabaseError(`findByAuthId(${authId})`, error);
     }
@@ -62,7 +62,7 @@ export class AppwriteUserRepository implements IUserRepository {
         return null;
       }
 
-      return result.documents[0] as unknown as User;
+      return this.toDomain(result.documents[0]);
     } catch (error: unknown) {
       throw new DatabaseError(`findByDiscordId(${discordId})`, error);
     }
@@ -77,7 +77,7 @@ export class AppwriteUserRepository implements IUserRepository {
         Query.limit(limit),
       ]);
 
-      return result.documents as unknown as User[];
+      return result.documents.map((doc) => this.toDomain(doc));
     } catch (error: unknown) {
       throw new DatabaseError(`findTopByPoints(${limit})`, error);
     }
@@ -89,7 +89,7 @@ export class AppwriteUserRepository implements IUserRepository {
       const queries = this.buildUserQueries(options);
 
       const result = await db.listDocuments(DB_ID, COLLECTIONS.USERS, queries);
-      return result.documents as unknown as User[];
+      return result.documents.map((doc) => this.toDomain(doc));
     } catch (error: unknown) {
       throw new DatabaseError("findMany", error);
     }
@@ -108,7 +108,7 @@ export class AppwriteUserRepository implements IUserRepository {
         ID.unique(),
         data,
       );
-      return doc as unknown as User;
+      return this.toDomain(doc);
     } catch (error: unknown) {
       throw new DatabaseError("create", error);
     }
@@ -118,7 +118,7 @@ export class AppwriteUserRepository implements IUserRepository {
     try {
       const db = getDatabase();
       const doc = await db.updateDocument(DB_ID, COLLECTIONS.USERS, id, data);
-      return doc as unknown as User;
+      return this.toDomain(doc);
     } catch (error: unknown) {
       if (this.isNotFoundError(error)) {
         throw new NotFoundError("User", id);
@@ -147,8 +147,39 @@ export class AppwriteUserRepository implements IUserRepository {
   }
 
   // =========================================================================
+  async countWithPointsGreaterThan(points: number): Promise<number> {
+    try {
+      const db = getDatabase();
+      const response = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
+        Query.greaterThan("details_points_current", points),
+        Query.limit(1),
+      ]);
+      return response.total;
+    } catch (error) {
+      throw new DatabaseError("countWithPointsGreaterThan", error);
+    }
+  }
+
   // Private Helpers
   // =========================================================================
+
+  /**
+   * Maps Appwrite Document to Domain Entity
+   */
+  private toDomain(doc: Models.Document): User {
+    // 1. Remap System Fields
+    const domainUser = {
+      ...doc,
+      id: doc.$id,
+      createdAt: doc.$createdAt,
+      updatedAt: doc.$updatedAt,
+    };
+
+    // 2. Validate with Zod
+    // Parsing ensures we drop internal Appwrite fields ($permissions, etc)
+    // and match the strict Domain Schema.
+    return UserSchema.parse(domainUser);
+  }
 
   private buildUserQueries(options: UserQueryOptions): string[] {
     const queries: string[] = [];
@@ -158,18 +189,17 @@ export class AppwriteUserRepository implements IUserRepository {
     }
 
     // Ordering
-    if (options.orderBy === "points") {
-      queries.push(
-        options.orderDirection === "asc"
-          ? Query.orderAsc("details_points_current")
-          : Query.orderDesc("details_points_current"),
-      );
+    const orderBy = options.orderBy || "createdAt";
+    const orderDir = options.orderDirection || "desc";
+
+    // Map Domain Field -> Appwrite Field
+    let dbField: string = orderBy;
+    if (orderBy === "createdAt") dbField = "$createdAt";
+
+    if (orderDir === "asc") {
+      queries.push(Query.orderAsc(dbField));
     } else {
-      queries.push(
-        options.orderDirection === "asc"
-          ? Query.orderAsc("$createdAt")
-          : Query.orderDesc("$createdAt"),
-      );
+      queries.push(Query.orderDesc(dbField));
     }
 
     // Limit

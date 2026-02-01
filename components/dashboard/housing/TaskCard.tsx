@@ -145,7 +145,7 @@ export default function TaskCard({
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
-      await claimTaskAction(task.$id, userId, jwt);
+      await claimTaskAction(task.id, userId, jwt);
       toast.success("Bounty Claimed!");
       onRefresh();
     } catch {
@@ -158,7 +158,7 @@ export default function TaskCard({
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
-      await unclaimTaskAction(task.$id, jwt);
+      await unclaimTaskAction(task.id, jwt);
       toast.success("Unclaimed");
       onRefresh();
     } catch {
@@ -182,7 +182,7 @@ export default function TaskCard({
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("taskId", task.$id);
+      formData.append("taskId", task.id);
 
       const { jwt } = await account.createJWT();
       const result = await submitProofAction(formData, jwt);

@@ -159,7 +159,7 @@ export class AuthService {
       }
 
       if (Object.keys(updates).length > 0) {
-        await this.userRepository.update(existingUser.$id, updates);
+        await this.userRepository.update(existingUser.id, updates);
       }
       return existingUser;
     }

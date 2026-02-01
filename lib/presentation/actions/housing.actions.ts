@@ -1,3 +1,7 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
 import { CreateAssignmentDTO } from "@/lib/domain/types/task";
 import { CreateScheduleDTO } from "@/lib/domain/types/schedule";
 

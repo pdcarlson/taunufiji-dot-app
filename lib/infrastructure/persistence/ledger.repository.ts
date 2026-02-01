@@ -4,15 +4,19 @@
  * Implements ILedgerRepository using Appwrite as the data store.
  */
 
-import { Query, ID } from "node-appwrite";
+import { Query, ID, Models } from "node-appwrite";
 import { getDatabase } from "./client";
 import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 import {
   ILedgerRepository,
   LedgerQueryOptions,
 } from "@/lib/domain/ports/ledger.repository";
-import { LedgerEntry, CreateLedgerDTO } from "@/lib/domain/types/ledger";
-import { NotFoundError, DatabaseError } from "@/lib/domain/errors";
+import {
+  LedgerEntry,
+  CreateLedgerDTO,
+  LedgerEntrySchema,
+} from "@/lib/domain/types/ledger";
+import { DatabaseError } from "@/lib/domain/errors";
 
 export class AppwriteLedgerRepository implements ILedgerRepository {
   // =========================================================================
@@ -23,7 +27,7 @@ export class AppwriteLedgerRepository implements ILedgerRepository {
     try {
       const db = getDatabase();
       const doc = await db.getDocument(DB_ID, COLLECTIONS.LEDGER, id);
-      return doc as unknown as LedgerEntry;
+      return this.toDomain(doc);
     } catch (error: unknown) {
       if (this.isNotFoundError(error)) {
         return null;
@@ -50,7 +54,7 @@ export class AppwriteLedgerRepository implements ILedgerRepository {
     try {
       const db = getDatabase();
       const result = await db.listDocuments(DB_ID, COLLECTIONS.LEDGER, queries);
-      return result.documents as unknown as LedgerEntry[];
+      return result.documents.map((doc) => this.toDomain(doc));
     } catch (error: unknown) {
       throw new DatabaseError(`findByUser(${userId})`, error);
     }
@@ -62,7 +66,7 @@ export class AppwriteLedgerRepository implements ILedgerRepository {
       const queries = this.buildLedgerQueries(options);
 
       const result = await db.listDocuments(DB_ID, COLLECTIONS.LEDGER, queries);
-      return result.documents as unknown as LedgerEntry[];
+      return result.documents.map((doc) => this.toDomain(doc));
     } catch (error: unknown) {
       throw new DatabaseError("findMany", error);
     }
@@ -96,7 +100,7 @@ export class AppwriteLedgerRepository implements ILedgerRepository {
         ID.unique(),
         data,
       );
-      return doc as unknown as LedgerEntry;
+      return this.toDomain(doc);
     } catch (error: unknown) {
       throw new DatabaseError("create", error);
     }
@@ -105,6 +109,16 @@ export class AppwriteLedgerRepository implements ILedgerRepository {
   // =========================================================================
   // Private Helpers
   // =========================================================================
+
+  private toDomain(doc: Models.Document): LedgerEntry {
+    const domainEntry = {
+      ...doc,
+      id: doc.$id,
+      createdAt: doc.$createdAt,
+      updatedAt: doc.$updatedAt,
+    };
+    return LedgerEntrySchema.parse(domainEntry);
+  }
 
   private buildLedgerQueries(options: LedgerQueryOptions): string[] {
     const queries: string[] = [];
@@ -129,8 +143,19 @@ export class AppwriteLedgerRepository implements ILedgerRepository {
       );
     }
 
-    // Default ordering by timestamp descending
-    queries.push(Query.orderDesc("timestamp"));
+    // Ordering
+    const orderBy = options.orderBy || "timestamp";
+    // Check if orderBy is a domain field that needs mapping (e.g. 'createdAt' -> '$createdAt')
+    // LedgerEntry fields: id, amount, reason, category, timestamp, is_debit, createdAt, updatedAt
+    // 'timestamp' is a custom attribute, so no mapping needed. 'createdAt' needs mapping.
+    let dbField = orderBy;
+    if (orderBy === "createdAt") dbField = "$createdAt";
+
+    if (options.orderDirection === "asc") {
+      queries.push(Query.orderAsc(dbField));
+    } else {
+      queries.push(Query.orderDesc(dbField));
+    }
 
     // Limit
     queries.push(Query.limit(options.limit ?? 100));

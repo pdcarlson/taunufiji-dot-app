@@ -45,7 +45,7 @@ export class DutyService implements IDutyService {
 
     // Emit Event
     await DomainEventBus.publish(TaskEvents.TASK_CLAIMED, {
-      taskId: task.$id,
+      taskId: task.id,
       title: task.title,
       userId: profileId,
     });
@@ -80,7 +80,7 @@ export class DutyService implements IDutyService {
 
     // Emit Event
     await DomainEventBus.publish(TaskEvents.TASK_SUBMITTED, {
-      taskId: task.$id,
+      taskId: task.id,
       title: task.title,
       userId: profileId,
     });
@@ -111,7 +111,7 @@ export class DutyService implements IDutyService {
 
     // Emit Event
     await DomainEventBus.publish(TaskEvents.TASK_UNASSIGNED, {
-      taskId: task.$id,
+      taskId: task.id,
       title: task.title,
       userId: profileId,
     });

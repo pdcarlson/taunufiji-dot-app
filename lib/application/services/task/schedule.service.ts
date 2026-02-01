@@ -39,7 +39,7 @@ export class ScheduleService {
         description: schedule.description,
         points_value: schedule.points_value,
         type: "duty",
-        schedule_id: schedule.$id,
+        schedule_id: schedule.id,
         assigned_to: schedule.assigned_to,
         due_at: nextInstance.dueAt.toISOString(),
         unlock_at: nextInstance.unlockAt.toISOString(),
@@ -50,7 +50,7 @@ export class ScheduleService {
       // Emit Event only if visible
       if (!isLocked) {
         await DomainEventBus.publish(TaskEvents.TASK_CREATED, {
-          taskId: task.$id,
+          taskId: task.id,
           title: task.title,
           type: "duty" as const,
           assignedTo: task.assigned_to,
@@ -83,7 +83,7 @@ export class ScheduleService {
 
     if (!nextInstance) {
       console.warn(
-        `Could not calculate next instance for schedule: ${schedule.$id}`,
+        `Could not calculate next instance for schedule: ${schedule.id}`,
       );
       return;
     }
@@ -96,7 +96,7 @@ export class ScheduleService {
       description: schedule.description,
       points_value: schedule.points_value,
       type: "duty",
-      schedule_id: schedule.$id,
+      schedule_id: schedule.id,
       assigned_to: schedule.assigned_to || previousTask.assigned_to,
       due_at: nextInstance.dueAt.toISOString(),
       unlock_at: nextInstance.unlockAt.toISOString(),
@@ -105,7 +105,7 @@ export class ScheduleService {
     });
 
     // Update Schedule
-    await this.taskRepository.updateSchedule(schedule.$id, {
+    await this.taskRepository.updateSchedule(schedule.id, {
       last_generated_at: new Date().toISOString(),
     });
   }

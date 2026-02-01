@@ -1,5 +1,5 @@
 import { createResponse, createEphemeralResponse } from "../utils";
-import { AdminService, ScheduleService } from "@/lib/application/services/task";
+import { getContainer } from "@/lib/infrastructure/container";
 import { CommandHandler } from "../types";
 
 /**
@@ -60,7 +60,8 @@ export const duty: CommandHandler = async (interaction, options) => {
   }
 
   try {
-    await AdminService.createTask({
+    const { adminService } = getContainer();
+    await adminService.createTask({
       title,
       description,
       points_value: 0, // duties = 0 pts, fined if missed
@@ -107,13 +108,15 @@ export const schedule: CommandHandler = async (interaction, options) => {
   const rrule = `FREQ=WEEKLY;BYDAY=${nextDay};BYHOUR=4;BYMINUTE=59`;
 
   try {
-    await ScheduleService.createSchedule({
+    const { scheduleService } = getContainer();
+    await scheduleService.createSchedule({
       title,
       description,
       recurrence_rule: rrule,
       lead_time_hours: leadTime,
       points_value: 0, // duties = 0 pts
       assigned_to: userId,
+      active: true,
     });
 
     const dayMap: Record<string, string> = {
@@ -150,7 +153,8 @@ export const bounty: CommandHandler = async (interaction, options) => {
   }
 
   try {
-    await AdminService.createTask({
+    const { adminService } = getContainer();
+    await adminService.createTask({
       title,
       description,
       points_value: points,

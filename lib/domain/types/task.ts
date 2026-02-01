@@ -40,12 +40,9 @@ export type HousingTask = z.infer<typeof HousingTaskSchema>;
 
 // DTOs for Creation/Update often differ from the Entity (no $id, etc)
 export const CreateAssignmentDTOSchema = HousingTaskSchema.omit({
-  $id: true,
-  $collectionId: true,
-  $databaseId: true,
-  $createdAt: true,
-  $updatedAt: true,
-  $permissions: true,
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 }).partial();
 
 export type CreateAssignmentDTO = z.infer<typeof CreateAssignmentDTOSchema>;

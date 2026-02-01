@@ -50,7 +50,7 @@ export const CronService = {
 
       for (const task of tasksToUnlock) {
         try {
-          await taskRepository.update(task.$id, {
+          await taskRepository.update(task.id, {
             status: "open",
             notification_level: "unlocked",
           });
@@ -61,13 +61,13 @@ export const CronService = {
               "unlocked",
               {
                 title: task.title,
-                taskId: task.$id,
+                taskId: task.id,
               },
             );
           }
           unlocked++;
         } catch (error: unknown) {
-          const errMsg = `Failed to unlock task ${task.$id}: ${getErrorMessage(error)}`;
+          const errMsg = `Failed to unlock task ${task.id}: ${getErrorMessage(error)}`;
           console.error(errMsg);
           errors.push(errMsg);
         }
@@ -98,7 +98,7 @@ export const CronService = {
         try {
           if (!task.assigned_to) continue;
 
-          await taskRepository.update(task.$id, {
+          await taskRepository.update(task.id, {
             notification_level: "unlocked",
           });
 
@@ -107,12 +107,12 @@ export const CronService = {
             "unlocked",
             {
               title: task.title,
-              taskId: task.$id,
+              taskId: task.id,
             },
           );
           unlocked++;
         } catch (error: unknown) {
-          const errMsg = `Failed to notify recurring task ${task.$id}: ${getErrorMessage(error)}`;
+          const errMsg = `Failed to notify recurring task ${task.id}: ${getErrorMessage(error)}`;
           console.error(errMsg);
           errors.push(errMsg);
         }
@@ -151,7 +151,7 @@ export const CronService = {
             continue;
           }
 
-          await taskRepository.update(task.$id, {
+          await taskRepository.update(task.id, {
             notification_level: "urgent",
           });
 
@@ -160,12 +160,12 @@ export const CronService = {
             "urgent",
             {
               title: task.title,
-              taskId: task.$id,
+              taskId: task.id,
             },
           );
           urgent++;
         } catch (error: unknown) {
-          const errMsg = `Failed to process urgent task ${task.$id}: ${getErrorMessage(error)}`;
+          const errMsg = `Failed to process urgent task ${task.id}: ${getErrorMessage(error)}`;
           console.error(errMsg);
           errors.push(errMsg);
         }
@@ -195,7 +195,7 @@ export const CronService = {
         try {
           if (task.type === "bounty" || task.type === "project") continue;
 
-          await taskRepository.update(task.$id, {
+          await taskRepository.update(task.id, {
             status: "expired",
           });
 
@@ -210,19 +210,17 @@ export const CronService = {
 
           if (task.schedule_id) {
             try {
-              await ScheduleService.triggerNextInstance(
-                task.schedule_id,
-                task as any,
-              );
+              const { scheduleService } = getContainer();
+              await scheduleService.triggerNextInstance(task.schedule_id, task);
             } catch (e) {
               console.error(
-                `Failed to trigger next instance for ${task.$id}:`,
+                `Failed to trigger next instance for ${task.id}:`,
                 e,
               );
             }
           }
         } catch (error: unknown) {
-          const errMsg = `Failed to expire task ${task.$id}: ${getErrorMessage(error)}`;
+          const errMsg = `Failed to expire task ${task.id}: ${getErrorMessage(error)}`;
           console.error(errMsg);
           errors.push(errMsg);
         }
@@ -263,18 +261,18 @@ export const CronService = {
               "expired",
               {
                 title: task.title,
-                taskId: task.$id,
+                taskId: task.id,
               },
             );
           }
 
-          await taskRepository.update(task.$id, {
+          await taskRepository.update(task.id, {
             notification_level: "expired",
           });
 
           expired_notified++;
         } catch (error: unknown) {
-          const errMsg = `Failed to notify expired task ${task.$id}: ${getErrorMessage(error)}`;
+          const errMsg = `Failed to notify expired task ${task.id}: ${getErrorMessage(error)}`;
           console.error(errMsg);
           errors.push(errMsg);
         }

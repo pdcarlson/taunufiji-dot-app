@@ -101,7 +101,7 @@ export async function createLibraryResourceAction(
         const { LibraryEvents } = await import("@/lib/domain/events");
         await DomainEventBus.publish(LibraryEvents.LIBRARY_UPLOADED, {
           userId: profile.discord_id,
-          resourceId: record.$id,
+          resourceId: record.id,
           fileName: data.metadata.standardizedFilename,
         });
       } catch (e) {

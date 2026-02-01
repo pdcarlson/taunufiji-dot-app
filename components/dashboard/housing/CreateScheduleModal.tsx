@@ -219,7 +219,7 @@ export default function CreateScheduleModal({
               >
                 <option value="">-- Floating / Open --</option>
                 {members?.map((m: Member) => (
-                  <option key={m.$id} value={m.discord_id}>
+                  <option key={m.id} value={m.discord_id}>
                     {m.full_name}
                   </option>
                 ))}

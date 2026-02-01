@@ -34,7 +34,7 @@ export class AdminService {
 
     if (isVisible) {
       await DomainEventBus.publish(TaskEvents.TASK_CREATED, {
-        taskId: task.$id,
+        taskId: task.id,
         title: task.title,
         type: task.type as "duty" | "bounty" | "project" | "one_off",
         assignedTo: task.assigned_to,
@@ -68,7 +68,7 @@ export class AdminService {
     const awardAmount = task.points_value;
 
     await DomainEventBus.publish(TaskEvents.TASK_APPROVED, {
-      taskId: task.$id,
+      taskId: task.id,
       title: task.title,
       userId: task.assigned_to,
       points: awardAmount,
@@ -106,7 +106,7 @@ export class AdminService {
     });
 
     await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
-      taskId: task.$id,
+      taskId: task.id,
       title: task.title,
       userId: task.assigned_to,
       reason,
@@ -140,7 +140,7 @@ export class AdminService {
     // If reassigned (not unassigned), emit event
     if (newUserId) {
       await DomainEventBus.publish(TaskEvents.TASK_REASSIGNED, {
-        taskId: task.$id,
+        taskId: task.id,
         title: task.title,
         newUserId: newUserId,
       });

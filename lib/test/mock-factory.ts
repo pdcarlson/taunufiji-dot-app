@@ -38,6 +38,7 @@ export const MockFactory = {
     create: vi.fn(),
     update: vi.fn(),
     updatePoints: vi.fn(),
+    countWithPointsGreaterThan: vi.fn(),
   }),
 
   createLedgerRepository: (): ILedgerRepository => ({
