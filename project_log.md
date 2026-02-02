@@ -283,3 +283,10 @@
 - **Fixed Redaction Alignment**: Removed CSS `scale()` transform that was causing double-scaling (canvas already rendered at correct size).
 - **Increased Upload Limit**: Changed Next.js `bodySizeLimit` from 10MB to 200MB to support large PDF uploads.
 - **Fixed Duplicate Check**: Converted from session-based to JWT-based authentication to match app architecture and fix "No session" errors.
+
+## 2026-02-02: Submit Proof Workflow Resilience
+
+- **Bug Fix**:
+  - **Issue**: Discord API failure (403 / Code 50013 for users with closed DMs) crashed `submitProof` even though the DB update succeeded, causing false-negative error toasts.
+  - **Fix**: Wrapped `NotificationService.notifyAdmins` in `submitProof` (`tasks.service.ts`) with a try-catch block. Discord errors are now logged but not thrown, ensuring `{ success: true }` returns to the frontend.
+- **Impact**: Users no longer see error toasts for successful proof submissions. UI correctly refreshes to show "Under Review" state.

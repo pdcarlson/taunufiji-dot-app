@@ -203,11 +203,16 @@ export const TasksService = {
       },
     );
 
-    // Notify Admin
-    await NotificationService.notifyAdmins(
-      `📥 **SUBMISSION**: User <@${profileId}> submitted **${task.title}**.`,
-      { taskId: task.$id },
-    );
+    // Notify Admin (non-blocking - don't fail if Discord is down)
+    try {
+      await NotificationService.notifyAdmins(
+        `📥 **SUBMISSION**: User <@${profileId}> submitted **${task.title}**.`,
+        { taskId: task.$id },
+      );
+    } catch (notifyError) {
+      console.error("Failed to notify admins (Discord):", notifyError);
+      // Swallow error - DB update succeeded, don't fail the user's submission
+    }
 
     return result;
   },
