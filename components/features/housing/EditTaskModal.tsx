@@ -45,20 +45,28 @@ export default function EditTaskModal({
   const canDelete = isBounty ? !isAssigned : true;
 
   // Fetch Schedule Details if Recurring
+  // Fetch Schedule Details if Recurring
   useEffect(() => {
-    if (isRecurring && task.schedule_id) {
-      setInitialLoading(true);
-      getScheduleAction(task.schedule_id)
-        .then((res) => {
+    const fetchSchedule = async () => {
+      if (isRecurring && task.schedule_id) {
+        setInitialLoading(true);
+        try {
+          const jwt = await getJWT();
+          const res = await getScheduleAction(task.schedule_id, jwt);
           if (res.success && res.data) {
             setFormData((prev) => ({
               ...prev,
-              lead_time_hours: res.data.lead_time_hours || 24,
+              lead_time_hours: res.data?.lead_time_hours || 24,
             }));
           }
-        })
-        .finally(() => setInitialLoading(false));
-    }
+        } catch (e) {
+          console.error("Failed to fetch schedule", e);
+        } finally {
+          setInitialLoading(false);
+        }
+      }
+    };
+    fetchSchedule();
   }, [isRecurring, task.schedule_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,20 +139,22 @@ export default function EditTaskModal({
       }
 
       // Parallel Actions
-      const promises = [updateTaskAction(task.id, payload, jwt)];
+      const taskPromise = updateTaskAction(task.id, payload, jwt);
+      let schedulePromise = null;
 
       // If Recurring & Lead Time Changed, update Schedule
       if (isRecurring && task.schedule_id) {
-        promises.push(
-          updateScheduleLeadTimeAction(
-            task.schedule_id,
-            Number(formData.lead_time_hours),
-            jwt,
-          ),
+        schedulePromise = updateScheduleLeadTimeAction(
+          task.schedule_id,
+          Number(formData.lead_time_hours),
+          jwt,
         );
       }
 
-      const [taskRes, scheduleRes] = await Promise.all(promises);
+      const [taskRes, scheduleRes] = await Promise.all([
+        taskPromise,
+        schedulePromise,
+      ]);
 
       // Check Task Update
       if (!taskRes.success) {

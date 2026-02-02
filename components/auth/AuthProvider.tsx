@@ -19,6 +19,7 @@ interface AuthContextType {
   error: any | null;
   login: () => void;
   logout: () => Promise<void>;
+  getToken: () => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -51,7 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Fetch Profile
         console.log("[AuthProvider] Fetching profile for:", currentUser.$id);
-        const userProfile = await getProfileAction(currentUser.$id);
+
+        // Create JWT for Server Action Verification
+        console.log("[AuthProvider] Creating JWT...");
+        const jwtResponse = await account.createJWT();
+        console.log("[AuthProvider] JWT Created");
+
+        const userProfile = await getProfileAction(jwtResponse.jwt);
         console.log("[AuthProvider] Profile fetched:", userProfile);
         setProfile(userProfile);
       } catch (err: any) {
@@ -75,6 +82,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const getToken = async () => {
+    const { jwt } = await account.createJWT();
+    return jwt;
+  };
+
   const logout = async () => {
     await account.deleteSession("current");
     setUser(null);
@@ -85,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, loading, error, login, logout }}
+      value={{ user, profile, loading, error, login, logout, getToken }}
     >
       {children}
     </AuthContext.Provider>

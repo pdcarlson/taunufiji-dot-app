@@ -1,9 +1,39 @@
-import { getLeaderboardAction } from "@/lib/presentation/actions/dashboard.actions";
-import { Medal } from "lucide-react";
-import { LeaderboardEntry } from "@/lib/domain/entities/user.entity";
+"use client";
 
-export default async function LeaderboardList() {
-  const users = await getLeaderboardAction();
+import { useEffect, useState } from "react";
+import { getLeaderboardAction } from "@/lib/presentation/actions/dashboard.actions";
+import { Medal, Loader2 } from "lucide-react";
+import { LeaderboardEntry } from "@/lib/domain/entities/user.entity";
+import { useAuth } from "@/components/auth/AuthProvider";
+
+export default function LeaderboardList() {
+  const { user, getToken } = useAuth();
+  const [users, setUsers] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!user) return;
+      try {
+        const token = await getToken();
+        const data = await getLeaderboardAction(token);
+        setUsers(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="animate-spin text-stone-300" />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden animate-in fade-in duration-500">
@@ -13,9 +43,9 @@ export default async function LeaderboardList() {
         <div className="col-span-3 text-right">Points</div>
       </div>
 
-      {users.map((user: LeaderboardEntry, index: number) => (
+      {users.map((entry, index) => (
         <div
-          key={user.id}
+          key={entry.id || index}
           className="grid grid-cols-12 gap-4 p-4 items-center border-b border-stone-50 hover:bg-stone-50 transition-colors"
         >
           <div className="col-span-2 flex justify-center">
@@ -28,9 +58,11 @@ export default async function LeaderboardList() {
               </span>
             )}
           </div>
-          <div className="col-span-7 font-bold text-stone-800">{user.name}</div>
+          <div className="col-span-7 font-bold text-stone-800">
+            {entry.name}
+          </div>
           <div className="col-span-3 text-right font-mono text-fiji-purple font-bold">
-            {user.points}
+            {entry.points}
           </div>
         </div>
       ))}

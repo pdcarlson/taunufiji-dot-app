@@ -9,7 +9,10 @@ import ScholarshipStats from "./ScholarshipStats";
 import { Upload, Search } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
-import { searchLibraryAction } from "@/lib/presentation/actions/library.actions";
+import {
+  searchLibraryAction,
+  getLibraryStatsAction,
+} from "@/lib/presentation/actions/library.actions";
 import { useJWT } from "@/hooks/useJWT";
 
 // We'll reuse the existing search API for infinite scroll/filtering interactions
@@ -39,6 +42,25 @@ export default function LibraryClient({
   const { getJWT } = useJWT();
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const debouncedFilters = useDebounce(filters, 500);
+
+  // Stats State
+  const [stats, setStats] = useState({
+    total: initialTotal,
+    userFiles: initialUserFiles,
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const jwt = await getJWT();
+        const data = await getLibraryStatsAction(jwt);
+        setStats({ total: data.totalFiles, userFiles: data.userFiles });
+      } catch (e) {
+        console.error("Stats fetch failed", e);
+      }
+    };
+    fetchStats();
+  }, []);
 
   // Data State
   const [results, setResults] = useState<any[] | null>(null);
@@ -109,8 +131,8 @@ export default function LibraryClient({
 
       {/* Stats Bar */}
       <ScholarshipStats
-        totalArchives={initialTotal}
-        myContributions={initialUserFiles}
+        totalArchives={stats.total}
+        myContributions={stats.userFiles}
         pendingReviews={0}
       />
 

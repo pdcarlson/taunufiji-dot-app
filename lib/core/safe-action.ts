@@ -45,8 +45,7 @@ export async function safeAction<T>(
         const client = createJWTClient(options.jwt);
         account = client.account;
       } else {
-        const session = await createSessionClient();
-        account = session.account;
+        throw new Error("Authentication Required: No JWT provided.");
       }
 
       const user = await account.get();

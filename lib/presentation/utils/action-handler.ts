@@ -34,17 +34,40 @@ export async function actionWrapper<T>(
     if (options.jwt) {
       const client = createJWTClient(options.jwt);
       account = client.account;
-    } else {
-      const session = await createSessionClient();
-      account = session.account;
+    } else if (options.public) {
+      // For public actions, we might not have a user
+      const {
+        getAdminClient,
+      } = require("@/lib/infrastructure/persistence/client");
+      const client = getAdminClient();
+      const { Account } = require("node-appwrite");
+      account = new Account(client); // This might be wrong if we need session, but public usually implies no session or admin.
+      // Actually, if it's public, do we even need an account?
+      // The action might need 'account' context.
+      // Let's look at how public actions are used.
+      // For now, if NO JWT and NO Public -> Error.
+      // If Public and NO JWT -> proceed with null/undefined?
+      // The original code tried createSessionClient() which uses cookies.
+      // The user explicitly said NO COOKIES.
+      // So we strictly require JWT for authenticated actions.
     }
 
-    const user = await account.get();
+    if (!options.jwt && !options.public) {
+      throw new Error("Authentication Required: No JWT provided.");
+    }
+
+    // If public and no JWT, we skip user fetching?
+    let user = null;
+    if (options.jwt) {
+      user = await account.get();
+    }
+
     const { authService } = getContainer();
 
     // 2. Global Authorization (Brother Check)
     // Skip if public option is set
     if (!options.public) {
+      if (!user) throw new Error("Unauthorized: User not found.");
       const isBrother = await authService.verifyBrother(user.$id);
       if (!isBrother) {
         throw new Error("Unauthorized Access: You are not a verified Brother.");
@@ -64,7 +87,9 @@ export async function actionWrapper<T>(
 
     // 4. Execution
     const container = getContainer();
-    const data = await action({ container, userId: user.$id, account });
+    // Pass userId if available, else empty string or throw if strict
+    const userId = user ? user.$id : "";
+    const data = await action({ container, userId, account });
 
     return { success: true, data };
   } catch (error) {

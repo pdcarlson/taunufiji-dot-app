@@ -4,6 +4,7 @@ import { HousingTask } from "@/lib/domain/types/task";
 import TaskCard from "./TaskCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ClipboardList } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface MyDutiesWidgetProps {
   initialTasks: HousingTask[];
@@ -32,6 +33,8 @@ export default function MyDutiesWidget({
     );
   }
 
+  const { getToken } = useAuth(); // Assuming wrapped in AuthProvider
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-2">
@@ -49,12 +52,7 @@ export default function MyDutiesWidget({
             userName="" // Not used in TaskCard logic really
             isAdmin={false}
             onRefresh={() => location.reload()} // Simple refresh for now as we lack a dedicated refresher
-            getJWT={async () => {
-              const { account } =
-                await import("@/lib/infrastructure/persistence/appwrite.web");
-              const { jwt } = await account.createJWT();
-              return jwt;
-            }}
+            getJWT={getToken}
           />
         ))}
       </div>

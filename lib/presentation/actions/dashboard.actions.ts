@@ -1,12 +1,12 @@
 "use server";
 
-import { createSessionClient } from "@/lib/presentation/server/appwrite";
+import { createJWTClient } from "@/lib/presentation/server/appwrite";
 import { getContainer } from "@/lib/infrastructure/container";
 import { logger } from "@/lib/utils/logger";
 import { DashboardStats } from "@/lib/domain/entities/dashboard.dto";
 
 export async function getDashboardStatsAction(
-  userId: string,
+  jwt: string,
 ): Promise<DashboardStats> {
   try {
     const {
@@ -17,34 +17,24 @@ export async function getDashboardStatsAction(
       ledgerRepository,
     } = getContainer();
 
-    // 1. Authorization Guard
+    // 1. Verify Identity
+    const { account } = createJWTClient(jwt);
+    const user = await account.get();
+    const userId = user.$id;
+
+    // 2. Authorization Guard
     const isAuthorized = await authService.verifyBrother(userId);
     if (!isAuthorized) {
-      return {
-        points: 0,
-        activeTasks: 0,
-        pendingReviews: 0,
-        fullName: "Brother",
-        housingHistory: [],
-        libraryHistory: [],
-      };
+      return emptyStats();
     }
 
-    // 2. Resolve Profile (Discord ID)
+    // 3. Resolve Profile (Discord ID)
     const profile = await authService.getProfile(userId);
     if (!profile) {
-      // If no profile, we can't do much
-      return {
-        points: 0,
-        activeTasks: 0,
-        pendingReviews: 0,
-        fullName: "Brother",
-        housingHistory: [],
-        libraryHistory: [],
-      };
+      return emptyStats();
     }
 
-    // 3. Maintenance & Active Tasks
+    // 4. Maintenance & Active Tasks
     let activeCount = 0;
     try {
       await maintenanceService.performMaintenance(profile.discord_id);
@@ -61,13 +51,7 @@ export async function getDashboardStatsAction(
       logger.error("Maintenance or Task Fetch Failed", e);
     }
 
-    // 4. Pending Reviews (Placeholder)
-    const pendingReviewsCount = 0;
-
-    // 5. Points & Full Name (from User Entity)
-    // We already invoked getProfile (which calls userRepository.findByAuthId or similar)
-    // But getProfile returns User entity.
-    // So 'profile' IS the strict Domain User.
+    // 5. Points & Full Name
     const points = profile.details_points_current || 0;
     const fullName = profile.full_name || "Brother";
 
@@ -76,9 +60,6 @@ export async function getDashboardStatsAction(
     let libraryHistory: any[] = [];
 
     try {
-      // Parallel fetch using Service/Repo
-      // Housing: categories 'task', 'fine'
-      // Library: category 'event'
       const [housingEntries, libraryEntries] = await Promise.all([
         pointsService.getHistory(profile.discord_id, ["task", "fine"]),
         ledgerRepository.findMany({
@@ -112,46 +93,40 @@ export async function getDashboardStatsAction(
     return {
       points,
       activeTasks: activeCount,
-      pendingReviews: pendingReviewsCount,
+      pendingReviews: 0,
       fullName,
       housingHistory,
       libraryHistory,
     };
   } catch (e: unknown) {
     logger.error("getDashboardStatsAction Failed", e);
-    return {
-      points: 0,
-      activeTasks: 0,
-      pendingReviews: 0,
-      fullName: "Brother",
-      housingHistory: [],
-      libraryHistory: [],
-    };
+    return emptyStats();
   }
 }
 
-export async function getLeaderboardAction(userId?: string) {
+function emptyStats() {
+  return {
+    points: 0,
+    activeTasks: 0,
+    pendingReviews: 0,
+    fullName: "Brother",
+    housingHistory: [],
+    libraryHistory: [],
+  };
+}
+
+export async function getLeaderboardAction(jwt: string) {
   try {
     const { pointsService, authService } = getContainer();
 
-    // If we have a userId, verify role
-    if (userId) {
-      const isAuthorized = await authService.verifyBrother(userId);
-      if (!isAuthorized) {
-        return [];
-      }
-    } else {
-      // Fallback: Try Session Client
-      try {
-        const { account } = await createSessionClient();
-        const user = await account.get();
-        if (!(await authService.verifyBrother(user.$id))) {
-          // user.$id is safe here, strictly typed from Appwrite Node SDK Account
-          return [];
-        }
-      } catch (_sessionError) {
-        return [];
-      }
+    // Verify Identity
+    const { account } = createJWTClient(jwt);
+    const user = await account.get();
+
+    // Verify Role
+    const isAuthorized = await authService.verifyBrother(user.$id);
+    if (!isAuthorized) {
+      return [];
     }
 
     const leaderboard = await pointsService.getLeaderboard(5);
@@ -169,29 +144,29 @@ export async function getLeaderboardAction(userId?: string) {
   }
 }
 
-export async function getMyRankAction(userId: string) {
+export async function getMyRankAction(jwt: string) {
   try {
-    // 1. Resolve User (Doc ID or Discord ID)
     const { userRepository, authService, pointsService } = getContainer();
 
-    let user = await userRepository.findById(userId);
-    if (!user) {
-      user = await userRepository.findByDiscordId(userId);
-    }
+    // 1. Resolve User
+    const { account } = createJWTClient(jwt);
+    const authUser = await account.get();
+    const userId = authUser.$id;
 
+    let user = await userRepository.findByAuthId(userId);
     if (!user) {
-      console.warn(`[getMyRank] User not found for ID: ${userId}`);
+      // Fallback logic if needed, but usually findByAuthId is enough
       return null;
     }
 
     // 2. Authorization
-    const isAuthorized = await authService.verifyBrother(user.auth_id);
+    const isAuthorized = await authService.verifyBrother(userId);
     if (!isAuthorized) {
       return null;
     }
 
     // 3. Get Rank via Service
-    const rankData = await pointsService.getUserRank(user.discord_id);
+    const rankData = await pointsService.getUserRank(user.discord_id); // Rank uses Discord ID
 
     if (!rankData) return null;
 

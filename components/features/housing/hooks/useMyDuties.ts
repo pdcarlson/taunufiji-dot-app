@@ -6,6 +6,7 @@ import {
   submitProofAction,
   unclaimTaskAction,
 } from "@/lib/presentation/actions/housing.actions";
+import { useAuth } from "@/components/auth/AuthProvider";
 // I see 'sonner' in previous conversations/files? No.
 // I'll stick to console.error for now or minimal feedback.
 
@@ -25,6 +26,8 @@ export function useMyDuties(initialTasks: HousingTask[], userId: string) {
     },
   );
 
+  const { getToken } = useAuth(); // Assuming wrapped in AuthProvider
+
   const [isPending, startTransition] = useTransition();
 
   const handleComplete = async (taskId: string, file: File) => {
@@ -37,7 +40,8 @@ export function useMyDuties(initialTasks: HousingTask[], userId: string) {
     formData.append("file", file);
 
     try {
-      const result = await submitProofAction(formData);
+      const jwt = await getToken();
+      const result = await submitProofAction(formData, jwt);
       if (!result.success) {
         // In real app, revert optimistic state or show error
         console.error("Failed to submit proof");
@@ -55,7 +59,8 @@ export function useMyDuties(initialTasks: HousingTask[], userId: string) {
     });
 
     try {
-      const result = await unclaimTaskAction(taskId);
+      const jwt = await getToken();
+      const result = await unclaimTaskAction(taskId, jwt);
       if (!result.success) {
         console.error("Failed to unclaim task");
       }

@@ -15,15 +15,27 @@ import Sidebar from "@/components/dashboard/Sidebar";
 
 export default function DashboardShell({
   children,
+  initialUser,
+  initialProfile,
 }: {
   children: React.ReactNode;
+  initialUser?: any;
+  initialProfile?: any;
 }) {
   const { user, profile, loading, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
-  // Redirect to login if not authenticated
-  if (!loading && !user) {
+  // 1. Hybrid Auth Resolution
+  const effectiveUser = initialUser || user;
+
+  // 2. Client-Side Fallback Trigger
+  // If server failed (no initialUser) and client hasn't loaded yet,
+  // the AuthProvider's internal useEffect will run 'checkSession'.
+  // We just need to make sure we don't redirect until we are SURE.
+
+  // 3. Protection: Redirect ONLY if fully loaded and no user found via either method
+  if (!loading && !effectiveUser) {
     router.push("/login");
     return null;
   }

@@ -16,58 +16,37 @@ export async function syncUserAction(authId: string) {
   }
 }
 
-export async function getProfileAction(authId: string) {
+export async function getProfileAction(jwt: string) {
   try {
     const { authService } = getContainer();
+    const { createJWTClient } =
+      await import("@/lib/presentation/server/appwrite");
 
-    // Attempt to Sync (Create/Update) User
+    // 1. Verify JWT & Identity
+    const client = createJWTClient(jwt);
+    const account = client.account;
+    const user = await account.get();
+    const authId = user.$id;
+
+    // 2. Attempt to Sync (Create/Update) User
     // ALERTS: This performs a write operation and hits the Discord API.
     const profile = await authService.syncUser(authId);
 
-    // Check Authorization (Brother Role)
+    // 3. Check Authorization (Brother Role)
     const isAuthorized = await authService.verifyBrother(authId);
 
     if (process.env.NODE_ENV === "development") {
       logger.log(`[getProfileAction] ${authId} -> Authorized: ${isAuthorized}`);
     }
 
-    // Return Profile + Auth Status
+    // 4. Return Profile + Auth Status
     return {
       ...JSON.parse(JSON.stringify(profile)),
       isAuthorized,
     };
   } catch (e) {
-    logger.error(`Sync User Failed for ${authId}`, e);
-
-    // Fallback: Try to just READ the profile if it exists
-    // This handles cases where Discord API is down but user exists in DB
-    try {
-      const { authService } = getContainer();
-      const profile = await authService.getProfile(authId);
-      if (profile) {
-        // If we fallback, we still need to verify authorization if possible.
-        // However, verifyBrother also hits Discord API.
-        // If syncUser failed due to Discord API, verifyBrother likely will too.
-        // We'll default to FALSE if we can't verify, or try one more time.
-        let isAuthorized = false;
-        try {
-          isAuthorized = await authService.verifyBrother(authId);
-        } catch (verifyError) {
-          logger.error(
-            `Fallback VerifyBrother Failed for ${authId}`,
-            verifyError,
-          );
-        }
-
-        return {
-          ...JSON.parse(JSON.stringify(profile)),
-          isAuthorized,
-        };
-      }
-    } catch (readError) {
-      logger.error(`Fallback GetProfile Failed for ${authId}`, readError);
-    }
-
+    logger.error(`Sync User Failed`, e);
+    // If JWT is invalid or sync fails, return null
     return null;
   }
 }

@@ -12,7 +12,7 @@ import { Loader } from "@/components/ui/Loader";
 type LedgerEntry = Models.Document & LedgerSchema;
 
 export default function PointsHistory() {
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   const [history, setHistory] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,8 +21,9 @@ export default function PointsHistory() {
       if (!user) return;
       setLoading(true);
       try {
-        const { jwt } = await account.createJWT();
-        const data = await getTransactionHistoryAction(user.$id, jwt);
+        const jwt = await getToken();
+        // Action now only requires JWT (userId derived for security)
+        const data = await getTransactionHistoryAction(jwt);
         // Verify data shape or cast if action returns generic Document[]
         setHistory(data as unknown as LedgerEntry[]);
       } catch (e) {

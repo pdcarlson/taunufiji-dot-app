@@ -9,28 +9,25 @@ import { actionWrapper } from "@/lib/presentation/utils/action-handler";
  */
 export async function uploadFileAction(formData: FormData) {
   try {
-    const jwt = formData.get("jwt") as string;
+    // const jwt = formData.get("jwt") as string; // Removed manual JWT
 
     // We treat upload as an action requiring at least Brother status
     // Note: wrapper usually takes jwt in options.
     // But wrapper also gets session/jwt inside.
-    const result = await actionWrapper(
-      async ({ container }) => {
-        // 2. Process File
-        const file = formData.get("file") as File;
-        if (!file) throw new Error("No file uploaded");
+    const result = await actionWrapper(async ({ container }) => {
+      // 2. Process File
+      const file = formData.get("file") as File;
+      if (!file) throw new Error("No file uploaded");
 
-        const buffer = Buffer.from(await file.arrayBuffer());
-        // Use 'library/' folder and keep original filename (sanitized)
-        const key = `library/${file.name.replace(/\s+/g, "_")}`;
+      const buffer = Buffer.from(await file.arrayBuffer());
+      // Use 'library/' folder and keep original filename (sanitized)
+      const key = `library/${file.name.replace(/\s+/g, "_")}`;
 
-        await StorageService.uploadFile(buffer, key, file.type);
+      await StorageService.uploadFile(buffer, key, file.type);
 
-        // Return an ID-like object to satisfy UI
-        return { $id: key, key: key };
-      },
-      { jwt },
-    );
+      // Return an ID-like object to satisfy UI
+      return { $id: key, key: key };
+    });
 
     if (result.success && result.data) return result.data;
     throw new Error(result.error || "Upload failed");
@@ -60,7 +57,7 @@ interface CreateResourceDTO {
 
 export async function createLibraryResourceAction(
   data: CreateResourceDTO,
-  jwt: string,
+  jwt?: string,
 ) {
   const result = await actionWrapper(
     async ({ container, userId }) => {
@@ -138,7 +135,7 @@ export async function checkDuplicateResourceAction(
     year: string | number;
     version: string;
   },
-  jwt: string,
+  jwt?: string,
 ) {
   const result = await actionWrapper(
     async ({ container }) => {
@@ -203,4 +200,16 @@ export async function getDownloadLinkAction(id: string, jwt: string) {
 
   if (result.success && result.data) return result.data;
   throw new Error(result.error || "Failed to generate download link");
+}
+
+export async function getLibraryStatsAction(jwt: string) {
+  const result = await actionWrapper(
+    async ({ container, userId }) => {
+      return await container.libraryService.getStats(userId);
+    },
+    { jwt },
+  );
+
+  if (result.success && result.data) return result.data;
+  return { totalFiles: 0, userFiles: 0 };
 }

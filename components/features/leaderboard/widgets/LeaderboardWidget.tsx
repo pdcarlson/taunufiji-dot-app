@@ -18,7 +18,7 @@ interface LeaderboardMember {
 }
 
 export default function LeaderboardWidget() {
-  const { user, profile } = useAuth();
+  const { user, profile, getToken } = useAuth();
   const [leaders, setLeaders] = useState<LeaderboardMember[]>([]);
   const [myStats, setMyStats] = useState<{
     rank: number;
@@ -29,14 +29,18 @@ export default function LeaderboardWidget() {
 
   const fetchLeaders = async () => {
     try {
+      if (!user) return;
+
+      const token = await getToken();
+
       // Use Server Action
       const [data, myData] = await Promise.all([
-        getLeaderboardAction(user?.$id),
-        profile?.$id ? getMyRankAction(profile.$id) : Promise.resolve(null),
+        getLeaderboardAction(token),
+        getLeadersMyRank(token),
       ]);
 
       if (Array.isArray(data)) {
-        setLeaders(data as any); // Cast to match interface or update interface
+        setLeaders(data as any);
       }
       if (myData) {
         setMyStats(myData);
@@ -47,6 +51,13 @@ export default function LeaderboardWidget() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper to handle conditional my rank call
+  const getLeadersMyRank = async (token: string) => {
+    // If we are authorized, we can get rank.
+    // The action handles internal logic.
+    return await getMyRankAction(token);
   };
 
   useEffect(() => {

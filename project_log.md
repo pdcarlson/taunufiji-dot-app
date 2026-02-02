@@ -1,3 +1,14 @@
+## 2026-02-02: Client-Centric Auth Refactor & Build Fixes
+
+- **Context**: Completed a major refactor to eliminate cookie-based authentication, shifting to a stateless, client-centric JWT architecture. Addressed extensive build failures caused by missing actions and legacy code in features.
+- **Technical Changes**:
+  - **Authentication**: Disabled `createSessionClient` (cookie-auth). Implemented `createJWTClient` usage across all Server Actions (`housing`, `library`, `ledger`, `dashboard`).
+  - **Housing Feature**: Fully implemented `housing.actions.ts` with 10+ new actions (`claim`, `proof`, `review`, `CRU task/schedule`) bridging `DutyService`, `ScheduleService`, and `AdminService`.
+  - **Library Feature**: Added `getLibraryStatsAction` and refactored `LibraryClient` to fetch data client-side, removing server-side dependencies in `LibraryPage`.
+  - **Components**: Converted `LeaderboardList`, `HousingDashboardClient`, `LibraryPage` to Client Components to consume `useAuth()`/JWTs.
+  - **Refactor**: Cleaned up `action-handler.ts` and `safe-action.ts` to strictly enforce JWT requirements and removed dead code.
+- **Impact**: Application `npm run build` passes successfully. Authentication is now fully decoupled from Next.js server session cookies, enabling stateless deployment and clearer separation of concerns.
+
 ## 2026-02-02: Fix Critical Auth Redirect Loop
 
 - **Context**: Resolved a critical infinite redirect loop between `/dashboard` and `/login` caused by a race condition in client-side navigation.
@@ -60,4 +71,3 @@
   - **Cleanup**: Removed components/dashboard/housing, library, and leaderboard directories. components/dashboard now strictly contains Shell/Layout components.
   - **Fixes**: Patched MyDutiesWidget props and resolved circular import dependencies in app/dashboard pages.
 - **Impact**: Enforces strict Domain-Driven directory structure. Eliminated 45% of component duplication.
-

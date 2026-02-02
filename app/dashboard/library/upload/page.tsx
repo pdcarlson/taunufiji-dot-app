@@ -7,7 +7,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import dynamic_ from "next/dynamic";
 import { useUploadQueue } from "@/components/features/library/upload/UploadContext";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+// import { account } from "@/lib/infrastructure/persistence/appwrite.web"; // Removed Direct Import
 import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
 import type { PdfRedactorRef } from "@/components/features/library/upload/PdfRedactor";
 import Combobox from "@/components/ui/Combobox";
@@ -65,10 +65,9 @@ export default function UnifiedUploadPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        // Use Server Action instead of API Route
-        // Generate JWT for stateless auth
-        const { jwt } = await account.createJWT();
-        const data = await getMetadataAction(jwt);
+        // Use Server Action (Cookie Auth)
+        // const { jwt } = await account.createJWT();
+        const data = await getMetadataAction(); // No JWT needed
         if (data) {
           setCourseData(data.courses);
           setProfessors(data.professors);
@@ -179,7 +178,7 @@ export default function UnifiedUploadPage() {
       const currentSem = stickyMetadata.semester || "Unknown";
 
       // Generate JWT once for all server actions
-      const { jwt } = await account.createJWT();
+      // const { jwt } = await account.createJWT();
 
       // 0. CHECK FOR DUPLICATES
       toast.loading("Checking for duplicates...", { id: toastId });
@@ -192,8 +191,8 @@ export default function UnifiedUploadPage() {
           year: stickyMetadata.year,
           version: stickyMetadata.version,
         },
-        jwt,
-      ); // Pass JWT
+        // Pass JWT
+      );
 
       if (isDuplicate) {
         toast.error("This exam already exists!", { id: toastId });
@@ -221,7 +220,7 @@ export default function UnifiedUploadPage() {
       // Use jwt generated earlier
       const formData = new FormData();
       formData.append("file", fileToUpload);
-      formData.append("jwt", jwt); // Pass JWT
+      // formData.append("jwt", jwt); // Pass JWT
 
       // We need a server action that accepts FormData for upload
       const uploadRes = await uploadFileAction(formData);
@@ -251,7 +250,7 @@ export default function UnifiedUploadPage() {
       // Generate JWT for secure server-side verification
       // WE ALREADY HAVE JWT from step 2 (Upload)
       // const { jwt } = await account.createJWT(); <--- REMOVED
-      await createLibraryResourceAction(resourceData, jwt);
+      await createLibraryResourceAction(resourceData);
 
       toast.success("Success! (+10 PTS)", { id: toastId });
       removeCurrentFileFromQueue();

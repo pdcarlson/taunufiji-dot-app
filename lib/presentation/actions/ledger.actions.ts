@@ -1,36 +1,17 @@
 "use server";
 
-import { PointsService } from "@/lib/application/services/points.service";
-import {
-  createSessionClient,
-  createJWTClient,
-} from "@/lib/presentation/server/appwrite";
-import { AuthService } from "@/lib/application/services/auth.service";
-
-async function getAuthAccount(jwt?: string) {
-  if (jwt) {
-    return createJWTClient(jwt).account;
-  }
-  const { account } = await createSessionClient();
-  return account;
-}
-
+import { createJWTClient } from "@/lib/presentation/server/appwrite";
 import { getContainer } from "@/lib/infrastructure/container";
 
-// ...
+// Helper removed (single usage refactored inline)
 
-export async function getTransactionHistoryAction(
-  userId: string,
-  jwt?: string,
-) {
+export async function getTransactionHistoryAction(jwt: string) {
   try {
-    const account = await getAuthAccount(jwt);
+    const { account } = createJWTClient(jwt);
     const session = await account.get();
+    const userId = session.$id;
 
-    if (!session || session.$id !== userId) {
-      // Only allow viewing OWN history for now.
-      // If admins need access, we check roles.
-      // But for "My Points", strictly enforce.
+    if (!session) {
       throw new Error("Unauthorized access to ledger");
     }
 
