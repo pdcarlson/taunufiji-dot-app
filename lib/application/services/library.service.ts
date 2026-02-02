@@ -4,6 +4,7 @@ import {
   LibrarySearchFilters,
   CreateResourceParams,
 } from "@/lib/domain/ports/library.repository";
+import { LibraryResource } from "@/lib/domain/types/library";
 
 export type { LibrarySearchFilters, CreateResourceParams };
 
@@ -13,7 +14,9 @@ export class LibraryService {
   /**
    * Searches the Library metadata collection.
    */
-  async search(filters: LibrarySearchFilters) {
+  async search(
+    filters: LibrarySearchFilters,
+  ): Promise<{ documents: LibraryResource[]; total: number }> {
     return await this.libraryRepository.search(filters);
   }
 

@@ -36,13 +36,14 @@ export default function LibraryClient({
   initialTotal,
   initialUserFiles,
 }: LibraryClientProps) {
+  const { getJWT } = useJWT();
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const debouncedFilters = useDebounce(filters, 500);
 
   // Data State
   const [results, setResults] = useState<any[] | null>(null);
   const [searchTotal, setSearchTotal] = useState(0);
-  const [loading, setLoading] = useState(false); // Default to false if we had initial data?
+  const [loading, setLoading] = useState(false);
   // Actually, we want to run an initial empty search to fill the list,
   // OR we could pass initialDocuments too.
   // Let's keep it simple: Client triggers the first search or we accept documents?

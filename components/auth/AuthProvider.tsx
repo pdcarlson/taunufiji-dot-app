@@ -9,7 +9,7 @@ import {
 } from "react";
 import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import { Models, OAuthProvider } from "appwrite";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { getProfileAction } from "@/lib/presentation/actions/auth.actions";
 
 interface AuthContextType {
@@ -23,45 +23,50 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-  initialUser?: Models.User<Models.Preferences> | null;
-}
-
-export function AuthProvider({
-  children,
-  initialUser = null,
-}: AuthProviderProps) {
-  // Initialize state with Server Data
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Models.User<Models.Preferences> | null>(
-    initialUser,
+    null,
   );
   const [profile, setProfile] = useState<any | null>(null);
-  // If we have initial user, we are not loading. If null, we are also done.
-  // Profile fetch happens in background.
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
 
-  // Sync Profile on detailed hydration
+  // Client-side session check on mount and route change
   useEffect(() => {
-    const syncProfile = async () => {
-      if (user && !profile) {
-        try {
-          console.log("[AuthProvider] Hydrating profile for:", user.$id);
-          const userProfile = await getProfileAction(user.$id);
-          setProfile(userProfile);
-        } catch (err) {
-          console.error("Profile sync failed", err);
-          // We do NOT redirect here. Just log error.
+    const checkSession = async () => {
+      try {
+        console.log("[AuthProvider] Checking session...");
+        const currentUser = await account.get();
+        console.log("[AuthProvider] Session found:", currentUser.$id);
+        setUser(currentUser);
+        setError(null);
+
+        // Redirect to dashboard if on login page
+        if (pathname === "/login") {
+          router.push("/dashboard");
+          return;
         }
+
+        // Fetch Profile
+        console.log("[AuthProvider] Fetching profile for:", currentUser.$id);
+        const userProfile = await getProfileAction(currentUser.$id);
+        console.log("[AuthProvider] Profile fetched:", userProfile);
+        setProfile(userProfile);
+      } catch (err: any) {
+        console.warn("[AuthProvider] No session found", err);
+        setUser(null);
+        setProfile(null);
+        setError(err.message || err.toString());
+      } finally {
+        setLoading(false);
       }
     };
-    syncProfile();
-  }, [user, profile]);
+    checkSession();
+  }, [pathname, router]);
 
   const login = () => {
-    // Redirect to Discord OAuth
     const origin = window.location.origin;
     account.createOAuth2Session(
       OAuthProvider.Discord,
@@ -74,7 +79,7 @@ export function AuthProvider({
     await account.deleteSession("current");
     setUser(null);
     setProfile(null);
-    router.refresh(); // Refresh to clear server cookies
+    setError(null);
     router.push("/login");
   };
 

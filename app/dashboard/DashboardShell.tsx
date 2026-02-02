@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/auth/AuthProvider";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Home,
@@ -9,7 +9,8 @@ import {
   GraduationCap,
   LogOut,
   LucideIcon,
-} from "lucide-react"; // Icons
+  Loader2,
+} from "lucide-react";
 import Sidebar from "@/components/dashboard/Sidebar";
 
 export default function DashboardShell({
@@ -19,12 +20,25 @@ export default function DashboardShell({
 }) {
   const { user, profile, loading, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Redirect to login if not authenticated
+  if (!loading && !user) {
+    router.push("/login");
+    return null;
+  }
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-fiji-purple" />
+      </div>
+    );
+  }
 
   // Detect if we're on the upload page (needs full screen width)
   const isUploadPage = pathname?.includes("/library/upload");
-
-  // Auth is handled by Middleware (Edge) and RootLayout (Server).
-  // We trust 'user' is present if we are here.
 
   // Mobile-First Shell
   return (

@@ -13,6 +13,7 @@ type ActionContext = {
 type ActionOptions = {
   jwt?: string;
   allowedRoles?: string[]; // If provided, strictly enforces one of these roles
+  public?: boolean; // If true, skip Brother verification
 };
 
 /**
@@ -42,11 +43,12 @@ export async function actionWrapper<T>(
     const { authService } = getContainer();
 
     // 2. Global Authorization (Brother Check)
-    // Every action requires at least "Verified Brother" status unless public (which we don't have yet)
-    // To skip this, we'd need another option like `public: true`
-    const isBrother = await authService.verifyBrother(user.$id);
-    if (!isBrother) {
-      throw new Error("Unauthorized Access: You are not a verified Brother.");
+    // Skip if public option is set
+    if (!options.public) {
+      const isBrother = await authService.verifyBrother(user.$id);
+      if (!isBrother) {
+        throw new Error("Unauthorized Access: You are not a verified Brother.");
+      }
     }
 
     // 3. Role-Based Authorization

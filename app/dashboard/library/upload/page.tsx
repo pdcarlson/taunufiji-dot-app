@@ -1,13 +1,15 @@
 "use client";
 
+// Disable prerendering - PDF library uses browser APIs
+export const dynamic = "force-dynamic";
+
 import { useState, useCallback, useRef, useEffect } from "react";
+import dynamic_ from "next/dynamic";
 import { useUploadQueue } from "@/components/features/library/upload/UploadContext";
-import { useAuth } from "@/components/auth/AuthProvider"; // Updated import
+import { useAuth } from "@/components/auth/AuthProvider";
 import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
-import PdfRedactor, {
-  PdfRedactorRef,
-} from "@/components/features/library/upload/PdfRedactor";
+import type { PdfRedactorRef } from "@/components/features/library/upload/PdfRedactor";
 import Combobox from "@/components/ui/Combobox";
 import {
   UploadCloud,
@@ -22,9 +24,15 @@ import toast from "react-hot-toast";
 import {
   uploadFileAction,
   createLibraryResourceAction,
-  checkDuplicateResourceAction, // Imported
-} from "@/lib/presentation/actions/library.actions"; // Need these actions
-import { getMetadataAction } from "@/lib/presentation/actions/library.actions"; // Need this action
+  checkDuplicateResourceAction,
+} from "@/lib/presentation/actions/library.actions";
+import { getMetadataAction } from "@/lib/presentation/actions/library.actions";
+
+// Dynamic import to prevent SSR evaluation of PDF library (uses DOMMatrix)
+const PdfRedactor = dynamic_(
+  () => import("@/components/features/library/upload/PdfRedactor"),
+  { ssr: false },
+);
 
 export default function UnifiedUploadPage() {
   const { user } = useAuth();
