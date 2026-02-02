@@ -456,7 +456,7 @@ export const TasksService = {
     const nextInstance = calculateNextInstance(
       schedule.recurrence_rule,
       new Date(),
-      24, // Default lead time for first (or fetch if we had it in DTO, but usually default)
+      schedule.lead_time_hours || 24, // Use schedule setting or default 24h
     );
 
     if (nextInstance) {
