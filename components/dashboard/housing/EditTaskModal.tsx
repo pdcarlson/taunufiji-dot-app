@@ -48,11 +48,11 @@ export default function EditTaskModal({
     if (isRecurring && task.schedule_id) {
       setInitialLoading(true);
       getScheduleAction(task.schedule_id)
-        .then((schedule) => {
-          if (schedule) {
+        .then((res) => {
+          if (res.success && res.data) {
             setFormData((prev) => ({
               ...prev,
-              lead_time_hours: schedule.lead_time_hours || 24,
+              lead_time_hours: res.data.lead_time_hours || 24,
             }));
           }
         })
@@ -143,17 +143,25 @@ export default function EditTaskModal({
         );
       }
 
-      const [taskRes] = await Promise.all(promises);
+      const [taskRes, scheduleRes] = await Promise.all(promises);
 
-      if (taskRes.success) {
-        toast.success("Task updated");
-        onRefresh();
-        onClose();
-      } else {
-        toast.error(taskRes.error || "Update failed");
+      // Check Task Update
+      if (!taskRes.success) {
+        throw new Error(taskRes.error || "Task update failed");
       }
-    } catch (e) {
-      toast.error("Failed to update task");
+
+      // Check Schedule Update (if strict? or just warn?)
+      // Let's be strict per "Search and Destroy"
+      if (scheduleRes && !scheduleRes.success) {
+        throw new Error(scheduleRes.error || "Schedule update failed");
+      }
+
+      toast.success("Task updated");
+      onRefresh();
+      onClose();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "Failed to update task");
     } finally {
       setLoading(false);
     }

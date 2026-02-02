@@ -39,7 +39,8 @@ export default function CreateOneOffModal({
         type: "one_off" as const,
       };
 
-      await createTaskAction(payload, jwt);
+      const res = await createTaskAction(payload, jwt);
+      if (!res.success) throw new Error(res.error);
       toast.success("Duty Assigned");
       onSuccess();
       onClose();

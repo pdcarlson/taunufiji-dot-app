@@ -7,34 +7,36 @@ import { CreateScheduleDTO } from "@/lib/domain/types/schedule";
 
 import { StorageService } from "@/lib/infrastructure/storage/storage";
 import { HOUSING_ADMIN_ROLES } from "@/lib/infrastructure/config/roles";
-import { actionWrapper } from "@/lib/presentation/utils/action-handler";
+import { safeAction } from "@/lib/core/safe-action";
 
 export async function getOpenTasksAction(jwt?: string) {
-  const result = await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       const tasks = await container.queryService.getOpenTasks();
       return JSON.parse(JSON.stringify(tasks));
     },
     { jwt },
   );
+}
 
-  if (result.success) return result.data;
-  return [];
+export async function getAllActiveTasksAction(jwt?: string) {
+  return await safeAction(
+    async ({ container }) => {
+      const tasks = await container.queryService.getAllActiveTasks();
+      return JSON.parse(JSON.stringify(tasks));
+    },
+    { jwt },
+  );
 }
 
 export async function getPendingReviewsAction(jwt?: string) {
-  const result = await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
-      // Caller should ideally be admin, but QueryService just returns data.
-      // ActionWrapper enforces "Brother" at least.
       const reviews = await container.queryService.getPendingReviews();
       return JSON.parse(JSON.stringify(reviews));
     },
     { jwt },
   );
-
-  if (result.success) return result.data;
-  return [];
 }
 
 export async function claimTaskAction(
@@ -42,7 +44,7 @@ export async function claimTaskAction(
   authId: string,
   jwt?: string,
 ) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container, userId }) => {
       // Ensure claiming for SELF
       if (userId !== authId) throw new Error("Cannot claim for others");
@@ -57,20 +59,10 @@ export async function claimTaskAction(
     },
     { jwt },
   );
-  // Returns { success: boolean, data: { success: true }, error: string }
-  // Wait, the UI expects { success: boolean, error?: string }.
-  // actionWrapper returns { success, data, error }.
-  // If I return the result of actionWrapper, it matches the shape roughly.
-  // existing: return { success: true } or { success: false, error: "..." }
-  // wrapper: { success: true, data: { success: true } } -> success is true.
-  // If error: { success: false, error: "..." }.
-  // The UI might check result.success.
-  // But result.data structure might be redundant?
-  // I will make the inner function return "void" or "true", and map the result.
 }
 
 export async function submitProofAction(formData: FormData, jwt?: string) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container, userId }) => {
       const taskId = formData.get("taskId") as string;
       const file = formData.get("file") as File;
@@ -105,48 +97,39 @@ export async function submitProofAction(formData: FormData, jwt?: string) {
 }
 
 export async function getMyTasksAction(userId: string, jwt?: string) {
-  const result = await actionWrapper(
+  return await safeAction(
     async ({ container, userId: authUserId }) => {
       if (authUserId !== userId) return []; // strict ownership
 
       const profile = await container.userService.getByAuthId(authUserId);
-      if (!profile) return [];
+      if (!profile) return []; // Or throw error? adhering to safeAction, maybe throw is better, but this mimics old logic.
+      // But old logic returned [], safeAction wrapper will return { success: true, data: [] }
+      // Checks out.
 
       const res = await container.dutyService.getMyTasks(profile.discord_id);
       return JSON.parse(JSON.stringify(res.documents));
     },
     { jwt },
   );
-
-  if (result.success) return result.data;
-  return [];
 }
 
 export async function getHistoryAction(userId: string) {
-  // getHistoryAction usually takes 'userId' (AuthID) but fetches profile history
-  // Since we don't have JWT param in the original signature for some reason (client component calls it?), I will assume session.
-  // Original: async function getHistoryAction(userId: string) { ... createSessionClient ... }
-
-  const result = await actionWrapper(
+  return await safeAction(
     async ({ container, userId: authUserId }) => {
-      if (authUserId !== userId) return [];
+      if (authUserId !== userId) throw new Error("Unauthorized history access");
 
       const profile = await container.userService.getByAuthId(authUserId);
-      if (!profile) return [];
+      if (!profile) throw new Error("Profile not found");
 
-      // QueryService.getHistory gets by Profile ID (Discord ID)
       const res = await container.queryService.getHistory(profile.discord_id);
       return JSON.parse(JSON.stringify(res));
     },
-    {}, // No JWT passed in original signature implies Session
+    {}, // No JWT passed in original implies Session
   );
-
-  if (result.success) return result.data;
-  return [];
 }
 
 export async function unclaimTaskAction(taskId: string, jwt?: string) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container, userId }) => {
       const profile = await container.userService.getByAuthId(userId);
       if (!profile) throw new Error("Profile not found");
@@ -167,7 +150,7 @@ export async function unclaimTaskAction(taskId: string, jwt?: string) {
 }
 
 export async function approveTaskAction(taskId: string, jwt?: string) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container, userId }) => {
       await container.adminService.verifyTask(taskId, userId);
       revalidatePath("/dashboard/housing");
@@ -182,7 +165,7 @@ export async function rejectTaskAction(
   reason: string | null,
   jwt?: string,
 ) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       await container.adminService.rejectTask(
         taskId,
@@ -199,7 +182,7 @@ export async function createTaskAction(
   data: CreateAssignmentDTO,
   jwt?: string,
 ) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       await container.adminService.createTask(data);
       revalidatePath("/dashboard/housing");
@@ -215,7 +198,7 @@ export async function reassignTaskAction(
   userName: string,
   jwt?: string,
 ) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       const targetProfileId = userId && userId.length > 0 ? userId : null;
       await container.adminService.adminReassign(taskId, targetProfileId);
@@ -227,23 +210,20 @@ export async function reassignTaskAction(
 }
 
 export async function getSchedulesAction(jwt?: string) {
-  const result = await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       const res = await container.scheduleService.getSchedules();
       return JSON.parse(JSON.stringify(res));
     },
     { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
   );
-
-  if (result.success) return result.data;
-  return [];
 }
 
 export async function createScheduleAction(
   data: CreateScheduleDTO,
   jwt?: string,
 ) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       await container.scheduleService.createSchedule(data);
       revalidatePath("/dashboard/housing");
@@ -254,29 +234,27 @@ export async function createScheduleAction(
 }
 
 export async function checkHousingAdminAction(jwt?: string) {
-  const result = await actionWrapper(
+  // Returns ActionResult<boolean> now
+  return await safeAction(
     async () => {
       return true; // If we passed the role check, we are admin
     },
     { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
   );
-  return result.success;
 }
 
 export async function getAllMembersAction(jwt?: string) {
-  const result = await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       const members = await container.queryService.getMembers();
       return members;
     },
     { jwt },
   );
-  if (result.success && result.data) return result.data;
-  return [];
 }
 
 export async function getReviewDetailsAction(taskId: string, jwt?: string) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       const task = await container.queryService.getTask(taskId);
       if (!task) throw new Error("Task not found");
@@ -285,6 +263,7 @@ export async function getReviewDetailsAction(taskId: string, jwt?: string) {
       let proofUrl = "";
 
       if (task.assigned_to) {
+        // Here we keep local try-catch because it's non-critical data enrichment
         try {
           const submitter = await container.queryService.getUserProfile(
             task.assigned_to,
@@ -313,7 +292,7 @@ export async function updateTaskAction(
   data: Partial<CreateAssignmentDTO>,
   jwt?: string,
 ) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       await container.adminService.updateTask(taskId, data);
       revalidatePath("/dashboard/housing");
@@ -324,7 +303,7 @@ export async function updateTaskAction(
 }
 
 export async function deleteTaskAction(taskId: string, jwt?: string) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       await container.adminService.deleteTask(taskId);
       revalidatePath("/dashboard/housing");
@@ -335,16 +314,13 @@ export async function deleteTaskAction(taskId: string, jwt?: string) {
 }
 
 export async function getScheduleAction(scheduleId: string, jwt?: string) {
-  const result = await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       const schedule = await container.scheduleService.getSchedule(scheduleId);
       return JSON.parse(JSON.stringify(schedule));
     },
     { jwt, allowedRoles: HOUSING_ADMIN_ROLES as string[] },
   );
-
-  if (result.success) return result.data;
-  return null;
 }
 
 export async function updateScheduleLeadTimeAction(
@@ -352,7 +328,7 @@ export async function updateScheduleLeadTimeAction(
   leadTime: number,
   jwt?: string,
 ) {
-  return await actionWrapper(
+  return await safeAction(
     async ({ container }) => {
       await container.scheduleService.updateSchedule(scheduleId, {
         lead_time_hours: leadTime,

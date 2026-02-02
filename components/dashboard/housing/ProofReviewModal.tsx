@@ -76,12 +76,13 @@ export default function ProofReviewModal({
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
-      await approveTaskAction(task.id, jwt);
+      const res = await approveTaskAction(task.id, jwt);
+      if (!res.success) throw new Error(res.error);
       toast.success("Task Approved! Points Awarded.");
       onSuccess();
       onClose();
-    } catch (err) {
-      toast.error("Approval failed");
+    } catch (err: any) {
+      toast.error(err.message || "Approval failed");
     } finally {
       setLoading(false);
     }
@@ -95,12 +96,13 @@ export default function ProofReviewModal({
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
-      await rejectTaskAction(task.id, reason, jwt);
+      const res = await rejectTaskAction(task.id, reason, jwt);
+      if (!res.success) throw new Error(res.error);
       toast.error("Proof Rejected.");
       onSuccess();
       onClose();
-    } catch (err) {
-      toast.error("Rejection failed");
+    } catch (err: any) {
+      toast.error(err.message || "Rejection failed");
     } finally {
       setLoading(false);
     }

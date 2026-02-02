@@ -27,59 +27,67 @@ export class MaintenanceService {
     const allAssigned = await this.taskRepository.findByAssignee(userId);
     const now = new Date();
 
+    const maintenancePromises: Promise<void>[] = [];
+
     for (const task of allAssigned) {
-      // Filter A: Approved (Hidden) or already Expired
-      if (task.status === "approved" || task.status === "expired") {
-        continue;
-      }
+      maintenancePromises.push(
+        (async () => {
+          // Filter A: Approved (Hidden) or already Expired
+          if (task.status === "approved" || task.status === "expired") {
+            return;
+          }
 
-      // Check B: Stuck in "Locked" but Time Passed
-      if (
-        task.status === "locked" &&
-        task.unlock_at &&
-        now >= new Date(task.unlock_at)
-      ) {
-        await this.taskRepository.update(task.id, {
-          status: "open",
-          notification_level: "unlocked",
-        });
-        continue;
-      }
+          // Check B: Stuck in "Locked" but Time Passed
+          if (
+            task.status === "locked" &&
+            task.unlock_at &&
+            now >= new Date(task.unlock_at)
+          ) {
+            await this.taskRepository.update(task.id, {
+              status: "open",
+              notification_level: "unlocked",
+            });
+            return;
+          }
 
-      // Check C: Open/Pending but Expired (Duty)
-      if (
-        task.status !== "rejected" &&
-        task.type !== "bounty" &&
-        task.due_at &&
-        now > new Date(task.due_at) &&
-        !task.proof_s3_key
-      ) {
-        // IT IS EXPIRED
-        await this.taskRepository.update(task.id, {
-          status: "expired",
-        });
+          // Check C: Open/Pending but Expired (Duty)
+          if (
+            task.status !== "rejected" &&
+            task.type !== "bounty" &&
+            task.due_at &&
+            now > new Date(task.due_at) &&
+            !task.proof_s3_key
+          ) {
+            // IT IS EXPIRED
+            await this.taskRepository.update(task.id, {
+              status: "expired",
+            });
 
-        // Emit Event
-        await DomainEventBus.publish(TaskEvents.TASK_EXPIRED, {
-          taskId: task.id,
-          title: task.title,
-          userId: userId,
-          fineAmount: 50,
-        });
-        continue;
-      }
+            // Emit Event
+            await DomainEventBus.publish(TaskEvents.TASK_EXPIRED, {
+              taskId: task.id,
+              title: task.title,
+              userId: userId,
+              fineAmount: 50,
+            });
+            return;
+          }
 
-      // Check D: Open Bounty but Expired (Assigned)
-      if (
-        task.type === "bounty" &&
-        task.status !== "open" &&
-        task.due_at &&
-        now > new Date(task.due_at)
-      ) {
-        // Expired Claim -> Unclaim
-        await this.dutyService.unclaimTask(task.id, userId);
-        continue;
-      }
+          // Check D: Open Bounty but Expired (Assigned)
+          if (
+            task.type === "bounty" &&
+            task.status !== "open" &&
+            task.due_at &&
+            now > new Date(task.due_at)
+          ) {
+            // Expired Claim -> Unclaim
+            await this.dutyService.unclaimTask(task.id, userId);
+            return;
+          }
+        })(),
+      );
     }
+
+    await Promise.all(maintenancePromises);
   }
 }

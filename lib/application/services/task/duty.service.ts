@@ -123,6 +123,15 @@ export class DutyService implements IDutyService {
    * Get tasks assigned to current user, with lazy evaluation for expiry/recurrence.
    */
   async getMyTasks(userId: string) {
+    if (!userId) {
+      console.warn(
+        "[DutyService] getMyTasks called with validation warning: No User ID",
+      );
+      return { documents: [], total: 0 };
+    }
+    // Debug log to catch Ghost ID issues
+    console.log(`[DutyService] Finding tasks for assignee: ${userId}`);
+
     const allAssigned = await this.taskRepository.findByAssignee(userId);
     const filtered: HousingTask[] = [];
 

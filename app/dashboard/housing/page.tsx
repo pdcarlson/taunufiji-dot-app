@@ -5,12 +5,10 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import { Loader } from "@/components/ui/Loader";
 import {
-  getOpenTasksAction,
-  getMyTasksAction,
+  getAllActiveTasksAction,
   getSchedulesAction,
   checkHousingAdminAction,
   getAllMembersAction,
-  getPendingReviewsAction,
 } from "@/lib/presentation/actions/housing.actions";
 import HousingStats from "@/components/dashboard/housing/HousingStats";
 import TaskCard, {
@@ -49,29 +47,45 @@ export default function HousingPage() {
       const { jwt } = await account.createJWT();
 
       // 1. Check Admin
-      const adminStatus = await checkHousingAdminAction(jwt);
-      setIsAdmin(adminStatus);
+      const adminRes = await checkHousingAdminAction(jwt);
+      // checkHousingAdminAction returns { success: true, data: true } if authorized
+      // If unauthorized, it might throw or return success:false depending on how safeAction handles the role check failure.
+      // safeAction catches and returns success:false error if verifyRole fails.
+      const isAdminUser = adminRes.success && adminRes.data === true;
+      setIsAdmin(isAdminUser);
 
-      // 2. Fetch Tasks & Members
-      // 2. Fetch Tasks & Members
-      const [open, mine, allMembers, pending] = await Promise.all([
-        getOpenTasksAction(jwt),
-        getMyTasksAction(user.$id, jwt),
+      // 2. Fetch Tasks & Members (Unified Fetch)
+      const [tasksRes, membersRes] = await Promise.all([
+        getAllActiveTasksAction(jwt),
         getAllMembersAction(jwt),
-        adminStatus ? getPendingReviewsAction(jwt) : Promise.resolve([]),
       ]);
-      const allTasks = [...open, ...mine, ...pending].filter(
-        (v, i, a) => a.findIndex((v2) => v2.$id === v.$id) === i,
-      );
+
+      // Error Handling
+      if (!tasksRes.success) console.error("Tasks Error:", tasksRes.error);
+      if (!membersRes.success)
+        console.error("Members Error:", membersRes.error);
+
+      // Unwrap Data
+      const allTasks = tasksRes.success && tasksRes.data ? tasksRes.data : [];
+      const allMembers =
+        membersRes.success && membersRes.data ? membersRes.data : [];
+
+      console.log(`[Dashboard] Loaded ${allTasks.length} active tasks.`);
+
       setTasks(allTasks);
       setMembers(allMembers);
 
       // 3. Fetch Schedules (If Admin)
-      if (adminStatus) {
-        const scheds = await getSchedulesAction(jwt);
-        setSchedules(scheds);
+      if (isAdminUser) {
+        const schedRes = await getSchedulesAction(jwt);
+        if (schedRes.success && schedRes.data) {
+          setSchedules(schedRes.data);
+        } else {
+          console.error("Schedules Error:", schedRes.error);
+        }
       }
     } catch (err) {
+      console.error(err);
       toast.error("Sync Failed");
     } finally {
       setLoading(false);

@@ -155,7 +155,9 @@ export default function LibraryPage() {
 
         {!loading &&
           results &&
-          results.map((doc) => <LibraryFileCard key={doc.$id} file={doc} />)}
+          results.map((doc) => (
+            <LibraryFileCard key={doc.$id || doc.id} file={doc} />
+          ))}
 
         {!loading && results && results.length < searchTotal && (
           <div className="text-center py-4 text-xs text-stone-400 font-bold uppercase tracking-widest border-t border-stone-100 mt-4">

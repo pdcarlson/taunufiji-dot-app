@@ -22,6 +22,15 @@ export class QueryService {
     return await this.taskRepository.findById(taskId);
   }
 
+  async getAllActiveTasks() {
+    return await this.taskRepository.findMany({
+      status: ["open", "pending", "locked", "rejected"],
+      orderBy: "createdAt",
+      orderDirection: "desc",
+      limit: 100, // Reasonable limit for now
+    });
+  }
+
   async getOpenTasks() {
     // Fetch Open AND Locked tasks (to check for unlocking)
     const [openTasks, lockedTasks] = await Promise.all([

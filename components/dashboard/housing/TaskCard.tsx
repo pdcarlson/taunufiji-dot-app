@@ -145,11 +145,12 @@ export default function TaskCard({
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
-      await claimTaskAction(task.id, userId, jwt);
+      const res = await claimTaskAction(task.id, userId, jwt);
+      if (!res.success) throw new Error(res.error);
       toast.success("Bounty Claimed!");
       onRefresh();
-    } catch {
-      toast.error("Error");
+    } catch (err: any) {
+      toast.error(err.message || "Error claiming task");
     }
     setLoading(false);
   };
@@ -158,11 +159,12 @@ export default function TaskCard({
     setLoading(true);
     try {
       const { jwt } = await account.createJWT();
-      await unclaimTaskAction(task.id, jwt);
+      const res = await unclaimTaskAction(task.id, jwt);
+      if (!res.success) throw new Error(res.error);
       toast.success("Unclaimed");
       onRefresh();
-    } catch {
-      toast.error("Error");
+    } catch (err: any) {
+      toast.error(err.message || "Error unclaiming task");
     }
     setLoading(false);
   };
