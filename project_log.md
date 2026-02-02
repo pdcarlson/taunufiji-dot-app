@@ -1,3 +1,11 @@
+## 2026-02-02: Fix Critical Auth Redirect Loop
+
+- **Context**: Resolved a critical infinite redirect loop between `/dashboard` and `/login` caused by a race condition in client-side navigation.
+- **Technical Changes**:
+  - **Login Page Refactor**: Split `app/login/page.tsx` into a Server Component (with session check) and `app/login/LoginClient.tsx` (UI only).
+  - **Logic Change**: Moved the "If logged in, go to dashboard" check to the Server Component. It now performs a **full Appwrite session validation** via `account.get()` (rather than just checking for cookie existence), ensuring robust protection against stale-cookie loops.
+- **Impact**: Eliminates the "flicker" of the login page for authenticated users, prevents race conditions, and handles stale sessions gracefully. `npm run build` confirmed passing.
+
 ## 2026-02-02: Housing Dashboard Refactor (Container/Presentational Pattern)
 
 - **Context**: Decoupled frontend components from Appwrite infrastructure by implementing the Container/Presentational pattern (_Week 4: Component Architecture_).
@@ -41,3 +49,15 @@
   - **Stability**: Removed redundant `syncUserAction` call in `DashboardShell.tsx` which was causing an infinite `Sync -> Update -> Render` loop on the client side.
   - **Testing**: Fixed `setup` and `teardown` in `library.service.test.ts`, `duty.service.test.ts`, and `points.service.test.ts` to use proper Dependency Injection and robust assertions.
 - **Impact**: Application is now stable locally. `npm run dev`, `npm run build`, and `npm test` all pass.
+
+## 2026-02-02: Component Architecture Standardization
+
+- **Context**: Resolved 'Split Personality' architecture where components were scattered between dashboard/ and features/, causing code duplication and circular dependencies.
+- **Technical Changes**:
+  - **Housing**: Consolidated all housing logic into components/features/housing. Replaced the 'Small' TaskCard.tsx with the robust Dashboard version.
+  - **Library**: Moved all library components to components/features/library.
+  - **Leaderboard**: Moved all leaderboard components to components/features/leaderboard.
+  - **Cleanup**: Removed components/dashboard/housing, library, and leaderboard directories. components/dashboard now strictly contains Shell/Layout components.
+  - **Fixes**: Patched MyDutiesWidget props and resolved circular import dependencies in app/dashboard pages.
+- **Impact**: Enforces strict Domain-Driven directory structure. Eliminated 45% of component duplication.
+

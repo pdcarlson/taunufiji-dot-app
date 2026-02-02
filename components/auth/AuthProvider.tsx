@@ -16,63 +16,52 @@ interface AuthContextType {
   user: Models.User<Models.Preferences> | null;
   profile: any | null;
   loading: boolean;
-  error: any | null; // NEW: Expose error
+  error: any | null;
   login: () => void;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+interface AuthProviderProps {
+  children: ReactNode;
+  initialUser?: Models.User<Models.Preferences> | null;
+}
+
+export function AuthProvider({
+  children,
+  initialUser = null,
+}: AuthProviderProps) {
+  // Initialize state with Server Data
   const [user, setUser] = useState<Models.User<Models.Preferences> | null>(
-    null,
+    initialUser,
   );
   const [profile, setProfile] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any | null>(null); // NEW
+  // If we have initial user, we are not loading. If null, we are also done.
+  // Profile fetch happens in background.
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<any | null>(null);
   const router = useRouter();
 
+  // Sync Profile on detailed hydration
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        console.log("[AuthProvider] Checking session...");
-
-        // Debug Config
-        console.log("[AuthProvider] Config:", {
-          endpoint: process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT,
-          project: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID,
-        });
-
-        const currentUser = await account.get();
-        console.log("[AuthProvider] Session found:", currentUser.$id);
-        setUser(currentUser);
-        setError(null);
-
-        // Fetch Internal Profile
-        if (currentUser) {
-          console.log("[AuthProvider] Fetching profile for:", currentUser.$id);
-          const userProfile = await getProfileAction(currentUser.$id);
-          console.log("[AuthProvider] Profile fetched:", userProfile);
+    const syncProfile = async () => {
+      if (user && !profile) {
+        try {
+          console.log("[AuthProvider] Hydrating profile for:", user.$id);
+          const userProfile = await getProfileAction(user.$id);
           setProfile(userProfile);
+        } catch (err) {
+          console.error("Profile sync failed", err);
+          // We do NOT redirect here. Just log error.
         }
-      } catch (err: unknown) {
-        console.warn("[AuthProvider] No session found", err);
-        setUser(null);
-        setProfile(null);
-        const message = err instanceof Error ? err.message : String(err);
-        setError(message); // Capture Error
-      } finally {
-        setLoading(false);
       }
     };
-    checkSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+    syncProfile();
+  }, [user, profile]);
 
   const login = () => {
     // Redirect to Discord OAuth
-    // Success URL: Dashboard
-    // Failure URL: Login
     const origin = window.location.origin;
     account.createOAuth2Session(
       OAuthProvider.Discord,
@@ -85,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await account.deleteSession("current");
     setUser(null);
     setProfile(null);
-    setError(null);
+    router.refresh(); // Refresh to clear server cookies
     router.push("/login");
   };
 

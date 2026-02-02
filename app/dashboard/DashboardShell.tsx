@@ -23,16 +23,8 @@ export default function DashboardShell({
   // Detect if we're on the upload page (needs full screen width)
   const isUploadPage = pathname?.includes("/library/upload");
 
-  // NOTE: Server-side auth in dashboard/page.tsx handles redirects.
-  // Client-side just shows loading state until AuthProvider resolves.
-
-  if (loading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-900 text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-fiji-gold"></div>
-      </div>
-    );
-  }
+  // Auth is handled by Middleware (Edge) and RootLayout (Server).
+  // We trust 'user' is present if we are here.
 
   // Mobile-First Shell
   return (

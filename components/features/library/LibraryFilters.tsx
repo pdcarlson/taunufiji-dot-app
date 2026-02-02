@@ -5,6 +5,7 @@ import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
 import { Search, Filter, Loader2 } from "lucide-react";
 import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import toast from "react-hot-toast";
+import { getMetadataAction } from "@/lib/presentation/actions/library.actions";
 
 interface FilterProps {
   filters: any;
@@ -24,16 +25,14 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
   useEffect(() => {
     const load = async () => {
       try {
+        // We can pass undefined JWT if purely public, or create one if strict auth needed.
+        // getMetadataAction handles it.
         const { jwt } = await account.createJWT();
-        const res = await fetch('/api/library/metadata', {
-            headers: {
-                'Authorization': `Bearer ${jwt}`
-            }
-        });
-        if(res.ok) {
-            const data = await res.json();
-            setCourseData(data.courses);
-            setProfessors(data.professors);
+        const data = await getMetadataAction(jwt);
+
+        if (data) {
+          setCourseData(data.courses);
+          setProfessors(data.professors);
         }
       } catch (e) {
         console.error("Failed to load filter data", e);

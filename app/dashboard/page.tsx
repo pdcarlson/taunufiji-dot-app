@@ -1,16 +1,13 @@
 import { createSessionClient } from "@/lib/presentation/server/appwrite";
 import { getContainer } from "@/lib/infrastructure/container";
 import { redirect } from "next/navigation";
-import { getDashboardStatsAction } from "@/lib/presentation/actions/dashboard.actions";
-import HousingWidget from "@/components/dashboard/HousingWidget";
-import LibraryWidget from "@/components/dashboard/LibraryWidget";
-import LeaderboardWidget from "@/components/dashboard/LeaderboardWidget";
-import MyDutiesWidget from "@/components/features/housing/MyDutiesWidget";
-import { HousingTask } from "@/lib/domain/types/task";
+import { Suspense } from "react";
+import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
+import DashboardWidgets from "@/components/dashboard/DashboardWidgets";
 
 export default async function DashboardHome() {
   try {
-    // 1. Auth & Session
+    // 1. Auth & Session (Fast - specific to User Identity)
     let user;
     try {
       const { account } = await createSessionClient();
@@ -19,11 +16,10 @@ export default async function DashboardHome() {
       redirect("/login");
     }
 
-    // 2. Fetch Data (Parallel with resilience)
+    // Resolve basic profile info for Greeting (Fast Query)
     const container = getContainer();
-
-    // Resolve Profile first
     const profile = await container.authService.getProfile(user.$id);
+
     if (!profile) {
       return (
         <div className="p-8 text-center">
@@ -33,30 +29,7 @@ export default async function DashboardHome() {
       );
     }
 
-    // Use allSettled to prevent one failure from crashing the page
-    const [statsRes, myTasksRes] = await Promise.allSettled([
-      getDashboardStatsAction(user.$id),
-      container.dutyService.getMyTasks(profile.discord_id),
-    ]);
-
-    const stats =
-      statsRes.status === "fulfilled"
-        ? statsRes.value
-        : {
-            points: 0,
-            activeTasks: 0,
-            pendingReviews: 0,
-            fullName: "Brother",
-            housingHistory: [],
-            libraryHistory: [],
-          };
-
-    const myTasks =
-      myTasksRes.status === "fulfilled" && myTasksRes.value
-        ? ((myTasksRes.value.documents || []) as HousingTask[])
-        : [];
-
-    // 3. Greeting Logic
+    // 2. Greeting Logic
     const hour = new Date().getHours();
     const greeting =
       hour < 12
@@ -80,12 +53,26 @@ export default async function DashboardHome() {
       return clean;
     };
 
-    const lastName = getLastName(stats.fullName);
+    // User's name might be in profile or fallback to account name if needed,
+    // but stats has fullName. We can use profile name here for speed.
+    // Or just "Brother" temporarily if we want to avoid another fetch.
+    // Actually profile.discord_username or similar is available.
+    // Let's use "Brother" + Last Name if we have it, else just "Brother".
+    // We already fetched profile.
+
+    // NOTE: DashboardWidgets will fetch the detailed stats including full name.
+    // We can pass the name down or just render greeting here.
+    // For instant load, let's use what we have potentially or just standard greeting.
+    // But we want "Good Morning, Brother [Name]".
+    // Profile has `name`? Check user entity.
+    // user.name from Appwrite account is usually available immediately.
+
+    const lastName = getLastName(user.name || "Brother");
     const displayName = lastName ? `Brother ${lastName}` : "Brother";
 
     return (
       <div className="space-y-8 animate-in fade-in duration-500">
-        {/* HERO SECTION */}
+        {/* HERO SECTION (Instant Render) */}
         <div className="bg-gradient-to-r from-stone-900 to-stone-800 rounded-2xl p-8 text-white shadow-2xl relative overflow-hidden border border-white/5">
           {/* Background Texture */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-fiji-purple opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -107,22 +94,13 @@ export default async function DashboardHome() {
           </div>
         </div>
 
-        {/* NEW: MY DUTIES WIDGET */}
-        <MyDutiesWidget initialTasks={myTasks} userId={user.$id} />
-
-        {/* WIDGET GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* 1. Housing Stats (Old Widget kept for Stats/Admin) */}
-          <HousingWidget stats={stats} loading={false} />
-          {/* 2. Library (Static) */}
-          <LibraryWidget stats={stats} />
-          {/* 3. Leaderboard */}
-          <LeaderboardWidget />
-        </div>
+        {/* WIDGETS (Streaming) */}
+        <Suspense fallback={<DashboardSkeleton />}>
+          <DashboardWidgets userId={user.$id} discordId={profile.discord_id} />
+        </Suspense>
       </div>
     );
   } catch (criticalError) {
-    // Rethrow Next.js internal redirect errors - these are not crashes
     if (
       criticalError instanceof Error &&
       criticalError.message === "NEXT_REDIRECT"

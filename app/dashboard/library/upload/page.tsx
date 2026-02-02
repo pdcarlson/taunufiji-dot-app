@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useUploadQueue } from "@/components/dashboard/library/upload/UploadContext";
+import { useUploadQueue } from "@/components/features/library/upload/UploadContext";
 import { useAuth } from "@/components/auth/AuthProvider"; // Updated import
 import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
 import PdfRedactor, {
   PdfRedactorRef,
-} from "@/components/dashboard/library/upload/PdfRedactor";
+} from "@/components/features/library/upload/PdfRedactor";
 import Combobox from "@/components/ui/Combobox";
 import {
   UploadCloud,

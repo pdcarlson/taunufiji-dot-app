@@ -160,3 +160,47 @@ export async function checkDuplicateResourceAction(
   if (result.success) return result.data ?? false;
   return false;
 }
+
+/**
+ * Searches the library primarily for client-side filtering interactions
+ */
+export async function searchLibraryAction(filters: any, jwt?: string) {
+  const result = await actionWrapper(
+    async ({ container }) => {
+      // Sanitize filters
+      const searchFilters: any = {};
+
+      if (filters.department && filters.department !== "All")
+        searchFilters.department = filters.department;
+      if (filters.course_number && filters.course_number !== "All")
+        searchFilters.course_number = filters.course_number;
+      if (filters.professor) searchFilters.professor = filters.professor;
+      if (filters.year)
+        searchFilters.year =
+          typeof filters.year === "string"
+            ? parseInt(filters.year)
+            : filters.year;
+
+      return await container.libraryService.search(searchFilters);
+    },
+    { jwt, public: true },
+  );
+
+  if (result.success && result.data) return result.data;
+  throw new Error(result.error || "Search failed");
+}
+
+/**
+ * Generates a secure S3 download link
+ */
+export async function getDownloadLinkAction(id: string, jwt: string) {
+  const result = await actionWrapper(
+    async ({ container }) => {
+      return await container.libraryService.getDownloadLink(id);
+    },
+    { jwt },
+  );
+
+  if (result.success && result.data) return result.data;
+  throw new Error(result.error || "Failed to generate download link");
+}

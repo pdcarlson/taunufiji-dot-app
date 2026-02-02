@@ -1,55 +1,31 @@
-import { getLeaderboardAction } from "@/lib/presentation/actions/dashboard.actions";
-import { Medal, Trophy } from "lucide-react";
-
-import { LeaderboardEntry } from "@/lib/domain/entities/user.entity";
+import { Trophy } from "lucide-react";
+import { Suspense } from "react";
+import LeaderboardList from "@/components/features/leaderboard/components/LeaderboardList";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const dynamic = "force-dynamic";
 
-export default async function LeaderboardPage() {
-  const users = await getLeaderboardAction();
-
+function LeaderboardSkeleton() {
   return (
-    <div className="pb-24">
+    <div className="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden space-y-4 p-4">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Skeleton key={i} className="h-12 w-full rounded-lg" />
+      ))}
+    </div>
+  );
+}
+
+export default function LeaderboardPage() {
+  return (
+    <div className="pb-24 animate-in fade-in duration-500">
       <div className="flex items-center gap-3 mb-8">
         <Trophy className="w-8 h-8 text-fiji-gold" />
         <h1 className="font-bebas text-3xl text-stone-900">Leaderboard</h1>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden">
-        <div className="grid grid-cols-12 gap-4 p-4 border-b border-stone-100 bg-stone-50 text-xs font-bold text-stone-500 uppercase tracking-widest">
-          <div className="col-span-2 text-center">Rank</div>
-          <div className="col-span-7">Brother</div>
-          <div className="col-span-3 text-right">Points</div>
-        </div>
-
-        {users.map((user: LeaderboardEntry, index: number) => (
-          <div
-            key={user.id}
-            className="grid grid-cols-12 gap-4 p-4 items-center border-b border-stone-50 hover:bg-stone-50 transition-colors"
-          >
-            <div className="col-span-2 flex justify-center">
-              {index === 0 && <Medal className="w-6 h-6 text-yellow-500" />}
-              {index === 1 && <Medal className="w-6 h-6 text-gray-400" />}
-              {index === 2 && <Medal className="w-6 h-6 text-amber-700" />}
-              {index > 2 && (
-                <span className="font-bebas text-xl text-stone-400">
-                  #{index + 1}
-                </span>
-              )}
-            </div>
-            <div className="col-span-7 font-bold text-stone-800">
-              {user.name}
-            </div>
-            <div className="col-span-3 text-right font-mono text-fiji-purple font-bold">
-              {user.points}
-            </div>
-          </div>
-        ))}
-
-        {users.length === 0 && (
-          <div className="p-8 text-center text-stone-500">No data yet.</div>
-        )}
-      </div>
+      <Suspense fallback={<LeaderboardSkeleton />}>
+        <LeaderboardList />
+      </Suspense>
     </div>
   );
 }

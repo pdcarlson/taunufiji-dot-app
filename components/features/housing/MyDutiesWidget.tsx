@@ -1,8 +1,7 @@
 "use client";
 
 import { HousingTask } from "@/lib/domain/types/task";
-import { TaskCard } from "./TaskCard";
-import { useMyDuties } from "./hooks/useMyDuties";
+import TaskCard from "./TaskCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ClipboardList } from "lucide-react";
 
@@ -15,10 +14,7 @@ export default function MyDutiesWidget({
   initialTasks,
   userId,
 }: MyDutiesWidgetProps) {
-  const { tasks, handleComplete, handleDelete, isPending } = useMyDuties(
-    initialTasks,
-    userId,
-  );
+  const tasks = initialTasks;
 
   if (tasks.length === 0) {
     // Return null or empty state?
@@ -48,9 +44,17 @@ export default function MyDutiesWidget({
           <TaskCard
             key={task.id}
             task={task}
-            onComplete={handleComplete}
-            onDelete={handleDelete}
-            isOptimistic={isPending} // Or we can track per-task if needed, but isPending covers transition
+            userId={userId}
+            profileId={userId}
+            userName="" // Not used in TaskCard logic really
+            isAdmin={false}
+            onRefresh={() => location.reload()} // Simple refresh for now as we lack a dedicated refresher
+            getJWT={async () => {
+              const { account } =
+                await import("@/lib/infrastructure/persistence/appwrite.web");
+              const { jwt } = await account.createJWT();
+              return jwt;
+            }}
           />
         ))}
       </div>
