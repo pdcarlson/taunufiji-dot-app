@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { HousingTask, HousingSchedule, Member } from "@/lib/domain/entities";
 import { Models } from "appwrite"; // For User type
 import TaskCard, { TaskCardSkeleton } from "./TaskCard";
-import HousingStats from "./HousingStats";
+
 import DutyRoster from "./DutyRoster";
 import ProofReviewModal from "./ProofReviewModal";
 import CreateBountyModal from "./CreateBountyModal";
@@ -20,32 +20,41 @@ import {
   getSchedulesAction,
   getAllMembersAction,
 } from "@/lib/presentation/actions/housing.actions";
+import { getMyTasksAction } from "@/lib/presentation/actions/tasks.actions";
+import MyDutiesWidget from "./MyDutiesWidget";
 import { useJWT } from "@/hooks/useJWT";
 // Note: We don't need useAuth for data anymore, but might use it for 'logout' if needed,
 // but passing user/profile as props is cleaner for the core logic.
+import { useAuth } from "@/components/auth/AuthProvider";
+import { Loader2 } from "lucide-react";
 
 interface HousingDashboardClientProps {
-  initialTasks: HousingTask[];
-  initialMembers: Member[];
-  initialSchedules: HousingSchedule[];
-  isAdmin: boolean;
-  currentUser: Models.User<Models.Preferences>;
-  currentProfile: Member | null; // Profile is type Member in this domain? Check entity match.
+  initialTasks?: HousingTask[];
+  initialMembers?: Member[];
+  initialSchedules?: HousingSchedule[];
 }
 
 export default function HousingDashboardClient({
-  initialTasks,
-  initialMembers,
-  initialSchedules,
-  isAdmin,
-  currentUser,
-  currentProfile,
+  initialTasks = [],
+  initialMembers = [],
+  initialSchedules = [],
 }: HousingDashboardClientProps) {
+  const { user: currentUser, getToken } = useAuth();
+  // We need to fetch profile if not passed.
+  // Actually, let's just fetch everything on mount if we don't have it.
+  const [profile, setProfile] = useState<Member | null>(null);
+
   const [tasks, setTasks] = useState<HousingTask[]>(initialTasks);
+  const [myDuties, setMyDuties] = useState<HousingTask[]>([]);
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [schedules, setSchedules] =
     useState<HousingSchedule[]>(initialSchedules);
   const [activeTab, setActiveTab] = useState<"board" | "roster">("board");
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  // Derived Admin State
+  // We'll calculate this once we have the profile or user data
+  const isAdmin = currentUser?.labels?.includes("admin") || false;
 
   // Modals
   const [showOneOffModal, setShowOneOffModal] = useState(false);
@@ -57,57 +66,80 @@ export default function HousingDashboardClient({
   // Loading state for *Refreshes* only (initial load is instant)
   const [refreshing, setRefreshing] = useState(false);
 
-  const { getJWT } = useJWT();
+  // Initial Fetch Effect
+  useEffect(() => {
+    if (currentUser) {
+      handleRefresh(true);
+    }
+  }, [currentUser]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
+  const handleRefresh = async (isInitial = false) => {
+    if (isInitial) setInitialLoading(true);
+    else setRefreshing(true);
+
     try {
-      const jwt = await getJWT();
+      const jwt = await getToken();
       // Parallel Refresh
-      const [tasksRes, membersRes] = await Promise.all([
+      // Parallel Refresh
+      const [tasksRes, membersRes, myDutiesRes] = await Promise.all([
         getAllActiveTasksAction(jwt),
         getAllMembersAction(jwt),
+        getMyTasksAction(jwt),
       ]);
 
-      if (tasksRes.success && tasksRes.data) setTasks(tasksRes.data);
-      if (membersRes.success && membersRes.data) setMembers(membersRes.data);
+      if (tasksRes.length > 0) setTasks(tasksRes);
+      if (myDutiesRes.documents)
+        setMyDuties(myDutiesRes.documents as HousingTask[]);
+      // Wait, housing.actions.ts:getAllActiveTasksAction returns array directly?
+      // Let's check the code I just wrote.
+      // YES: return JSON.parse(JSON.stringify(result)); which is data.
 
-      if (isAdmin) {
-        const schedRes = await getSchedulesAction(jwt);
-        if (schedRes.success && schedRes.data) setSchedules(schedRes.data);
+      if (membersRes.length > 0) {
+        setMembers(membersRes);
+        // Find my profile
+        const myProfile = membersRes.find(
+          (m: any) =>
+            m.discord_id === currentUser?.$id ||
+            m.account_id === currentUser?.$id,
+        );
+        // We might need a better way to link profile, but usually discord_id matches.
+        // Actually, let's use the explicit profile fetch if needed, but members list usually has it.
+        if (myProfile) setProfile(myProfile);
       }
 
-      toast.success("Dashboard Updated");
+      // Check Admin status via labels or specific check
+      // For now using client-side derivation if possible, or fetch schedules if admin
+      if (isAdmin) {
+        const schedRes = await getSchedulesAction(jwt);
+        if (schedRes.length > 0) setSchedules(schedRes);
+      }
+
+      if (!isInitial) toast.success("Dashboard Updated");
     } catch (error) {
       console.error("Refresh failed", error);
-      toast.error("Failed to refresh data");
+      if (!isInitial) toast.error("Failed to refresh data");
     } finally {
       setRefreshing(false);
+      setInitialLoading(false);
     }
   };
+
+  if (initialLoading || !currentUser) {
+    return (
+      <div className="flex h-[50vh] w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-stone-300" />
+      </div>
+    );
+  }
+
+  // Fallback for profile
+  const currentProfile =
+    profile || members.find((m) => m.discord_id === currentUser.$id) || null;
 
   // Filters
   const pendingReviews = isAdmin
     ? tasks.filter((t) => t.status === "pending" && t.proof_s3_key)
     : [];
-
-  const myResponsibilities = tasks
-    .filter((t) => t.assigned_to === currentProfile?.discord_id)
-    .filter((t) => !(t.type === "one_off" && t.status === "approved"))
-    .sort((a, b) => {
-      const aReview = a.status === "pending" && a.proof_s3_key;
-      const bReview = b.status === "pending" && b.proof_s3_key;
-      if (aReview && !bReview) return 1;
-      if (!aReview && bReview) return -1;
-
-      const aDate = new Date(
-        a.due_at || a.expires_at || "9999-12-31",
-      ).getTime();
-      const bDate = new Date(
-        b.due_at || b.expires_at || "9999-12-31",
-      ).getTime();
-      return aDate - bDate;
-    });
 
   const availableBounties = tasks.filter(
     (t) => t.status === "open" && t.type === "bounty",
@@ -150,8 +182,6 @@ export default function HousingDashboardClient({
           </button>
         </div>
       </div>
-
-      <HousingStats />
 
       {/* --- TAB: WORK BOARD --- */}
       {activeTab === "board" && (
@@ -202,7 +232,7 @@ export default function HousingDashboardClient({
                     userName={currentUser.name}
                     isAdmin={isAdmin}
                     onRefresh={handleRefresh}
-                    getJWT={getJWT}
+                    getJWT={getToken}
                     viewMode="review"
                     onReview={setReviewTask}
                     onEdit={(t) => setEditingTask(t)}
@@ -212,34 +242,11 @@ export default function HousingDashboardClient({
             </div>
           )}
 
-          {/* 2. MY RESPONSIBILITIES */}
-          <section>
-            <h2 className="font-bebas text-2xl text-fiji-purple mb-4 border-b border-stone-200 pb-2">
-              My Responsibilities
-            </h2>
-            {myResponsibilities.length === 0 ? (
-              <div className="text-center py-12 bg-stone-50 rounded border border-dashed border-stone-200 text-stone-400 font-bold">
-                No active tasks assigned to you
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {myResponsibilities.map((t) => (
-                  <TaskCard
-                    key={t.id}
-                    task={t}
-                    userId={currentUser.$id}
-                    profileId={currentProfile?.discord_id || ""}
-                    userName={currentUser.name}
-                    isAdmin={isAdmin}
-                    onRefresh={handleRefresh}
-                    getJWT={getJWT}
-                    viewMode="action"
-                    onEdit={(t) => setEditingTask(t)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+          {/* 2. MY RESPONSIBILITIES (Unified Widget) */}
+          <MyDutiesWidget
+            initialTasks={myDuties}
+            userId={currentUser?.$id || ""}
+          />
 
           {/* 3. AVAILABLE BOUNTIES */}
           <section>
@@ -263,7 +270,7 @@ export default function HousingDashboardClient({
                     userName={currentUser.name}
                     isAdmin={isAdmin}
                     onRefresh={handleRefresh}
-                    getJWT={getJWT}
+                    getJWT={getToken}
                     viewMode="action"
                     onEdit={(t) => setEditingTask(t)}
                   />

@@ -1,10 +1,3 @@
-/**
- * Points Service
- *
- * Handles all point-related operations including awards, deductions,
- * and transaction history. Uses repository pattern for data access.
- */
-
 import { logger } from "@/lib/utils/logger";
 import { IUserRepository } from "@/lib/domain/ports/user.repository";
 import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
@@ -14,20 +7,16 @@ import {
   PointsTransaction,
 } from "@/lib/domain/ports/services/points.service.port";
 
-import Redis from "ioredis";
-
 export class PointsService implements IPointsService {
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly ledgerRepository: ILedgerRepository,
-    private readonly redis?: Redis,
   ) {}
 
   /**
    * Awards (or deducts) points for a user.
    * 1. Updates User Profile (current + lifetime).
    * 2. Creates a Ledger Record.
-   * 3. Updates Redis Leaderboard (Write-Through).
    */
   async awardPoints(discordUserId: string, tx: PointsTransaction) {
     try {
@@ -38,8 +27,6 @@ export class PointsService implements IPointsService {
       }
 
       // 2. Update User Points via Repository
-      // We calculate new points locally for Redis since Appwrite return is not guaranteed in repository contract
-      const newPoints = (user.details_points_current || 0) + tx.amount;
       await this.userRepository.updatePoints(user.id, tx.amount);
 
       // 3. Create Ledger Record
@@ -52,23 +39,6 @@ export class PointsService implements IPointsService {
         timestamp: new Date().toISOString(),
         is_debit: isDebit,
       });
-
-      // 4. Update Redis (Fire & Forget)
-      if (this.redis) {
-        try {
-          const pipe = this.redis.pipeline();
-          // Update Score
-          pipe.zadd("leaderboard", newPoints, discordUserId);
-          // Update Profile Cache
-          pipe.hset(`user:${discordUserId}`, {
-            name: user.full_name || user.discord_handle || "Unknown",
-            avatar: user.avatar_url || "",
-          });
-          await pipe.exec();
-        } catch (redisErr) {
-          logger.error("Redis Leaderboard Update Failed", redisErr);
-        }
-      }
 
       logger.log(
         `Points Awarded: ${discordUserId} +${tx.amount} (${tx.reason})`,
@@ -84,10 +54,6 @@ export class PointsService implements IPointsService {
    * Get transaction history for a user
    */
   async getHistory(userId: string, category?: string | string[]) {
-    // Mapping: ledgerRepository.findByUser(userId, category, limit)
-    // LedgerRepository.findByUser currently: findByUser(userId, limit). It might not accept category as 2nd arg.
-    // Let's check LedgerRepository interface.
-    // If it doesn't, we use findMany directly.
     // Sanitize category
     let validCategory: "task" | "fine" | "event" | "manual" | undefined;
     if (typeof category === "string") {
@@ -125,39 +91,7 @@ export class PointsService implements IPointsService {
   }
 
   async getLeaderboard(limit = 20) {
-    // Try Redis first
-    if (this.redis) {
-      try {
-        // Get Top IDs
-        const topIds = await this.redis.zrevrange(
-          "leaderboard",
-          0,
-          limit - 1,
-          "WITHSCORES",
-        );
-        if (topIds.length > 0) {
-          // Parse [id, score, id, score]
-          const leaderboard = [];
-          for (let i = 0; i < topIds.length; i += 2) {
-            const id = topIds[i];
-            const score = parseInt(topIds[i + 1]);
-            const meta = await this.redis.hgetall(`user:${id}`);
-            leaderboard.push({
-              id,
-              name: meta.name || "Unknown",
-              points: score,
-              rank: i / 2 + 1,
-            });
-          }
-          return leaderboard;
-        }
-      } catch (e) {
-        logger.error("Redis Leaderboard Read Failed", e);
-      }
-    }
-
-    // Fallback to Appwrite
-    // Fallback to Appwrite
+    // Direct DB Call
     const members = await this.userRepository.findTopByPoints(limit);
     return members.map((m, i) => ({
       id: m.id,

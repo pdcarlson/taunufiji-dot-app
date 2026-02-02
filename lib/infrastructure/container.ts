@@ -28,7 +28,7 @@ import { AppwriteLedgerRepository } from "./persistence/ledger.repository";
 import { AppwriteLibraryRepository } from "./persistence/library.repository";
 import { DiscordProvider } from "./messaging/discord.provider";
 import { AppwriteIdentityProvider } from "./auth/appwrite.identity";
-import { getRedisClient } from "./persistence/redis.client";
+
 import { DutyService } from "@/lib/application/services/task/duty.service";
 import { PointsService } from "@/lib/application/services/points.service";
 import { UserService } from "@/lib/application/services/user.service";
@@ -83,11 +83,7 @@ export function getContainer(): Container {
     const userService = new UserService(userRepository);
     const authService = new AuthService(userRepository, identityProvider);
     const dutyService = new DutyService(taskRepository);
-    const pointsService = new PointsService(
-      userRepository,
-      ledgerRepository,
-      getRedisClient(),
-    );
+    const pointsService = new PointsService(userRepository, ledgerRepository);
     const scheduleService = new ScheduleService(taskRepository);
     const queryService = new QueryService(taskRepository, userRepository);
     const maintenanceService = new MaintenanceService(

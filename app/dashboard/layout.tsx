@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import DashboardShell from "./DashboardShell";
-import { createSessionClient } from "@/lib/presentation/server/appwrite";
+
 import { getContainer } from "@/lib/infrastructure/container";
 import { redirect } from "next/navigation";
 

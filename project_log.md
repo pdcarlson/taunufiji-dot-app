@@ -1,3 +1,36 @@
+## 2026-02-02: Infrastructure & UI Simplification
+
+- **Context**: Removed Docker and Redis complexity and the redundant "Your Score" widget from Housing Dashboard as per user request.
+- **Technical Changes**:
+  - **Infrastructure**: Deleted `docker-compose.yml`, removed `ioredis` dependency, and stripped Redis caching logic from `PointsService` and `Container`.
+  - **UI**: Removed `HousingStats` component usage and file.
+- **Impact**: Simplified development stack (no Docker required), reduced dependencies, and streamlined the Housing Dashboard UI.
+
+## 2026-02-02: Unification of Task Displays
+
+- **Context**: Addressed inconsistency between Main Dashboard ("My Duties") and Housing Dashboard ("My Responsibilities").
+- **Technical Changes**:
+  - **Refactor**: Updated `HousingDashboardClient` to use `getMyTasksAction` and render the shared `MyDutiesWidget`.
+  - **Cleanup**: Removed custom, fragile client-side filtering logic for "My Responsibilities" in `HousingDashboardClient`.
+- **Impact**: Both dashboards now use the exact same logic and UI to display user tasks, reducing maintenance overhead and ensuring consistency.
+
+## 2026-02-02: Architecture Standardization & JWT Fixes
+
+- **Context**: Resolved critical "Invalid Token" errors in the Housing Dashboard. Standardized remaining Action files to use the unified `actionWrapper` pattern.
+- **Technical Changes**:
+  - **Standardization**: Refactored `dashboard.actions.ts` and `tasks.actions.ts` to use `actionWrapper`, ensuring consistent error handling and authentication checks.
+  - **Bug Fix**: Updated `HousingStats.tsx` to correctly fetch a JWT using `getToken()` and pass it to Server Actions instead of passing raw User IDs.
+- **Impact**: Dashboard now loads correctly without 401 errors. All Server Actions now follow the same secure implementation pattern.
+
+## 2026-02-02: Route Restoration & Action Standardization
+
+- **Context**: Addressed missing `/dashboard/housing` route causing 404s. Standardized Housing Server Actions to match the new architecture patterns.
+- **Technical Changes**:
+  - **Routes**: Re-created `app/dashboard/housing/page.tsx` rendering `HousingDashboardClient`.
+  - **Refactor**: Updated `HousingDashboardClient` to fetch data client-side using `useEffect` + `useAuth`, removing dependency on server-side props.
+  - **Actions**: Refactored `housing.actions.ts` to use `actionWrapper` for consistent authentication and error handling, reducing boilerplate.
+- **Impact**: Restored functionality to the Housing Dashboard. Improved code maintainability by unifying action patterns.
+
 ## 2026-02-02: Client-Centric Auth Refactor & Build Fixes
 
 - **Context**: Completed a major refactor to eliminate cookie-based authentication, shifting to a stateless, client-centric JWT architecture. Addressed extensive build failures caused by missing actions and legacy code in features.

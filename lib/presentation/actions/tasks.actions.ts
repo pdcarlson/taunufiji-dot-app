@@ -1,36 +1,23 @@
 "use server";
 
-import { createJWTClient } from "@/lib/presentation/server/appwrite";
-import { getContainer } from "@/lib/infrastructure/container";
-import { logger } from "@/lib/utils/logger";
-import { HousingTask } from "@/lib/domain/types/task";
+import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 
 export async function getMyTasksAction(jwt: string) {
-  try {
-    const { dutyService, authService } = getContainer();
+  const result = await actionWrapper(
+    async ({ container, userId }) => {
+      // 3. Resolve Profile for Discord ID
+      const profile = await container.authService.getProfile(userId);
+      if (!profile) return { documents: [], total: 0 };
 
-    // 1. Verify Identity
-    const { account } = createJWTClient(jwt);
-    const user = await account.get();
-    const userId = user.$id;
+      // 4. Fetch Tasks
+      const tasks = await container.dutyService.getMyTasks(profile.discord_id);
 
-    // 2. Authorization
-    const isAuthorized = await authService.verifyBrother(userId);
-    if (!isAuthorized) {
-      return { documents: [], total: 0 };
-    }
+      // Serialization for Client
+      return JSON.parse(JSON.stringify(tasks));
+    },
+    { jwt },
+  );
 
-    // 3. Resolve Profile for Discord ID
-    const profile = await authService.getProfile(userId);
-    if (!profile) return { documents: [], total: 0 };
-
-    // 4. Fetch Tasks
-    const result = await dutyService.getMyTasks(profile.discord_id);
-
-    // Serialization for Client
-    return JSON.parse(JSON.stringify(result));
-  } catch (e) {
-    logger.error("getMyTasksAction Failed", e);
-    return { documents: [], total: 0 };
-  }
+  if (result.success && result.data) return result.data;
+  return { documents: [], total: 0 };
 }
