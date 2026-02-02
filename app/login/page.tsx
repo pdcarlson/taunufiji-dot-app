@@ -1,8 +1,7 @@
 import LoginClient from "@/components/auth/LoginClient";
 
 export default function LoginPage() {
-  // Middleware handles the "Already Logged In" redirect.
-  // Layout handles the "Stale Cookie" cleanup.
-  // This page is now purely UI.
+  // AuthProvider handles the "Already Logged In" redirect.
+  // This page is purely UI.
   return <LoginClient />;
 }
