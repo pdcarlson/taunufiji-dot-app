@@ -1,7 +1,7 @@
 "use client";
 
 import { createTaskAction } from "@/lib/presentation/actions/housing.actions";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+import { useJWT } from "@/hooks/useJWT";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
@@ -21,13 +21,14 @@ export default function CreateOneOffModal({
   onSuccess,
   members,
 }: CreateOneOffModalProps) {
+  const { getJWT } = useJWT();
   const [loading, setLoading] = useState(false);
   const { register, handleSubmit } = useForm();
 
   const onSubmit = async (data: FieldValues) => {
     setLoading(true);
     try {
-      const { jwt } = await account.createJWT();
+      const jwt = await getJWT();
 
       const payload = {
         title: data.title,

@@ -1,3 +1,15 @@
+## 2026-02-02: Housing Dashboard Refactor (Container/Presentational Pattern)
+
+- **Context**: Decoupled frontend components from Appwrite infrastructure by implementing the Container/Presentational pattern (_Week 4: Component Architecture_).
+- **Technical Changes**:
+  - Created `hooks/useJWT.ts` hook to centralize JWT token creation.
+  - Refactored `TaskCard.tsx` to receive `getJWT` as a prop instead of importing `account` directly.
+  - Updated Housing page (`app/dashboard/housing/page.tsx`) to use `useJWT` hook and pass `getJWT` to all TaskCard instances.
+  - Refactored all housing modals (`ProofReviewModal`, `EditTaskModal`, `CreateBountyModal`, `CreateScheduleModal`, `CreateOneOffModal`) to use `useJWT` hook.
+  - Fixed error handling from `any` to `unknown` type throughout codebase.
+  - Updated test files (`TaskCard.test.tsx`, `auth.service.test.ts`, `duty.service.test.ts`) to use DTO format (`id` vs `$id`).
+- **Impact**: 6 components now decoupled from Appwrite. All 18 tests passing. TypeScript compilation clean.
+
 ## 2026-02-01: Dependency Injection & Architecture Refactor
 
 - **Context**: Transitioned the application from a Service Locator pattern (static calls) to strictly typed Dependency Injection to improve testability and architectural clarity.

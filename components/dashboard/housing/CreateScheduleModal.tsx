@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import { X, Calendar, User, FileText, Check, Clock } from "lucide-react";
 import { createScheduleAction } from "@/lib/presentation/actions/housing.actions";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+import { useJWT } from "@/hooks/useJWT";
 import toast from "react-hot-toast";
 
 import { Member } from "@/lib/domain/entities";
@@ -43,12 +43,13 @@ export default function CreateScheduleModal({
       lead_time: 24,
     },
   });
+  const { getJWT } = useJWT();
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (data: FieldValues) => {
     setLoading(true);
     try {
-      const jwt = await account.createJWT();
+      const jwt = await getJWT();
 
       // RRule runs in UTC timezone
       // For 11:59 PM EST: EST is UTC-5, so 11:59 PM EST = 04:59 AM UTC (next day)
@@ -75,7 +76,7 @@ export default function CreateScheduleModal({
         active: true,
       };
 
-      const res = await createScheduleAction(payload, jwt.jwt);
+      const res = await createScheduleAction(payload, jwt);
       if (res.success) {
         toast.success("Schedule Created!");
         onSuccess();

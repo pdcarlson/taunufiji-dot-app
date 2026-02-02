@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import { X, Clock, DollarSign, FileText, Check } from "lucide-react";
 import { createTaskAction } from "@/lib/presentation/actions/housing.actions";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+import { useJWT } from "@/hooks/useJWT";
 import toast from "react-hot-toast";
 import { CreateAssignmentDTO } from "@/lib/application/services/task";
 
@@ -14,6 +14,7 @@ interface Props {
 }
 
 export default function CreateBountyModal({ onClose, onSuccess }: Props) {
+  const { getJWT } = useJWT();
   const {
     register,
     handleSubmit,
@@ -24,7 +25,7 @@ export default function CreateBountyModal({ onClose, onSuccess }: Props) {
   const onSubmit = async (data: FieldValues) => {
     setLoading(true);
     try {
-      const jwt = await account.createJWT();
+      const jwt = await getJWT();
 
       // No expiry for the offer itself (stays open until claimed)
       // Set execution_limit for the deadline calculation upon claim
@@ -51,7 +52,7 @@ export default function CreateBountyModal({ onClose, onSuccess }: Props) {
         execution_limit: days,
       };
 
-      const res = await createTaskAction(payload, jwt.jwt);
+      const res = await createTaskAction(payload, jwt);
       if (res.success) {
         toast.success("Bounty Posted!");
         onSuccess();

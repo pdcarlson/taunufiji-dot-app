@@ -122,6 +122,14 @@ export default async function DashboardHome() {
       </div>
     );
   } catch (criticalError) {
+    // Rethrow Next.js internal redirect errors - these are not crashes
+    if (
+      criticalError instanceof Error &&
+      criticalError.message === "NEXT_REDIRECT"
+    ) {
+      throw criticalError;
+    }
+
     console.error("Critical Dashboard Crash:", criticalError);
     return (
       <div className="p-12 text-center">

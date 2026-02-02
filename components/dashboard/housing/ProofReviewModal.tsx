@@ -5,7 +5,7 @@ import {
   rejectTaskAction,
   getReviewDetailsAction,
 } from "@/lib/presentation/actions/housing.actions";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+import { useJWT } from "@/hooks/useJWT";
 import { X, Check, AlertTriangle, ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
@@ -26,6 +26,7 @@ export default function ProofReviewModal({
   onClose,
   onSuccess,
 }: ProofReviewModalProps) {
+  const { getJWT } = useJWT();
   const [loading, setLoading] = useState(false);
   const [details, setDetails] = useState<{
     name: string;
@@ -42,7 +43,7 @@ export default function ProofReviewModal({
 
     const fetchDetails = async () => {
       try {
-        const { jwt } = await account.createJWT();
+        const jwt = await getJWT();
         const res = await getReviewDetailsAction(task.id, jwt);
         if (res.success && res.data) {
           setDetails({
@@ -75,14 +76,15 @@ export default function ProofReviewModal({
 
     setLoading(true);
     try {
-      const { jwt } = await account.createJWT();
+      const jwt = await getJWT();
       const res = await approveTaskAction(task.id, jwt);
       if (!res.success) throw new Error(res.error);
       toast.success("Task Approved! Points Awarded.");
       onSuccess();
       onClose();
-    } catch (err: any) {
-      toast.error(err.message || "Approval failed");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Approval failed";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -95,14 +97,15 @@ export default function ProofReviewModal({
 
     setLoading(true);
     try {
-      const { jwt } = await account.createJWT();
+      const jwt = await getJWT();
       const res = await rejectTaskAction(task.id, reason, jwt);
       if (!res.success) throw new Error(res.error);
       toast.error("Proof Rejected.");
       onSuccess();
       onClose();
-    } catch (err: any) {
-      toast.error(err.message || "Rejection failed");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Rejection failed";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

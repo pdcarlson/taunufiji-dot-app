@@ -96,8 +96,13 @@ describe("AuthService", () => {
       // 2. Repo Mock (Not Found)
       mockUserRepo.findByDiscordId = vi.fn().mockResolvedValue(null);
       mockUserRepo.create = vi.fn().mockResolvedValue({
-        $id: "new_doc",
+        id: "new_doc",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         auth_id: "auth_new",
+        discord_id: "discord_new",
+        discord_handle: "testuser",
+        full_name: "Brother Test",
       } as Member);
 
       await authService.syncUser("auth_new");

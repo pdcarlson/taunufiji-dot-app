@@ -6,7 +6,6 @@ import {
   unclaimTaskAction,
   submitProofAction,
 } from "@/lib/presentation/actions/housing.actions";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import { Loader } from "@/components/ui/Loader";
 import {
   Clock,
@@ -91,6 +90,11 @@ interface TaskCardProps {
   userName: string;
   isAdmin: boolean;
   onRefresh: () => void;
+  /**
+   * JWT token provider function - decouples component from Appwrite infrastructure.
+   * Should be provided by the parent container component.
+   */
+  getJWT: () => Promise<string>;
   // NEW: Determines if we show Upload buttons or Review buttons
   viewMode?: "action" | "review";
   onReview?: (task: Task) => void;
@@ -125,6 +129,7 @@ export default function TaskCard({
   userName,
   isAdmin,
   onRefresh,
+  getJWT,
   viewMode = "action",
   onReview,
   onEdit, // Added
@@ -144,13 +149,15 @@ export default function TaskCard({
     if (isDuty) return;
     setLoading(true);
     try {
-      const { jwt } = await account.createJWT();
+      const jwt = await getJWT();
       const res = await claimTaskAction(task.id, userId, jwt);
       if (!res.success) throw new Error(res.error);
       toast.success("Bounty Claimed!");
       onRefresh();
-    } catch (err: any) {
-      toast.error(err.message || "Error claiming task");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error claiming task";
+      toast.error(message);
     }
     setLoading(false);
   };
@@ -158,13 +165,15 @@ export default function TaskCard({
   const handleUnclaim = async () => {
     setLoading(true);
     try {
-      const { jwt } = await account.createJWT();
+      const jwt = await getJWT();
       const res = await unclaimTaskAction(task.id, jwt);
       if (!res.success) throw new Error(res.error);
       toast.success("Unclaimed");
       onRefresh();
-    } catch (err: any) {
-      toast.error(err.message || "Error unclaiming task");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error unclaiming task";
+      toast.error(message);
     }
     setLoading(false);
   };
@@ -186,7 +195,7 @@ export default function TaskCard({
       formData.append("file", file);
       formData.append("taskId", task.id);
 
-      const { jwt } = await account.createJWT();
+      const jwt = await getJWT();
       const result = await submitProofAction(formData, jwt);
 
       if (!result.success) throw new Error(result.error);

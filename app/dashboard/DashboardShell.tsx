@@ -1,9 +1,7 @@
 "use client";
 
-import { AuthService } from "@/lib/application/services/auth.service";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   Home,
@@ -19,22 +17,14 @@ export default function DashboardShell({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, profile, loading, error, logout } = useAuth();
-  const router = useRouter();
+  const { user, profile, loading, logout } = useAuth();
   const pathname = usePathname();
 
   // Detect if we're on the upload page (needs full screen width)
   const isUploadPage = pathname?.includes("/library/upload");
 
-  useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.push("/login");
-      } else if (profile && profile.isAuthorized === false) {
-        router.push("/unauthorized");
-      }
-    }
-  }, [user, profile, loading, router]);
+  // NOTE: Server-side auth in dashboard/page.tsx handles redirects.
+  // Client-side just shows loading state until AuthProvider resolves.
 
   if (loading || !user) {
     return (

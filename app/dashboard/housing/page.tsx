@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+import { useJWT } from "@/hooks/useJWT";
 import { Loader } from "@/components/ui/Loader";
 import {
   getAllActiveTasksAction,
@@ -28,6 +28,7 @@ import { HousingTask, HousingSchedule, Member } from "@/lib/domain/entities";
 
 export default function HousingPage() {
   const { user, profile } = useAuth();
+  const { getJWT } = useJWT();
   const [tasks, setTasks] = useState<HousingTask[]>([]);
   const [schedules, setSchedules] = useState<HousingSchedule[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -44,7 +45,7 @@ export default function HousingPage() {
     if (!user) return;
     setLoading(true);
     try {
-      const { jwt } = await account.createJWT();
+      const jwt = await getJWT();
 
       // 1. Check Admin
       const adminRes = await checkHousingAdminAction(jwt);
@@ -208,6 +209,7 @@ export default function HousingPage() {
                     userName={user?.name || ""}
                     isAdmin={isAdmin}
                     onRefresh={loadData}
+                    getJWT={getJWT}
                     viewMode="review"
                     onReview={setReviewTask}
                     onEdit={(t) => setEditingTask(t)} // Added
@@ -243,6 +245,7 @@ export default function HousingPage() {
                     userName={user?.name || ""}
                     isAdmin={isAdmin}
                     onRefresh={loadData}
+                    getJWT={getJWT}
                     viewMode="action"
                     onEdit={(t) => setEditingTask(t)} // Added
                   />
@@ -279,6 +282,7 @@ export default function HousingPage() {
                     userName={user?.name || ""}
                     isAdmin={isAdmin}
                     onRefresh={loadData}
+                    getJWT={getJWT}
                     viewMode="action"
                     onEdit={(t) => setEditingTask(t)} // Added
                   />

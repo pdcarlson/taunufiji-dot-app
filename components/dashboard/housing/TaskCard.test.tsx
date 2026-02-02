@@ -4,10 +4,10 @@ import TaskCard from "./TaskCard";
 import { HousingTask } from "@/lib/domain/entities";
 
 // Mock dependencies
-vi.mock("@/lib/infrastructure/persistence/appwrite.web", () => ({
-  account: {
-    createJWT: vi.fn().mockResolvedValue({ jwt: "mock_jwt" }),
-  },
+vi.mock("@/hooks/useJWT", () => ({
+  useJWT: () => ({
+    getJWT: vi.fn().mockResolvedValue("mock_jwt"),
+  }),
 }));
 
 vi.mock("@/lib/presentation/actions/housing.actions", () => ({
@@ -23,22 +23,26 @@ vi.mock("react-hot-toast", () => ({
   },
 }));
 
-// Mock Lucide Icons (Optional, but good practice if they crash Jest/Vitest)
-// Usually Lucide React works fine in Jest environment.
+// Mock getJWT function for props
+const mockGetJWT = vi.fn().mockResolvedValue("mock_jwt");
 
 describe("TaskCard", () => {
-  const mockUser = { $id: "u1", name: "Tester" };
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("renders a Bounty correctly", () => {
-    const task = {
-      $id: "t1",
+    const task: HousingTask = {
+      id: "t1",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       title: "Fix Door",
       description: "The handle is broken",
       type: "bounty",
       status: "open",
       points_value: 100,
       expires_at: new Date(Date.now() + 86400000).toISOString(),
-    } as unknown as HousingTask;
+    };
 
     render(
       <TaskCard
@@ -47,6 +51,7 @@ describe("TaskCard", () => {
         userName="Tester"
         isAdmin={false}
         onRefresh={vi.fn()}
+        getJWT={mockGetJWT}
       />,
     );
 
@@ -56,13 +61,17 @@ describe("TaskCard", () => {
   });
 
   it("renders a Locked Recurring Duty", () => {
-    const task = {
-      $id: "t2",
+    const task: HousingTask = {
+      id: "t2",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       title: "Weekly Clean",
+      description: "Clean the common areas",
       type: "duty",
       status: "locked",
+      points_value: 0,
       unlock_at: new Date(Date.now() + 86400000).toISOString(), // Future
-    } as unknown as HousingTask;
+    };
 
     render(
       <TaskCard
@@ -71,6 +80,7 @@ describe("TaskCard", () => {
         userName="Tester"
         isAdmin={false}
         onRefresh={vi.fn()}
+        getJWT={mockGetJWT}
       />,
     );
 
@@ -80,14 +90,18 @@ describe("TaskCard", () => {
   });
 
   it("renders an Active Duty for Me", () => {
-    const task = {
-      $id: "t3",
+    const task: HousingTask = {
+      id: "t3",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       title: "Trash",
+      description: "Take out the trash",
       type: "duty",
       status: "open",
+      points_value: 0,
       assigned_to: "p1", // Assigned to me
       due_at: new Date(Date.now() + 86400000).toISOString(),
-    } as unknown as HousingTask;
+    };
 
     render(
       <TaskCard
@@ -97,6 +111,7 @@ describe("TaskCard", () => {
         userName="Tester"
         isAdmin={false}
         onRefresh={vi.fn()}
+        getJWT={mockGetJWT}
       />,
     );
 

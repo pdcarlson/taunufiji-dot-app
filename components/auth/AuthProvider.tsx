@@ -9,7 +9,7 @@ import {
 } from "react";
 import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import { Models, OAuthProvider } from "appwrite";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getProfileAction } from "@/lib/presentation/actions/auth.actions";
 
 interface AuthContextType {
@@ -31,7 +31,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any | null>(null); // NEW
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     const checkSession = async () => {
@@ -56,17 +55,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("[AuthProvider] Profile fetched:", userProfile);
           setProfile(userProfile);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.warn("[AuthProvider] No session found", err);
         setUser(null);
         setProfile(null);
-        setError(err.message || err.toString()); // Capture Error
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message); // Capture Error
       } finally {
         setLoading(false);
       }
     };
     checkSession();
-  }, [pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   const login = () => {
     // Redirect to Discord OAuth

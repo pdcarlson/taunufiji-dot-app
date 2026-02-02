@@ -5,7 +5,7 @@ import {
   getScheduleAction,
   updateScheduleLeadTimeAction,
 } from "@/lib/presentation/actions/housing.actions";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+import { useJWT } from "@/hooks/useJWT";
 import { Member, HousingTask } from "@/lib/domain/entities";
 import { Loader } from "@/components/ui/Loader";
 import { X, Calendar, Edit2, Users, Clock, Trash2, Repeat } from "lucide-react";
@@ -24,6 +24,7 @@ export default function EditTaskModal({
   onClose,
   onRefresh,
 }: EditTaskModalProps) {
+  const { getJWT } = useJWT();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -65,7 +66,7 @@ export default function EditTaskModal({
     setLoading(true);
 
     try {
-      const { jwt } = await account.createJWT();
+      const jwt = await getJWT();
 
       // Validations
       if (Number(formData.points_value) < 0) {
@@ -159,9 +160,10 @@ export default function EditTaskModal({
       toast.success("Task updated");
       onRefresh();
       onClose();
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      toast.error(e.message || "Failed to update task");
+      const message = e instanceof Error ? e.message : "Failed to update task";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -173,7 +175,7 @@ export default function EditTaskModal({
 
     setLoading(true);
     try {
-      const { jwt } = await account.createJWT();
+      const jwt = await getJWT();
       const result = await deleteTaskAction(task.id, jwt);
       if (result.success) {
         toast.success("Task deleted");
