@@ -10,11 +10,15 @@ import {
 import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import { Models, OAuthProvider } from "appwrite";
 import { useRouter, usePathname } from "next/navigation";
-import { getProfileAction } from "@/lib/presentation/actions/auth.actions";
+import {
+  getProfileAction,
+  checkHousingAdminAction,
+} from "@/lib/presentation/actions/auth.actions";
 
 interface AuthContextType {
   user: Models.User<Models.Preferences> | null;
   profile: any | null;
+  isHousingAdmin: boolean;
   loading: boolean;
   error: any | null;
   login: () => void;
@@ -29,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     null,
   );
   const [profile, setProfile] = useState<any | null>(null);
+  const [isHousingAdmin, setIsHousingAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any | null>(null);
   const router = useRouter();
@@ -58,9 +63,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const jwtResponse = await account.createJWT();
         console.log("[AuthProvider] JWT Created");
 
-        const userProfile = await getProfileAction(jwtResponse.jwt);
+        const [userProfile, adminStatus] = await Promise.all([
+          getProfileAction(jwtResponse.jwt),
+          checkHousingAdminAction(jwtResponse.jwt),
+        ]);
         console.log("[AuthProvider] Profile fetched:", userProfile);
+        console.log("[AuthProvider] Housing Admin:", adminStatus);
         setProfile(userProfile);
+        setIsHousingAdmin(adminStatus);
       } catch (err: any) {
         console.warn("[AuthProvider] No session found", err);
         setUser(null);
@@ -91,13 +101,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await account.deleteSession("current");
     setUser(null);
     setProfile(null);
+    setIsHousingAdmin(false);
     setError(null);
     router.push("/login");
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, loading, error, login, logout, getToken }}
+      value={{
+        user,
+        profile,
+        isHousingAdmin,
+        loading,
+        error,
+        login,
+        logout,
+        getToken,
+      }}
     >
       {children}
     </AuthContext.Provider>

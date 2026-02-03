@@ -98,7 +98,13 @@ interface TaskCardProps {
   // NEW: Determines if we show Upload buttons or Review buttons
   viewMode?: "action" | "review";
   onReview?: (task: Task) => void;
-  onEdit?: (task: Task) => void; // Added
+  onEdit?: (task: Task) => void;
+  /**
+   * Card layout variant:
+   * - "square" (default): Standard card layout with full details
+   * - "horizontal": Simplified row layout for bounties (title, description, points, claim)
+   */
+  variant?: "square" | "horizontal";
 }
 
 export function TaskCardSkeleton() {
@@ -132,7 +138,8 @@ export default function TaskCard({
   getJWT,
   viewMode = "action",
   onReview,
-  onEdit, // Added
+  onEdit,
+  variant = "square",
 }: TaskCardProps) {
   const [loading, setLoading] = useState(false);
 
@@ -232,7 +239,47 @@ export default function TaskCard({
     );
   }
 
-  // 2. ACTIVE CARD
+  // 2. HORIZONTAL VARIANT (Simplified bounty cards)
+  if (
+    variant === "horizontal" &&
+    task.type === "bounty" &&
+    task.status === "open"
+  ) {
+    return (
+      <div className="bg-white border border-stone-200 rounded-lg p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
+        {/* Title & Description */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bebas text-xl text-stone-800 truncate">
+            {task.title}
+          </h3>
+          <p className="text-stone-500 text-sm truncate">{task.description}</p>
+        </div>
+
+        {/* Points */}
+        <span className="bg-fiji-gold text-white text-sm font-bold px-3 py-1.5 rounded shadow-sm whitespace-nowrap">
+          {task.points_value} PTS
+        </span>
+
+        {/* Claim Button */}
+        <button
+          onClick={handleClaim}
+          disabled={loading}
+          className="bg-fiji-purple hover:bg-fiji-dark text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap flex items-center gap-2"
+        >
+          {loading ? (
+            <>
+              <Loader size="sm" className="text-white" />
+              Claiming...
+            </>
+          ) : (
+            "Claim"
+          )}
+        </button>
+      </div>
+    );
+  }
+
+  // 3. ACTIVE CARD (Square variant - default)
   return (
     <div
       className={`relative bg-white border rounded-xl p-5 transition-all shadow-sm hover:shadow-md flex flex-col h-full group ${

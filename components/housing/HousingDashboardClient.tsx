@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { HousingTask, HousingSchedule, Member } from "@/lib/domain/entities";
-import { Models } from "appwrite"; // For User type
 import TaskCard, { TaskCardSkeleton } from "./TaskCard";
 
 import DutyRoster from "./DutyRoster";
@@ -11,7 +10,7 @@ import CreateBountyModal from "./CreateBountyModal";
 import CreateScheduleModal from "./CreateScheduleModal";
 import CreateOneOffModal from "./CreateOneOffModal";
 import EditTaskModal from "./EditTaskModal";
-import { ListTodo, Users, CalendarClock, Plus } from "lucide-react";
+import { Users, CalendarClock, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
 // Actions for Client-Side Refreshing
@@ -22,9 +21,7 @@ import {
 } from "@/lib/presentation/actions/housing.actions";
 import { getMyTasksAction } from "@/lib/presentation/actions/tasks.actions";
 import MyDutiesWidget from "./MyDutiesWidget";
-import { useJWT } from "@/hooks/useJWT";
-// Note: We don't need useAuth for data anymore, but might use it for 'logout' if needed,
-// but passing user/profile as props is cleaner for the core logic.
+// Note: We use useAuth for getToken and isHousingAdmin
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Loader2 } from "lucide-react";
 
@@ -39,7 +36,7 @@ export default function HousingDashboardClient({
   initialMembers = [],
   initialSchedules = [],
 }: HousingDashboardClientProps) {
-  const { user: currentUser, getToken } = useAuth();
+  const { user: currentUser, getToken, isHousingAdmin } = useAuth();
   // We need to fetch profile if not passed.
   // Actually, let's just fetch everything on mount if we don't have it.
   const [profile, setProfile] = useState<Member | null>(null);
@@ -49,12 +46,10 @@ export default function HousingDashboardClient({
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [schedules, setSchedules] =
     useState<HousingSchedule[]>(initialSchedules);
-  const [activeTab, setActiveTab] = useState<"board" | "roster">("board");
   const [initialLoading, setInitialLoading] = useState(true);
 
-  // Derived Admin State
-  // We'll calculate this once we have the profile or user data
-  const isAdmin = currentUser?.labels?.includes("admin") || false;
+  // isHousingAdmin is now sourced from AuthProvider (Discord role check)
+  const isAdmin = isHousingAdmin;
 
   // Modals
   const [showOneOffModal, setShowOneOffModal] = useState(false);
@@ -157,72 +152,53 @@ export default function HousingDashboardClient({
             Tau Nu Chapter Housing Dashboard.
           </p>
         </div>
-
-        {/* TABS */}
-        <div className="flex bg-stone-100 p-1 rounded-lg w-full md:w-auto overflow-x-auto justify-center">
-          <button
-            onClick={() => setActiveTab("board")}
-            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-all whitespace-nowrap ${
-              activeTab === "board"
-                ? "bg-white text-fiji-dark shadow-sm"
-                : "text-stone-500 hover:text-stone-700"
-            }`}
-          >
-            <ListTodo className="w-4 h-4" /> Work Board
-          </button>
-          <button
-            onClick={() => setActiveTab("roster")}
-            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-all whitespace-nowrap ${
-              activeTab === "roster"
-                ? "bg-white text-fiji-dark shadow-sm"
-                : "text-stone-500 hover:text-stone-700"
-            }`}
-          >
-            <Users className="w-4 h-4" /> Master Roster
-          </button>
-        </div>
       </div>
 
-      {/* --- TAB: WORK BOARD --- */}
-      {activeTab === "board" && (
-        <div className="space-y-8">
-          {refreshing && (
-            <div className="text-center text-xs text-stone-400">
-              Refreshing...
-            </div>
-          )}
+      {/* ADMIN ACTION BAR */}
+      {isAdmin && (
+        <div className="flex flex-wrap gap-2 p-3 md:p-4 bg-stone-100 rounded-xl border border-stone-200 justify-center md:justify-start">
+          <button
+            onClick={() => setShowBountyModal(true)}
+            className="flex items-center gap-2 bg-stone-800 hover:bg-black text-white text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors flex-grow md:flex-grow-0 justify-center"
+          >
+            <Plus className="w-4 h-4" /> Post Bounty
+          </button>
+          <button
+            onClick={() => setShowOneOffModal(true)}
+            className="flex items-center gap-2 bg-stone-800 hover:bg-black text-white text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors flex-grow md:flex-grow-0 justify-center"
+          >
+            <Plus className="w-4 h-4" /> Assign Duty
+          </button>
+          <button
+            onClick={() => setShowScheduleModal(true)}
+            className="flex items-center gap-2 bg-white hover:bg-stone-50 text-stone-700 text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors border border-stone-300 flex-grow md:flex-grow-0 justify-center"
+          >
+            <CalendarClock className="w-4 h-4" /> Create Schedule
+          </button>
+        </div>
+      )}
 
-          {/* ADMIN ACTION BAR */}
-          {isAdmin && (
-            <div className="flex flex-wrap gap-2 mb-6 p-3 md:p-4 bg-stone-100 rounded-xl border border-stone-200 justify-center md:justify-start">
-              <button
-                onClick={() => setShowBountyModal(true)}
-                className="flex items-center gap-2 bg-stone-800 hover:bg-black text-white text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors flex-grow md:flex-grow-0 justify-center"
-              >
-                <Plus className="w-4 h-4" /> Post Bounty
-              </button>
-              <button
-                onClick={() => setShowOneOffModal(true)}
-                className="flex items-center gap-2 bg-stone-800 hover:bg-black text-white text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors flex-grow md:flex-grow-0 justify-center"
-              >
-                <Plus className="w-4 h-4" /> Assign Duty
-              </button>
-              <button
-                onClick={() => setShowScheduleModal(true)}
-                className="flex items-center gap-2 bg-white hover:bg-stone-50 text-stone-700 text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors border border-stone-300 flex-grow md:flex-grow-0 justify-center"
-              >
-                <CalendarClock className="w-4 h-4" /> Create Schedule
-              </button>
-            </div>
-          )}
+      {/* MAIN CONTENT: 2-COLUMN LAYOUT */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* LEFT COLUMN: My Duties (sticky on desktop) */}
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-4">
+            <MyDutiesWidget
+              initialTasks={myDuties}
+              userId={currentUser?.$id || ""}
+            />
+          </div>
+        </div>
 
-          {/* 1. ADMIN REVIEWS */}
+        {/* RIGHT COLUMN: Reviews + Bounties */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* PENDING REVIEWS (Admin Only) */}
           {pendingReviews.length > 0 && (
             <div>
               <h2 className="font-bebas text-xl text-stone-700 mb-4">
                 Pending Approvals
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {pendingReviews.map((t) => (
                   <TaskCard
                     key={t.id}
@@ -242,13 +218,7 @@ export default function HousingDashboardClient({
             </div>
           )}
 
-          {/* 2. MY RESPONSIBILITIES (Unified Widget) */}
-          <MyDutiesWidget
-            initialTasks={myDuties}
-            userId={currentUser?.$id || ""}
-          />
-
-          {/* 3. AVAILABLE BOUNTIES */}
+          {/* AVAILABLE BOUNTIES (Horizontal Cards) */}
           <section>
             <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-2">
               <h2 className="font-bebas text-2xl text-stone-700">
@@ -260,7 +230,7 @@ export default function HousingDashboardClient({
                 No active bounties
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-3">
                 {availableBounties.map((t) => (
                   <TaskCard
                     key={t.id}
@@ -272,6 +242,7 @@ export default function HousingDashboardClient({
                     onRefresh={handleRefresh}
                     getJWT={getToken}
                     viewMode="action"
+                    variant="horizontal"
                     onEdit={(t) => setEditingTask(t)}
                   />
                 ))}
@@ -279,10 +250,14 @@ export default function HousingDashboardClient({
             )}
           </section>
         </div>
-      )}
+      </div>
 
-      {/* --- TAB: MASTER ROSTER --- */}
-      {activeTab === "roster" && (
+      {/* MASTER ROSTER (Inline at Bottom) */}
+      <section className="border-t border-stone-200 pt-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Users className="w-5 h-5 text-stone-500" />
+          <h2 className="font-bebas text-2xl text-stone-700">Master Roster</h2>
+        </div>
         <DutyRoster
           tasks={tasks}
           members={members}
@@ -291,7 +266,7 @@ export default function HousingDashboardClient({
           onRefresh={handleRefresh}
           onEdit={(t) => setEditingTask(t)}
         />
-      )}
+      </section>
 
       {/* MODALS */}
       <ProofReviewModal

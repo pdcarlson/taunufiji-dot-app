@@ -50,3 +50,32 @@ export async function getProfileAction(jwt: string) {
     return null;
   }
 }
+
+/**
+ * Check if the current user has Housing Admin privileges.
+ * Verifies Discord roles against HOUSING_ADMIN_ROLES (Housing Chair, Cabinet, Dev).
+ */
+export async function checkHousingAdminAction(jwt: string): Promise<boolean> {
+  try {
+    const { authService } = getContainer();
+    const { createJWTClient } =
+      await import("@/lib/presentation/server/appwrite");
+    const { HOUSING_ADMIN_ROLES } =
+      await import("@/lib/infrastructure/config/roles");
+
+    // 1. Verify JWT & get auth ID
+    const client = createJWTClient(jwt);
+    const account = client.account;
+    const user = await account.get();
+    const authId = user.$id;
+
+    // 2. Check if user has any housing admin role
+    return await authService.verifyRole(
+      authId,
+      HOUSING_ADMIN_ROLES.map((r) => r as string),
+    );
+  } catch (e) {
+    logger.error(`checkHousingAdmin Failed`, e);
+    return false;
+  }
+}

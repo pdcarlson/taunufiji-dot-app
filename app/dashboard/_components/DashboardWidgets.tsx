@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getDashboardStatsAction } from "@/lib/presentation/actions/dashboard.actions";
 import { getMyTasksAction } from "@/lib/presentation/actions/tasks.actions";
-import HousingWidget from "@/components/housing/widgets/HousingWidget";
+import GreetingCard from "@/components/home/GreetingCard";
 import LibraryWidget from "@/components/library/widgets/LibraryWidget";
 import LeaderboardWidget from "@/components/leaderboard/widgets/LeaderboardWidget";
 import MyDutiesWidget from "@/components/housing/MyDutiesWidget";
@@ -50,14 +50,14 @@ export default function DashboardWidgets() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 delay-100">
-      {/* MY DUTIES WIDGET */}
-      <MyDutiesWidget initialTasks={myTasks} userId={user?.$id || ""} />
+      {/* GREETING CARD (Full Width) */}
+      <GreetingCard userName={user?.name} />
 
       {/* WIDGET GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* 1. Housing Stats */}
-        <HousingWidget stats={stats || {}} loading={false} />
-        {/* 2. Library (Static) */}
+        {/* 1. My Duties (replaces Housing Stats) */}
+        <MyDutiesWidget initialTasks={myTasks} userId={user?.$id || ""} />
+        {/* 2. Library */}
         <LibraryWidget stats={stats || {}} />
         {/* 3. Leaderboard */}
         <LeaderboardWidget />
