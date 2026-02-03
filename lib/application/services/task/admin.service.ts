@@ -96,13 +96,14 @@ export class AdminService {
       throw new Error("Task not found.");
     }
 
+    // For bounties: unassign user so task returns to pool
+    // For duties: keep assignee so they can resubmit
+    const shouldUnassign = task.type === "bounty";
+
     await this.taskRepository.update(taskId, {
-      status: "open",
-      proof_s3_key: undefined, // undefined is fine if interface allows optional or nullable. Zod says optional()/nullable() so usually undefined works, but Appwrite update needs null?
-      // Appwrite node SDK: usually null to clear. TypeScript types created might expect null.
-      // HousingTaskSchema: proof_s3_key: z.string().optional().nullable()
-      // CreateAssignmentDTO (derived): optional.
-      // I'll stick to what was there: undefined. If it breaks, I'll change to null.
+      status: shouldUnassign ? "open" : "rejected",
+      proof_s3_key: null,
+      assigned_to: shouldUnassign ? null : task.assigned_to,
     });
 
     await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {

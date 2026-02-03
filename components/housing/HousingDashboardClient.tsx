@@ -192,30 +192,43 @@ export default function HousingDashboardClient({
 
         {/* RIGHT COLUMN: Reviews + Bounties */}
         <div className="lg:col-span-2 space-y-8">
-          {/* PENDING REVIEWS (Admin Only) */}
-          {pendingReviews.length > 0 && (
-            <div>
-              <h2 className="font-bebas text-xl text-stone-700 mb-4">
-                Pending Approvals
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {pendingReviews.map((t) => (
-                  <TaskCard
-                    key={t.id}
-                    task={t}
-                    userId={currentUser.$id}
-                    profileId={currentProfile?.discord_id || ""}
-                    userName={currentUser.name}
-                    isAdmin={isAdmin}
-                    onRefresh={handleRefresh}
-                    getJWT={getToken}
-                    viewMode="review"
-                    onReview={setReviewTask}
-                    onEdit={(t) => setEditingTask(t)}
-                  />
-                ))}
+          {/* PENDING REVIEWS (Admin Only - Always Visible) */}
+          {isAdmin && (
+            <section>
+              <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-2">
+                <h2 className="font-bebas text-2xl text-stone-700">
+                  Pending Approvals
+                </h2>
+                {pendingReviews.length > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    {pendingReviews.length}
+                  </span>
+                )}
               </div>
-            </div>
+              {pendingReviews.length === 0 ? (
+                <div className="text-center py-8 bg-green-50 rounded border border-dashed border-green-200 text-green-600 font-bold">
+                  ✓ All caught up! No pending reviews.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pendingReviews.map((t) => (
+                    <TaskCard
+                      key={t.id}
+                      task={t}
+                      userId={currentUser.$id}
+                      profileId={currentProfile?.discord_id || ""}
+                      userName={currentUser.name}
+                      isAdmin={isAdmin}
+                      getJWT={getToken}
+                      viewMode="review"
+                      onReview={setReviewTask}
+                      onEdit={(t) => setEditingTask(t)}
+                      variant="horizontal"
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
           )}
 
           {/* AVAILABLE BOUNTIES (Horizontal Cards) */}
@@ -239,7 +252,6 @@ export default function HousingDashboardClient({
                     profileId={currentProfile?.discord_id || ""}
                     userName={currentUser.name}
                     isAdmin={isAdmin}
-                    onRefresh={handleRefresh}
                     getJWT={getToken}
                     viewMode="action"
                     variant="horizontal"

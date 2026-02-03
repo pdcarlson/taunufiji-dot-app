@@ -1,8 +1,10 @@
 "use client";
 
-import { HousingTask } from "@/lib/domain/types/task";
+import { useState, useEffect } from "react";
+import { HousingTask } from "@/lib/domain/entities";
 import TaskCard from "./TaskCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import CollapsedDutyCard from "./cards/variants/CollapsedDutyCard";
+import { Card, CardContent } from "@/components/ui/Card";
 import { ClipboardList } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -17,12 +19,25 @@ export default function MyDutiesWidget({
 }: MyDutiesWidgetProps) {
   const tasks = initialTasks;
 
+  /* Accordion Logic */
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+
+  // Set initial active task
+  useEffect(() => {
+    if (initialTasks.length > 0 && !activeTaskId) {
+      // Prefer pending/rejected tasks first, then the first one
+      const priorityTask =
+        initialTasks.find(
+          (t) => t.status === "rejected" || t.status === "pending",
+        ) || initialTasks[0];
+      setActiveTaskId(priorityTask.id);
+    }
+  }, [initialTasks]);
+
+  const { getToken } = useAuth();
+
+  // If no tasks, show empty state
   if (tasks.length === 0) {
-    // Return null or empty state?
-    // If we want it to be collapsible, maybe return nothing if no tasks?
-    // But prompt says "render the 'My Duties' widget at the top".
-    // It implies it should exist.
-    // I'll render an empty state.
     return (
       <Card className="border-dashed border-stone-200 bg-stone-50/50">
         <CardContent className="flex flex-col items-center justify-center p-8 text-center text-stone-500">
@@ -33,28 +48,42 @@ export default function MyDutiesWidget({
     );
   }
 
-  const { getToken } = useAuth(); // Assuming wrapped in AuthProvider
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative z-10 w-full max-w-full">
       <div className="flex items-center gap-2 mb-2">
         <ClipboardList className="w-5 h-5 text-stone-400" />
         <h2 className="font-bebas text-2xl text-stone-700">My Duties</h2>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {tasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            userId={userId}
-            profileId={userId}
-            userName="" // Not used in TaskCard logic really
-            isAdmin={false}
-            onRefresh={() => location.reload()} // Simple refresh for now as we lack a dedicated refresher
-            getJWT={getToken}
-          />
-        ))}
+      <div className="flex flex-col gap-3">
+        {tasks.map((task) => {
+          const isActive = task.id === activeTaskId;
+
+          return isActive ? (
+            // EXPANDED CARD
+            <div
+              key={task.id}
+              className="animate-in fade-in zoom-in-95 duration-200"
+            >
+              <TaskCard
+                task={task}
+                userId={userId}
+                profileId={userId}
+                userName=""
+                isAdmin={false}
+                getJWT={getToken}
+              />
+            </div>
+          ) : (
+            // COLLAPSED CARD
+            <CollapsedDutyCard
+              key={task.id}
+              task={task}
+              isActive={false}
+              onClick={() => setActiveTaskId(task.id)}
+            />
+          );
+        })}
       </div>
     </div>
   );
