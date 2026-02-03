@@ -11,7 +11,13 @@ import MyDutiesWidget from "@/components/housing/MyDutiesWidget";
 import { HousingTask } from "@/lib/domain/types/task";
 import { Loader2 } from "lucide-react";
 
-export default function DashboardWidgets() {
+interface DashboardWidgetsProps {
+  initialLeaderboard: any[];
+}
+
+export default function DashboardWidgets({
+  initialLeaderboard,
+}: DashboardWidgetsProps) {
   const { getToken, user } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [myTasks, setMyTasks] = useState<HousingTask[]>([]);
@@ -60,7 +66,7 @@ export default function DashboardWidgets() {
         {/* 2. Library */}
         <LibraryWidget stats={stats || {}} />
         {/* 3. Leaderboard */}
-        <LeaderboardWidget />
+        <LeaderboardWidget initialLeaderboard={initialLeaderboard} />
       </div>
     </div>
   );

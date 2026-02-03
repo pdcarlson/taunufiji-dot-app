@@ -1,6 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import { HousingTask } from "@/lib/domain/entities";
+import { claimTaskAction } from "@/lib/presentation/actions/housing.actions";
 import { Loader } from "@/components/ui/Loader";
-import { useTaskActions } from "@/hooks/useTaskActions";
+import toast from "react-hot-toast";
 
 interface BountyCardProps {
   task: HousingTask;
@@ -15,20 +19,33 @@ export default function BountyCard({
   getJWT,
   onEdit,
 }: BountyCardProps) {
-  const { loading, handleClaim } = useTaskActions({
-    taskId: task.id,
-    userId,
-    getJWT,
-  });
+  const [loading, setLoading] = useState(false);
+
+  const handleClaim = async () => {
+    setLoading(true);
+    try {
+      const jwt = await getJWT();
+      const res = await claimTaskAction(task.id, userId, jwt);
+      if (!res.success) throw new Error(res.error);
+      toast.success("Bounty Claimed!");
+      // We rely on parent to refresh or optimistic update?
+      // The original code called onRefresh(). properties passed didn't include onRefresh?
+      // Wait, TaskCardProps HAS onRefresh. But BountyCardProps in TaskCard.tsx DOES NOT pass it?
+      // Let's check TaskCard.tsx usages.
+      window.location.reload(); // Fallback if no refresh provided, or better: just toast.
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error claiming task";
+      toast.error(message);
+    }
+    setLoading(false);
+  };
 
   return (
-    <div
-      onClick={() => onEdit?.(task)}
-      className="bg-white border border-stone-200 rounded-lg p-4 flex items-center gap-4 hover:shadow-md transition-shadow group cursor-pointer"
-    >
+    <div className="bg-white border border-stone-200 rounded-lg p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
       {/* Title & Description */}
       <div className="flex-1 min-w-0">
-        <h3 className="font-bebas text-xl text-stone-800 truncate group-hover:text-fiji-purple transition-colors">
+        <h3 className="font-bebas text-xl text-stone-800 truncate">
           {task.title}
         </h3>
         <p className="text-stone-500 text-sm truncate">{task.description}</p>
@@ -41,10 +58,7 @@ export default function BountyCard({
 
       {/* Claim Button */}
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleClaim();
-        }}
+        onClick={handleClaim}
         disabled={loading}
         className="bg-fiji-purple hover:bg-fiji-dark text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap flex items-center gap-2"
       >

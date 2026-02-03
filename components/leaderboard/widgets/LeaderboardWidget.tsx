@@ -17,14 +17,21 @@ interface LeaderboardMember {
   points: number;
 }
 
-export default function LeaderboardWidget() {
+interface LeaderboardWidgetProps {
+  initialLeaderboard?: LeaderboardMember[];
+}
+
+export default function LeaderboardWidget({
+  initialLeaderboard = [],
+}: LeaderboardWidgetProps) {
   const { user, profile, getToken } = useAuth();
-  const [leaders, setLeaders] = useState<LeaderboardMember[]>([]);
+  const [leaders, setLeaders] =
+    useState<LeaderboardMember[]>(initialLeaderboard);
   const [myStats, setMyStats] = useState<{
     rank: number;
     points: number;
   } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialLeaderboard.length === 0);
   const [error, setError] = useState<string | null>(null);
 
   const fetchLeaders = async () => {
@@ -34,12 +41,15 @@ export default function LeaderboardWidget() {
       const token = await getToken();
 
       // Use Server Action
-      const [data, myData] = await Promise.all([
-        getLeaderboardAction(token),
-        getLeadersMyRank(token),
-      ]);
+      // If we already have leaders, we only need my rank
+      const promises: Promise<any>[] = [getLeadersMyRank(token)];
+      if (leaders.length === 0) {
+        promises.push(getLeaderboardAction(token));
+      }
 
-      if (Array.isArray(data)) {
+      const [myData, data] = await Promise.all(promises);
+
+      if (data && Array.isArray(data)) {
         setLeaders(data as any);
       }
       if (myData) {
@@ -47,7 +57,8 @@ export default function LeaderboardWidget() {
       }
     } catch (err) {
       console.error("Leaderboard error:", err);
-      setError("Failed to load");
+      // Don't error out if we have initial data, just log
+      if (leaders.length === 0) setError("Failed to load");
     } finally {
       setLoading(false);
     }
@@ -61,7 +72,12 @@ export default function LeaderboardWidget() {
   };
 
   useEffect(() => {
-    fetchLeaders();
+    // If we have initial data, we only need to fetch user rank if user is present
+    if (user) {
+      fetchLeaders();
+    } else if (initialLeaderboard.length > 0) {
+      setLoading(false);
+    }
   }, [user, profile]);
 
   // Standardized Name Formatter

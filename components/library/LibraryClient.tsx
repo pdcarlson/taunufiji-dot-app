@@ -13,7 +13,7 @@ import {
   searchLibraryAction,
   getLibraryStatsAction,
 } from "@/lib/presentation/actions/library.actions";
-import { useJWT } from "@/hooks/useJWT";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 // We'll reuse the existing search API for infinite scroll/filtering interactions
 // since moving ALL search logic to server actions might be overkill for simple filtering
@@ -23,6 +23,7 @@ import { useJWT } from "@/hooks/useJWT";
 interface LibraryClientProps {
   initialTotal: number;
   initialUserFiles: number;
+  initialResources?: any[];
 }
 
 const INITIAL_FILTERS = {
@@ -38,8 +39,9 @@ const INITIAL_FILTERS = {
 export default function LibraryClient({
   initialTotal,
   initialUserFiles,
+  initialResources = [],
 }: LibraryClientProps) {
-  const { getJWT } = useJWT();
+  const { getToken, user } = useAuth();
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const debouncedFilters = useDebounce(filters, 500);
 
@@ -49,33 +51,45 @@ export default function LibraryClient({
     userFiles: initialUserFiles,
   });
 
+  // Only fetch user-specific stats if we have a user
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const jwt = await getJWT();
+        if (!user) return; // public view already has total
+        const jwt = await getToken();
         const data = await getLibraryStatsAction(jwt);
+        // Only update if we need to (or just update userFiles)
         setStats({ total: data.totalFiles, userFiles: data.userFiles });
       } catch (e) {
         console.error("Stats fetch failed", e);
       }
     };
     fetchStats();
-  }, []);
+  }, [user]);
 
   // Data State
-  const [results, setResults] = useState<any[] | null>(null);
-  const [searchTotal, setSearchTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  // Actually, we want to run an initial empty search to fill the list,
-  // OR we could pass initialDocuments too.
-  // Let's keep it simple: Client triggers the first search or we accept documents?
-  // "Frontend 2.0" prefers server data.
-  // But filtering complex many-to-many relationships server-side in Appwrite
-  // might be easier via the existing API route.
-  // Let's trigger the first search on mount for now (Client Pull for content, Server Push for Stats).
-  // Improvement: We can pass initialDocuments later.
+  const [results, setResults] = useState<any[] | null>(initialResources);
+  const [searchTotal, setSearchTotal] = useState(initialTotal);
+  // If we have initial resources, we aren't loading initially
+  const [loading, setLoading] = useState(initialResources.length === 0);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   useEffect(() => {
+    // Skip the very first run if we have initial data AND filters haven't changed
+    // But debouncedFilters changes on mount? No, it initializes with value.
+    // We want to skip search if filters are default AND we have initial data.
+
+    const isDefaultFilters = Object.keys(INITIAL_FILTERS).every(
+      (k) =>
+        // @ts-ignore
+        filters[k] === INITIAL_FILTERS[k],
+    );
+
+    if (isFirstLoad && initialResources.length > 0 && isDefaultFilters) {
+      setIsFirstLoad(false);
+      return;
+    }
+
     const runSearch = async () => {
       setLoading(true);
       try {
@@ -92,7 +106,7 @@ export default function LibraryClient({
           apiFilters.year = parseInt(apiFilters.year);
         }
 
-        const jwt = await getJWT();
+        const jwt = await getToken();
         // Server Action Call
         const data = await searchLibraryAction(apiFilters, jwt);
 
@@ -107,6 +121,7 @@ export default function LibraryClient({
     };
 
     runSearch();
+    setIsFirstLoad(false);
   }, [debouncedFilters]);
 
   return (

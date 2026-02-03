@@ -37,18 +37,27 @@ export default function HousingDashboardClient({
   initialSchedules = [],
 }: HousingDashboardClientProps) {
   const { user: currentUser, getToken, isHousingAdmin } = useAuth();
-  // We need to fetch profile if not passed.
-  // Actually, let's just fetch everything on mount if we don't have it.
-  const [profile, setProfile] = useState<Member | null>(null);
 
+  // Initialize state with server-provided data
   const [tasks, setTasks] = useState<HousingTask[]>(initialTasks);
-  const [myDuties, setMyDuties] = useState<HousingTask[]>([]);
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [schedules, setSchedules] =
     useState<HousingSchedule[]>(initialSchedules);
-  const [initialLoading, setInitialLoading] = useState(true);
 
-  // isHousingAdmin is now sourced from AuthProvider (Discord role check)
+  // Derived state for My Duties (avoids extra API call and sync issues)
+  // We filter the main task list for tasks assigned to the current user
+  const myDuties = tasks.filter((task) => {
+    if (!currentUser) return false;
+    // Check against both ID and Discord ID (Member profile)
+    // We need to match against the Member's discord_id usually
+    const myProfile = members.find((m) => m.auth_id === currentUser.$id);
+    const targetId = myProfile?.discord_id || currentUser.$id;
+
+    return task.assigned_to === targetId;
+  });
+
+  const [profile, setProfile] = useState<Member | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const isAdmin = isHousingAdmin;
 
   // Modals
@@ -58,78 +67,44 @@ export default function HousingDashboardClient({
   const [showBountyModal, setShowBountyModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
-  // Loading state for *Refreshes* only (initial load is instant)
-  const [refreshing, setRefreshing] = useState(false);
-
-  // Initial Fetch Effect
+  // Resolve Profile on mount if user exists
   useEffect(() => {
-    if (currentUser) {
-      handleRefresh(true);
+    if (currentUser && members.length > 0) {
+      const myProfile = members.find(
+        (m) =>
+          m.discord_id === currentUser.$id || m.auth_id === currentUser.$id,
+      );
+      if (myProfile) setProfile(myProfile);
     }
-  }, [currentUser]);
+  }, [currentUser, members]);
 
-  const handleRefresh = async (isInitial = false) => {
-    if (isInitial) setInitialLoading(true);
-    else setRefreshing(true);
-
+  // Handle manual refresh
+  const handleRefresh = async () => {
+    setRefreshing(true);
     try {
       const jwt = await getToken();
-      // Parallel Refresh
-      // Parallel Refresh
-      const [tasksRes, membersRes, myDutiesRes] = await Promise.all([
+
+      const [tasksRes, membersRes, schedulesRes] = await Promise.all([
         getAllActiveTasksAction(jwt),
         getAllMembersAction(jwt),
-        getMyTasksAction(jwt),
+        isAdmin ? getSchedulesAction(jwt) : Promise.resolve([]),
       ]);
 
-      if (tasksRes.length > 0) setTasks(tasksRes);
-      if (myDutiesRes.documents)
-        setMyDuties(myDutiesRes.documents as HousingTask[]);
-      // Wait, housing.actions.ts:getAllActiveTasksAction returns array directly?
-      // Let's check the code I just wrote.
-      // YES: return JSON.parse(JSON.stringify(result)); which is data.
+      if (tasksRes) setTasks(tasksRes);
+      if (membersRes) setMembers(membersRes);
+      if (schedulesRes.length > 0) setSchedules(schedulesRes);
 
-      if (membersRes.length > 0) {
-        setMembers(membersRes);
-        // Find my profile
-        const myProfile = membersRes.find(
-          (m: any) =>
-            m.discord_id === currentUser?.$id ||
-            m.account_id === currentUser?.$id,
-        );
-        // We might need a better way to link profile, but usually discord_id matches.
-        // Actually, let's use the explicit profile fetch if needed, but members list usually has it.
-        if (myProfile) setProfile(myProfile);
-      }
-
-      // Check Admin status via labels or specific check
-      // For now using client-side derivation if possible, or fetch schedules if admin
-      if (isAdmin) {
-        const schedRes = await getSchedulesAction(jwt);
-        if (schedRes.length > 0) setSchedules(schedRes);
-      }
-
-      if (!isInitial) toast.success("Dashboard Updated");
+      toast.success("Dashboard Updated");
     } catch (error) {
       console.error("Refresh failed", error);
-      if (!isInitial) toast.error("Failed to refresh data");
+      toast.error("Failed to refresh data");
     } finally {
       setRefreshing(false);
-      setInitialLoading(false);
     }
   };
 
-  if (initialLoading || !currentUser) {
-    return (
-      <div className="flex h-[50vh] w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-stone-300" />
-      </div>
-    );
-  }
-
-  // Fallback for profile
   const currentProfile =
-    profile || members.find((m) => m.discord_id === currentUser.$id) || null;
+    profile || members.find((m) => m.discord_id === currentUser?.$id) || null;
 
   // Filters
   const pendingReviews = isAdmin
@@ -215,9 +190,9 @@ export default function HousingDashboardClient({
                     <TaskCard
                       key={t.id}
                       task={t}
-                      userId={currentUser.$id}
+                      userId={currentUser?.$id || ""}
                       profileId={currentProfile?.discord_id || ""}
-                      userName={currentUser.name}
+                      userName={currentUser?.name || "Guest"}
                       isAdmin={isAdmin}
                       getJWT={getToken}
                       viewMode="review"
@@ -248,9 +223,9 @@ export default function HousingDashboardClient({
                   <TaskCard
                     key={t.id}
                     task={t}
-                    userId={currentUser.$id}
+                    userId={currentUser?.$id || ""}
                     profileId={currentProfile?.discord_id || ""}
-                    userName={currentUser.name}
+                    userName={currentUser?.name || "Guest"}
                     isAdmin={isAdmin}
                     getJWT={getToken}
                     viewMode="action"
@@ -270,7 +245,7 @@ export default function HousingDashboardClient({
           tasks={tasks}
           members={members}
           isAdmin={isAdmin}
-          userId={currentUser.$id}
+          userId={currentUser?.$id || ""}
           onRefresh={handleRefresh}
           onEdit={(t) => setEditingTask(t)}
         />

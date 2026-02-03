@@ -1,5 +1,6 @@
 import { HousingTask } from "@/lib/domain/entities";
-import { Zap, Briefcase, RefreshCw, Eye } from "lucide-react";
+import { Briefcase, RefreshCw, Zap } from "lucide-react";
+import { TimeDisplay } from "../TimeDisplay";
 
 interface ReviewCardProps {
   task: HousingTask;
@@ -7,51 +8,55 @@ interface ReviewCardProps {
 }
 
 export default function ReviewCard({ task, onReview }: ReviewCardProps) {
-  const isDuty = task.type === "duty" || task.type === "one_off";
   const isOneOff = task.type === "one_off";
+  const isDuty = task.type === "duty" || task.type === "one_off";
 
   return (
-    <div className="bg-white border border-stone-200 rounded-lg p-4 flex items-center gap-4 hover:shadow-md transition-shadow group">
-      {/* Type Badge */}
-      <div className="flex-shrink-0">
-        {isDuty ? (
-          <div className="p-2 rounded-md bg-red-50 text-red-500">
-            {isOneOff ? (
-              <Briefcase className="w-5 h-5" />
-            ) : (
-              <RefreshCw className="w-5 h-5" />
-            )}
-          </div>
-        ) : (
-          <div className="p-2 rounded-md bg-yellow-50 text-fiji-gold">
-            <Zap className="w-5 h-5" />
-          </div>
-        )}
+    <div className="relative bg-white border border-stone-200 rounded-xl p-5 transition-all shadow-sm hover:shadow-md flex flex-col h-full group">
+      {/* HEADER */}
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          {isDuty ? (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] tracking-widest font-bold text-red-600 bg-red-50 border border-red-100 uppercase mb-2">
+              {isOneOff ? (
+                <Briefcase className="w-3 h-3" />
+              ) : (
+                <RefreshCw className="w-3 h-3" />
+              )}
+              {isOneOff ? "Assigned Duty" : "Recurring Duty"}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] tracking-widest font-bold text-fiji-gold-dark bg-yellow-50 border border-yellow-100 uppercase mb-2">
+              <Zap className="w-3 h-3" /> Bounty
+            </span>
+          )}
+          <h3 className="font-bebas text-2xl text-stone-800 leading-none group-hover:text-fiji-dark transition-colors">
+            {task.title}
+          </h3>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          {!isDuty && (
+            <span className="bg-fiji-gold text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
+              {task.points_value} PTS
+            </span>
+          )}
+          {task.due_at && <TimeDisplay target={task.due_at} mode="deadline" />}
+        </div>
       </div>
 
-      {/* Title & Description */}
-      <div className="flex-1 min-w-0">
-        <h3 className="font-bebas text-xl text-stone-800 truncate group-hover:text-fiji-purple transition-colors">
-          {task.title}
-        </h3>
-        <p className="text-stone-500 text-sm truncate">{task.description}</p>
+      <p className="text-stone-600 text-sm mb-4 flex-1 line-clamp-3 leading-relaxed">
+        {task.description}
+      </p>
+
+      {/* FOOTER ACTIONS */}
+      <div className="pt-3 border-t border-stone-100 space-y-2">
+        <button
+          onClick={() => onReview(task)}
+          className="w-full bg-stone-800 hover:bg-black text-white font-bold py-2 rounded text-sm shadow-sm transition-all hover:shadow"
+        >
+          Review Proof
+        </button>
       </div>
-
-      {/* Points (Bounty Only) */}
-      {!isDuty && (
-        <span className="bg-fiji-gold text-white text-sm font-bold px-3 py-1.5 rounded shadow-sm whitespace-nowrap">
-          {task.points_value} PTS
-        </span>
-      )}
-
-      {/* Review Button */}
-      <button
-        onClick={() => onReview(task)}
-        className="bg-stone-800 hover:bg-black text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap flex items-center gap-2"
-      >
-        <Eye className="w-4 h-4" />
-        Review
-      </button>
     </div>
   );
 }
