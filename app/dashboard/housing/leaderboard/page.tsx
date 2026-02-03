@@ -1,6 +1,6 @@
 import { Trophy } from "lucide-react";
 import { Suspense } from "react";
-import LeaderboardList from "@/components/features/leaderboard/components/LeaderboardList";
+import LeaderboardList from "@/components/leaderboard/components/LeaderboardList";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const dynamic = "force-dynamic";

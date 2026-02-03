@@ -1,4 +1,4 @@
-import DashboardWidgets from "@/components/dashboard/DashboardWidgets";
+import DashboardWidgets from "./_components/DashboardWidgets";
 
 export default function DashboardPage() {
   return <DashboardWidgets />;

@@ -1,6 +1,6 @@
 "use client";
 
-import { UploadQueueProvider } from "@/components/features/library/upload/UploadContext";
+import { UploadQueueProvider } from "@/components/library/upload/UploadContext";
 
 export default function UploadLayout({
   children,

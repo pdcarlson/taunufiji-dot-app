@@ -1,4 +1,4 @@
-import LoginClient from "@/components/auth/LoginClient";
+import LoginClient from "./_components/LoginClient";
 
 export default function LoginPage() {
   // AuthProvider handles the "Already Logged In" redirect.

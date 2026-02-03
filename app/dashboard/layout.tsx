@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import DashboardShell from "./DashboardShell";
+import DashboardShell from "./_components/DashboardClientLayout";
 
 import { getContainer } from "@/lib/infrastructure/container";
 import { redirect } from "next/navigation";

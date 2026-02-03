@@ -205,7 +205,8 @@ export async function getDownloadLinkAction(id: string, jwt: string) {
 export async function getLibraryStatsAction(jwt: string) {
   const result = await actionWrapper(
     async ({ container, userId }) => {
-      return await container.libraryService.getStats(userId);
+      const profile = await container.userService.getByAuthId(userId);
+      return await container.libraryService.getStats(profile?.discord_id);
     },
     { jwt },
   );
