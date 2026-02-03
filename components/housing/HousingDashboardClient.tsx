@@ -10,7 +10,7 @@ import CreateBountyModal from "./CreateBountyModal";
 import CreateScheduleModal from "./CreateScheduleModal";
 import CreateOneOffModal from "./CreateOneOffModal";
 import EditTaskModal from "./EditTaskModal";
-import { Users, CalendarClock, Plus } from "lucide-react";
+import { Users, CalendarClock, Zap, UserPlus } from "lucide-react";
 import toast from "react-hot-toast";
 
 // Actions for Client-Side Refreshing
@@ -156,22 +156,22 @@ export default function HousingDashboardClient({
 
       {/* ADMIN ACTION BAR */}
       {isAdmin && (
-        <div className="flex flex-wrap gap-2 p-3 md:p-4 bg-stone-100 rounded-xl border border-stone-200 justify-center md:justify-start">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
           <button
             onClick={() => setShowBountyModal(true)}
-            className="flex items-center gap-2 bg-stone-800 hover:bg-black text-white text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors flex-grow md:flex-grow-0 justify-center"
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-fiji-gold to-amber-500 hover:from-amber-500 hover:to-fiji-gold text-white text-sm font-bold px-4 py-3 rounded-lg transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
           >
-            <Plus className="w-4 h-4" /> Post Bounty
+            <Zap className="w-4 h-4" /> Post Bounty
           </button>
           <button
             onClick={() => setShowOneOffModal(true)}
-            className="flex items-center gap-2 bg-stone-800 hover:bg-black text-white text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors flex-grow md:flex-grow-0 justify-center"
+            className="flex items-center justify-center gap-2 bg-fiji-purple hover:bg-fiji-dark text-white text-sm font-bold px-4 py-3 rounded-lg transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
           >
-            <Plus className="w-4 h-4" /> Assign Duty
+            <UserPlus className="w-4 h-4" /> Assign Duty
           </button>
           <button
             onClick={() => setShowScheduleModal(true)}
-            className="flex items-center gap-2 bg-white hover:bg-stone-50 text-stone-700 text-xs md:text-sm font-bold px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors border border-stone-300 flex-grow md:flex-grow-0 justify-center"
+            className="flex items-center justify-center gap-2 bg-white hover:bg-stone-50 text-stone-700 text-sm font-bold px-4 py-3 rounded-lg transition-all border-2 border-stone-200 hover:border-stone-300"
           >
             <CalendarClock className="w-4 h-4" /> Create Schedule
           </button>
@@ -264,12 +264,8 @@ export default function HousingDashboardClient({
         </div>
       </div>
 
-      {/* MASTER ROSTER (Inline at Bottom) */}
-      <section className="border-t border-stone-200 pt-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Users className="w-5 h-5 text-stone-500" />
-          <h2 className="font-bebas text-2xl text-stone-700">Master Roster</h2>
-        </div>
+      {/* TASK ROSTER */}
+      <section className="pt-6">
         <DutyRoster
           tasks={tasks}
           members={members}
