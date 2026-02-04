@@ -3,6 +3,17 @@
 import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 import { DashboardStats } from "@/lib/domain/entities/dashboard.dto";
 
+// Define local interface for View Model
+interface DashboardTransaction {
+  id: string;
+  reason: string;
+  amount: number;
+  category: string; // 'task' | 'fine' | 'event'
+  timestamp: string;
+  userId?: string; // Only for global ledger
+  userName?: string; // Only for global ledger
+}
+
 export async function getDashboardStatsAction(
   jwt: string,
 ): Promise<DashboardStats> {
@@ -40,9 +51,9 @@ export async function getDashboardStatsAction(
       const fullName = profile.full_name || "Brother";
 
       // 6. History
-      let housingHistory: any[] = [];
-      let libraryHistory: any[] = [];
-      let ledgerHistory: any[] = [];
+      let housingHistory: DashboardTransaction[] = [];
+      let libraryHistory: DashboardTransaction[] = [];
+      let ledgerHistory: DashboardTransaction[] = [];
 
       try {
         const [housingEntries, libraryEntries, allLedgerEntries] =
@@ -124,7 +135,7 @@ export async function getDashboardStatsAction(
   return emptyStats();
 }
 
-function emptyStats() {
+function emptyStats(): DashboardStats {
   return {
     points: 0,
     activeTasks: 0,

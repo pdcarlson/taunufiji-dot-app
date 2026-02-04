@@ -502,4 +502,9 @@
   - Refactored `auth.actions.ts` to use `actionWrapper` (100% Action Compliance).
   - Added global `loading.tsx` Skeleton.
   - Configured SEO & OpenGraph Metadata.
+- **V2 Polish**:
+  - Reverted `loading.tsx` per user feedback.
+  - Replaced hard reloads with `router.refresh()` in `DutyCard`.
+  - Added branded `not-found.tsx` and `error.tsx` pages.
+  - Hardened types in `dashboard.actions` and `read.actions`.
 - **Risk**: None. Build verified.

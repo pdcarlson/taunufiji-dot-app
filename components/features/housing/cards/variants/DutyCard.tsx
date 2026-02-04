@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { HousingTask } from "@/lib/domain/entities";
 import {
   Briefcase,
@@ -37,6 +38,7 @@ export default function DutyCard({
   onEdit,
   variant = "square",
 }: DutyCardProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const isOneOff = task.type === "one_off";
@@ -52,7 +54,7 @@ export default function DutyCard({
       const res = await claimTaskAction(task.id, userId, jwt);
       if (!res.success) throw new Error(res.error);
       toast.success("Bounty Claimed!");
-      window.location.reload();
+      router.refresh();
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Error claiming task";
@@ -68,7 +70,7 @@ export default function DutyCard({
       const res = await unclaimTaskAction(task.id, jwt);
       if (!res.success) throw new Error(res.error);
       toast.success("Unclaimed");
-      window.location.reload();
+      router.refresh();
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Error unclaiming task";
@@ -93,7 +95,7 @@ export default function DutyCard({
       const result = await submitProofAction(formData, jwt);
       if (!result.success) throw new Error(result.error);
       toast.success("Proof uploaded!");
-      window.location.reload();
+      router.refresh();
     } catch (err: unknown) {
       console.error("Upload error:", err);
       toast.error(

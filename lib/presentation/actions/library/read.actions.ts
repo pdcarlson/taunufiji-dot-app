@@ -49,11 +49,23 @@ export async function checkDuplicateResourceAction(
 /**
  * Searches the library primarily for client-side filtering interactions
  */
-export async function searchLibraryAction(filters: any, jwt?: string) {
+interface LibrarySearchFilters {
+  department?: string;
+  course_number?: string;
+  professor?: string;
+  year?: string | number;
+  [key: string]: any; // Allow extensibility if needed, or keep strict?
+  // Let's keep it somewhat strict but pragmatic.
+}
+
+export async function searchLibraryAction(
+  filters: LibrarySearchFilters,
+  jwt?: string,
+) {
   const result = await actionWrapper(
     async ({ container }) => {
       // Sanitize filters
-      const searchFilters: any = {};
+      const searchFilters: Record<string, string | number> = {};
 
       if (filters.department && filters.department !== "All")
         searchFilters.department = filters.department;
