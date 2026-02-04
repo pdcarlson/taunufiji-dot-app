@@ -162,6 +162,7 @@ export default function HousingDashboardClient({
               initialTasks={myDuties}
               userId={currentUser?.$id || ""}
               profileId={currentProfile?.discord_id || currentUser?.$id || ""}
+              variant="minimal"
             />
           </div>
         </div>

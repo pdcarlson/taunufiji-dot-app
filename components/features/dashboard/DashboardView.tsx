@@ -61,20 +61,27 @@ export default function DashboardView({
       <GreetingCard userName={user?.name} />
 
       {/* WIDGET GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
         {/* LEFT COLUMN (Wide) */}
-        <div className="lg:col-span-2">
-          <MyDutiesWidget
-            initialTasks={myTasks}
-            userId={user?.$id || ""}
-            profileId={profile?.discord_id || user?.$id || ""}
-            variant="wide"
-          />
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <div>
+            <MyDutiesWidget
+              initialTasks={myTasks}
+              userId={user?.$id || ""}
+              profileId={profile?.discord_id || user?.$id || ""}
+              variant="wide"
+            />
+          </div>
+          <div className="flex-1">
+            <AdHocRequestCard
+              variant="horizontal"
+              onSuccess={() => window.location.reload()}
+            />
+          </div>
         </div>
 
-        {/* RIGHT COLUMN (Stack) */}
-        <div className="space-y-6">
-          <AdHocRequestCard onSuccess={() => window.location.reload()} />
+        {/* RIGHT COLUMN (Rankings) */}
+        <div className="flex flex-col">
           <LeaderboardWidget initialLeaderboard={initialLeaderboard} />
         </div>
       </div>

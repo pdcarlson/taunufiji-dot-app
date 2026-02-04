@@ -424,26 +424,6 @@
   - **UI/UX**:
     - **PointsLedger**: Created a new full-width component with transaction "stacking" logic (grouping consecutive identical actions by the same user with a "xN" badge).
     - **LibraryWidget**: Redesigned the card to remove history lists and focus on a clean "Contribute" CTA.
-  - **Logic & Types**:
-    - Updated `HistoryItem` DTO to include `userName` and `userId`.
-    - Fixed pre-existing type errors in `TaskCard.test.tsx` and `PointsLedger.tsx` (name collisions and invalid props).
-    - Updated `MockFactory` to support the new repository methods.
-
-## 2026-02-03: Frontend Architecture & Cleanup
-
-- **Context**: Standardized component architecture and cleaned up dead code.
-- **Technical Changes**:
-  - **Component Structure**: Enforced strict `components/features/[featureName]`, `components/layout/`, and `components/ui/` pattern.
-  - **Auth Module**: Migrated Login Logic to `features/auth`.
-  - **Static Assets**: Moved `favicon.ico` to `public/`.
-  - **Dead Code**: Removed unused Next.js SVGs (`next.svg`, `vercel.svg`, etc).
-- **Impact**: Codebase is clean, predictable, and ready for backend refactoring.
-
-## 2026-02-03: Backend Infrastructure Refactor
-
-- **Context**: Executed a comprehensive backend refactor to match the "Feature-First" architecture of the frontend. Enforced Clean Architecture and strictly typed Dependency Injection.
-- **Technical Changes**:
-  - **Dependency Injection**:
     - Refactored `StorageService` to `S3StorageService` class using `IStorageService` port.
     - Updated `container.ts` to manage storage dependencies properly.
   - **Service Migration**:
@@ -465,12 +445,13 @@
   - Split CronService into jobs/handlers/ (UnlockTasksJob, NotifyUrgentJob, etc.).
   - Created index.ts barrel files for all service modules.
   - Updated container.ts to use standardized imports.
-  - Patched env.ts to skip Zod validation in 	est environment.
+  - Patched env.ts to skip Zod validation in est environment.
   - Fixed dependency injection in LibraryService.test.ts.
   - **Security**: Fixed uploadFileAction to enforce JWT authentication.
 - **Impact**: Cleaner imports, easier testing of cron jobs, and fixed a security/reliability bug in file uploads.
 
 ## 2026-02-03: Fix 'completed_at' Schema Error
+
 - **Issue**: Task approval failed with Invalid document structure: Unknown attribute: "completed_at".
 - **Root Cause**: The AdminService logic was updated to set completed_at, but the Appwrite database schema was missing this attribute.
 - **Fix**:
@@ -478,6 +459,7 @@
   - Added unit test lib/application/services/housing/admin.service.test.ts to verify erifyTask logic and prevent regressions.
 
 ## 2026-02-03: Fix Silent Ledger Failure
+
 - **Issue**: Task approval showed success in UI even if Points/Ledger transaction failed (swallowed error).
 - **Fix**:
   - Updated DomainEventBus to propagate errors instead of swallowing them.
@@ -499,3 +481,13 @@
   - **Upload Button**: Fixed logic where 'Upload Proof' button was hidden because dashboard passed Auth ID instead of Discord Profile ID.
   - **Build**: Fixed type errors in 'library/upload/page.tsx' and 'env.ts'.
 
+## 2026-02-04: Dashboard Layout Realignment & UI Polish
+
+- **Context**: Refined the dashboard layout to solve whitespace inefficiency and balance section heights.
+- **Technical Changes**:
+  - **DutyCard**: Implemented a compact horizontal variant for the main dashboard, moving from a 3-column grid to a single-row layout with integrated icons.
+  - **MyDutiesWidget**: Added `minimal` (for Housing) and `wide` (for Main) variants. Disabled accordion logic for the wide view to allow persistent visibility of all tasks.
+  - **AdHocRequestCard**: Created a horizontal variant maintaining the brand gradient and implemented vertical stretching to align with adjacent columns.
+  - **Dashboard Layout**: Restructured `DashboardView` grid to use a [2/3 | 1/3] split with `items-stretch`, moving AdHoc requests under the Duties list.
+- **Impact**: Improved visual hierarchy and information density on the main dashboard; standardized housing dashboard aesthetics.
+- **Risk**: None. Build verified.

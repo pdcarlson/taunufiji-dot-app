@@ -111,14 +111,14 @@ export default function DutyCard({
   } ${isReview ? "opacity-60 grayscale-[80%] bg-stone-50" : ""}`;
 
   // RENDER ACTION BUTTONS HELPER
-  const renderActions = () => (
+  const renderActions = (btnClass = "w-full") => (
     <>
       {/* Claim (Square Bounty) */}
       {task.status === "open" && !isDuty && (
         <button
           onClick={handleClaim}
           disabled={loading}
-          className={`w-full font-bold py-2 rounded text-sm transition-colors bg-stone-100 text-stone-700 hover:bg-stone-200 hover:text-stone-900 border border-stone-200 flex items-center justify-center gap-2`}
+          className={`${btnClass} font-bold py-2 rounded text-sm transition-colors bg-stone-100 text-stone-700 hover:bg-stone-200 hover:text-stone-900 border border-stone-200 flex items-center justify-center gap-2`}
         >
           {loading ? (
             <>
@@ -137,9 +137,11 @@ export default function DutyCard({
           task.status === "rejected" ||
           (isDuty && task.status === "open")) &&
         !isReview && (
-          <div className="flex gap-2 w-full">
+          <div
+            className={`flex gap-2 ${btnClass === "w-full" ? "w-full" : "w-auto items-center"}`}
+          >
             <label
-              className={`flex-1 bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow hover:-translate-y-0.5 active:translate-y-0 ${
+              className={`${btnClass === "w-full" ? "flex-1" : "px-4"} bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow hover:-translate-y-0.5 active:translate-y-0 ${
                 loading || (task.due_at && new Date() > new Date(task.due_at))
                   ? "opacity-50 pointer-events-none grayscale"
                   : ""
@@ -153,7 +155,7 @@ export default function DutyCard({
                 </>
               ) : (
                 <>
-                  <UploadCloud className="w-4 h-4" /> Upload Proof
+                  <UploadCloud className="w-4 h-4" /> Upload
                 </>
               )}
               <input
@@ -171,7 +173,7 @@ export default function DutyCard({
               <button
                 onClick={handleUnclaim}
                 disabled={loading}
-                className="px-3 text-red-400 hover:bg-red-50 rounded border border-transparent hover:border-red-100 transition-colors"
+                className="px-3 text-red-400 hover:bg-red-50 rounded border border-transparent hover:border-red-100 transition-colors h-full flex items-center justify-center"
                 title="Unclaim"
               >
                 <XCircle className="w-5 h-5" />
@@ -182,58 +184,64 @@ export default function DutyCard({
 
       {/* STATUS */}
       {task.status === "approved" && (
-        <div className="w-full text-center text-xs text-green-600 font-bold py-2 flex items-center justify-center gap-2 bg-green-50 rounded border border-green-100">
+        <div
+          className={`${btnClass} text-center text-xs text-green-600 font-bold py-2 flex items-center justify-center gap-2 bg-green-50 rounded border border-green-100`}
+        >
           <CheckCircle className="w-3 h-3" /> Completed
         </div>
       )}
       {task.proof_s3_key && task.status === "pending" && (
-        <div className="w-full text-center text-xs text-stone-500 font-bold py-2 flex items-center justify-center gap-2 bg-stone-50 rounded">
-          <Clock className="w-3 h-3" /> Under Review
+        <div
+          className={`${btnClass} text-center text-xs text-stone-500 font-bold py-2 flex items-center justify-center gap-2 bg-stone-50 rounded`}
+        >
+          <Clock className="w-3 h-3" /> Reviewing
         </div>
       )}
       {!task.proof_s3_key && task.status === "rejected" && (
-        <div className="w-full text-center text-xs text-red-500 font-bold py-2 flex items-center justify-center gap-2 bg-red-50 rounded border border-red-100">
-          <XCircle className="w-3 h-3" /> Rejected - Please Resubmit
+        <div
+          className={`${btnClass} text-center text-xs text-red-500 font-bold py-2 flex items-center justify-center gap-2 bg-red-50 rounded border border-red-100`}
+        >
+          <XCircle className="w-3 h-3" /> Rejected
         </div>
       )}
     </>
   );
 
-  // === HORIZONTAL LAYOUT ===
+  // === HORIZONTAL LAYOUT (Compact) ===
   if (variant === "horizontal") {
     return (
-      <div className={containerClasses + " !flex-row !items-center gap-6 !p-6"}>
-        {/* Left: Type Indicator */}
-        <div className="flex flex-col items-center gap-2 min-w-[70px]">
-          <div
-            className={`p-4 rounded-2xl ${isOneOff ? "bg-indigo-50 text-indigo-600" : "bg-rose-50 text-rose-600"}`}
-          >
-            {isOneOff ? (
-              <Briefcase className="w-7 h-7" />
-            ) : (
-              <RefreshCw className="w-7 h-7" />
-            )}
-          </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 text-center leading-tight">
-            {isOneOff ? "Assigned" : "Recurring"}
-          </span>
+      <div
+        className={`relative bg-white border border-stone-200 rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-all group h-auto ${isReview ? "opacity-60 grayscale-[80%] bg-stone-50" : ""}`}
+      >
+        {/* ICON */}
+        <div
+          className={`p-2.5 rounded-lg shrink-0 ${isOneOff ? "bg-indigo-50 text-indigo-600" : "bg-rose-50 text-rose-600"}`}
+        >
+          {isOneOff ? (
+            <Briefcase className="w-5 h-5" />
+          ) : (
+            <RefreshCw className="w-5 h-5" />
+          )}
         </div>
 
-        {/* Middle: Content */}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bebas text-3xl text-stone-800 leading-none group-hover:text-fiji-dark transition-colors mb-2">
-            {task.title}
-          </h3>
-          <p className="text-stone-600 text-sm line-clamp-2 leading-relaxed">
-            {task.description}
+        {/* CONTENT */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <div className="flex items-center gap-2 mb-0.5">
+            <h3 className="font-bebas text-xl text-stone-800 leading-none group-hover:text-fiji-dark transition-colors truncate pt-0.5">
+              {task.title}
+            </h3>
+          </div>
+          <p className="text-stone-500 text-xs line-clamp-1">
+            {task.description || "No description provided."}
           </p>
         </div>
 
-        {/* Right: Actions & Meta */}
-        <div className="flex flex-col items-end gap-3 min-w-[180px]">
-          <div className="flex gap-2">
+        {/* META & ACTIONS */}
+        <div className="flex items-center gap-4 shrink-0">
+          {/* POINTS & DUE DATE */}
+          <div className="flex flex-col items-end justify-center gap-0.5 min-w-[80px]">
             {task.points_value > 0 && (
-              <span className="bg-fiji-gold text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
+              <span className="font-bold text-stone-700 text-sm">
                 {task.points_value} PTS
               </span>
             )}
@@ -241,7 +249,11 @@ export default function DutyCard({
               <TimeDisplay target={task.due_at} mode="deadline" />
             )}
           </div>
-          <div className="w-full">{renderActions()}</div>
+
+          {/* ACTION BUTTON */}
+          <div className="w-[140px] flex justify-end">
+            {renderActions("w-full")}
+          </div>
         </div>
       </div>
     );
