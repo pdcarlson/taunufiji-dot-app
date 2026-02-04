@@ -457,3 +457,15 @@
   - `npm run build` passing with 0 errors.
   - `npm test` passing (Fixed `TaskCard` userId mismatch and updated mocks).
 - **Impact**: Backend code is now highly modular, testable, and aligned with the project's long-term architectural goals.
+
+## 2026-02-03: Refactor Lib Structure & Cron Split
+
+- **Context**: To improve maintainability and strictly follow Clean Architecture, the lib folder was restructured. CronService was monolithic and split into smaller handlers.
+- **Technical Changes**:
+  - Split CronService into jobs/handlers/ (UnlockTasksJob, NotifyUrgentJob, etc.).
+  - Created index.ts barrel files for all service modules.
+  - Updated container.ts to use standardized imports.
+  - Patched env.ts to skip Zod validation in 	est environment.
+  - Fixed dependency injection in LibraryService.test.ts.
+  - **Security**: Fixed uploadFileAction to enforce JWT authentication.
+- **Impact**: Cleaner imports, easier testing of cron jobs, and fixed a security/reliability bug in file uploads.

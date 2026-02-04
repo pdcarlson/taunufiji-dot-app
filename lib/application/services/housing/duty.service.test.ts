@@ -4,6 +4,20 @@ import { MockFactory } from "@/lib/test/mock-factory";
 import { HousingTask } from "@/lib/domain/entities";
 
 // Helper to create valid HousingTask mock
+vi.mock("@/lib/infrastructure/events/dispatcher", () => ({
+  DomainEventBus: {
+    publish: vi.fn(),
+  },
+  TaskEvents: {
+    TASK_CLAIMED: "task.claimed",
+    TASK_SUBMITTED: "task.submitted",
+    TASK_APPROVED: "task.approved",
+    TASK_REJECTED: "task.rejected",
+    TASK_REASSIGNED: "task.reassigned",
+    TASK_UNASSIGNED: "task.unassigned",
+  },
+}));
+
 const createMockTask = (overrides: Partial<HousingTask>): HousingTask => ({
   id: "task_default",
   createdAt: new Date().toISOString(),

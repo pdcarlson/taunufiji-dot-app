@@ -31,15 +31,16 @@ import { DiscordProvider } from "./messaging/discord.provider";
 import { AppwriteIdentityProvider } from "./auth/appwrite.identity";
 import { S3StorageService } from "./storage/storage";
 
-import { DutyService } from "@/lib/application/services/housing/duty.service";
-import { PointsService } from "@/lib/application/services/ledger/points.service";
-import { UserService } from "@/lib/application/services/identity/user.service";
-import { AuthService } from "@/lib/application/services/identity/auth.service";
-import { ScheduleService } from "@/lib/application/services/housing/schedule.service";
-import { QueryService } from "@/lib/application/services/housing/query.service";
-import { MaintenanceService } from "@/lib/application/services/housing/maintenance.service";
-import { AdminService } from "@/lib/application/services/housing/admin.service";
-import { LibraryService } from "@/lib/application/services/library/library.service";
+import {
+  DutyService,
+  ScheduleService,
+  QueryService,
+  MaintenanceService,
+  AdminService,
+} from "@/lib/application/services/housing";
+import { PointsService } from "@/lib/application/services/ledger";
+import { UserService, AuthService } from "@/lib/application/services/identity";
+import { LibraryService } from "@/lib/application/services/library";
 
 // ...
 

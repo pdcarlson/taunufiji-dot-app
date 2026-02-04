@@ -11,11 +11,16 @@ vi.mock("@/lib/infrastructure/storage/storage", () => ({
 
 describe("LibraryService", () => {
   const mockRepo = MockFactory.createLibraryRepository();
+  const mockStorageService = {
+    getReadUrl: vi.fn().mockResolvedValue("https://S3-URL"),
+    uploadFile: vi.fn(),
+    deleteFile: vi.fn(),
+  };
   let service: LibraryService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new LibraryService(mockRepo);
+    service = new LibraryService(mockRepo, mockStorageService);
   });
 
   describe("getStats", () => {

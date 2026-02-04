@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getDashboardStatsAction } from "@/lib/presentation/actions/dashboard.actions";
-import { getMyTasksAction } from "@/lib/presentation/actions/tasks.actions";
+import { getMyTasksAction } from "@/lib/presentation/actions/housing/tasks.actions";
 import GreetingCard from "./GreetingCard";
 import LibraryWidget from "@/components/features/library/widgets/LibraryWidget";
 import LeaderboardWidget from "@/components/features/leaderboard/widgets/LeaderboardWidget";

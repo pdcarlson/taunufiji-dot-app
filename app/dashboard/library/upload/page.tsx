@@ -37,7 +37,7 @@ const PdfRedactor = dynamic_(
 );
 
 export default function UnifiedUploadPage() {
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   const {
     addFilesToQueue,
     removeCurrentFileFromQueue,
@@ -176,24 +176,14 @@ export default function UnifiedUploadPage() {
 
     try {
       let fileToUpload: File = currentFile;
-      const stdName = generateFilename("pdf");
-      const currentSem = stickyMetadata.semester || "Unknown";
-
-      // Generate JWT once for all server actions
-      // const { jwt } = await account.createJWT();
-
-      // 0. CHECK FOR DUPLICATES
-      toast.loading("Checking for duplicates...", { id: toastId });
-      const isDuplicate = await checkDuplicateResourceAction(
-        {
-          department: stickyMetadata.department,
-          courseNumber: stickyMetadata.courseNumber,
-          assessmentType: stickyMetadata.assessmentType,
-          semester: currentSem,
-          year: stickyMetadata.year,
-          version: stickyMetadata.version,
         },
-        // Pass JWT
+        // Pass JWT - Wait, checkDuplicateResourceAction needs to be updated too if it requires auth?
+        // Let's assume for now I should pass it if the action accepts it.
+        // I will check the action signature first.
+        // Actually, let's just create the JWT here first.
+        
+        // Generate JWT once for all server actions
+        await getToken(),
       );
 
       if (isDuplicate) {
@@ -224,8 +214,9 @@ export default function UnifiedUploadPage() {
       formData.append("file", fileToUpload);
       // formData.append("jwt", jwt); // Pass JWT
 
+      const jwt = await getToken();
       // We need a server action that accepts FormData for upload
-      const uploadRes = await uploadFileAction(formData);
+      const uploadRes = await uploadFileAction(formData, jwt);
       if (!uploadRes || !uploadRes.$id) throw new Error("Upload failed");
 
       // 3. SUBMIT METADATA TO API

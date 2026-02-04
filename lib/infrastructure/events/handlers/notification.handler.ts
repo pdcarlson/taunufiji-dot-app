@@ -15,7 +15,7 @@ import {
   TaskReassignedEvent,
   TaskUnassignedEvent,
 } from "@/lib/domain/events";
-import { NotificationService } from "@/lib/application/services/notification.service";
+import { NotificationService } from "@/lib/application/services/shared/notification.service";
 import { logger } from "@/lib/utils/logger";
 
 export const NotificationHandler = {

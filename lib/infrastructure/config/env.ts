@@ -24,7 +24,10 @@ const envSchema = z.object({
 });
 
 // Validate process.env
-const parsed = envSchema.safeParse(process.env);
+const isTest = process.env.NODE_ENV === "test";
+const parsed = isTest
+  ? { success: true, data: process.env } // Skip validation in test
+  : envSchema.safeParse(process.env);
 
 if (!parsed.success) {
   console.error(

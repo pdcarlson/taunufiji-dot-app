@@ -6,22 +6,25 @@ import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 /**
  * Uploads a file to S3 and returns the Key/ID
  */
-export async function uploadFileAction(formData: FormData) {
+export async function uploadFileAction(formData: FormData, jwt: string) {
   try {
-    const result = await actionWrapper(async ({ container }) => {
-      // 2. Process File
-      const file = formData.get("file") as File;
-      if (!file) throw new Error("No file uploaded");
+    const result = await actionWrapper(
+      async ({ container }) => {
+        // 2. Process File
+        const file = formData.get("file") as File;
+        if (!file) throw new Error("No file uploaded");
 
-      const buffer = Buffer.from(await file.arrayBuffer());
-      // Use 'library/' folder and keep original filename (sanitized)
-      const key = `library/${file.name.replace(/\s+/g, "_")}`;
+        const buffer = Buffer.from(await file.arrayBuffer());
+        // Use 'library/' folder and keep original filename (sanitized)
+        const key = `library/${file.name.replace(/\s+/g, "_")}`;
 
-      await container.storageService.uploadFile(buffer, key, file.type);
+        await container.storageService.uploadFile(buffer, key, file.type);
 
-      // Return an ID-like object to satisfy UI
-      return { $id: key, key: key };
-    });
+        // Return an ID-like object to satisfy UI
+        return { $id: key, key: key };
+      },
+      { jwt },
+    );
 
     if (result.success && result.data) return result.data;
     throw new Error(result.error || "Upload failed");

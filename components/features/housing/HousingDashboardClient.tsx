@@ -19,7 +19,7 @@ import {
   getAllMembersAction,
 } from "@/lib/presentation/actions/housing/query.actions";
 import { getSchedulesAction } from "@/lib/presentation/actions/housing/schedule.actions";
-import { getMyTasksAction } from "@/lib/presentation/actions/tasks.actions";
+import { getMyTasksAction } from "@/lib/presentation/actions/housing/tasks.actions";
 import MyDutiesWidget from "./MyDutiesWidget";
 // Note: We use useAuth for getToken and isHousingAdmin
 import { useAuth } from "@/components/providers/AuthProvider";
