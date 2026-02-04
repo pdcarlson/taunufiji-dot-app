@@ -19,7 +19,7 @@ interface DashboardViewProps {
 export default function DashboardView({
   initialLeaderboard,
 }: DashboardViewProps) {
-  const { getToken, user } = useAuth();
+  const { getToken, user, profile } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [myTasks, setMyTasks] = useState<HousingTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,13 +61,22 @@ export default function DashboardView({
       <GreetingCard userName={user?.name} />
 
       {/* WIDGET GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* 1. My Duties (replaces Housing Stats) */}
-        <MyDutiesWidget initialTasks={myTasks} userId={user?.$id || ""} />
-        {/* 2. Ad-Hoc Request (Replaces Library) */}
-        <AdHocRequestCard onSuccess={() => window.location.reload()} />
-        {/* 3. Leaderboard */}
-        <LeaderboardWidget initialLeaderboard={initialLeaderboard} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* LEFT COLUMN (Wide) */}
+        <div className="lg:col-span-2">
+          <MyDutiesWidget
+            initialTasks={myTasks}
+            userId={user?.$id || ""}
+            profileId={profile?.discord_id || user?.$id || ""}
+            variant="wide"
+          />
+        </div>
+
+        {/* RIGHT COLUMN (Stack) */}
+        <div className="space-y-6">
+          <AdHocRequestCard onSuccess={() => window.location.reload()} />
+          <LeaderboardWidget initialLeaderboard={initialLeaderboard} />
+        </div>
       </div>
 
       {/* 4. Points Ledger (Full Width) */}

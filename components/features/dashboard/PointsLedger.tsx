@@ -73,7 +73,8 @@ export default function PointsLedger({ history }: PointsLedgerProps) {
           </thead>
           <tbody className="divide-y divide-stone-50">
             {stackedHistory.map((item, idx) => {
-              const isPositive = item.amount > 0;
+              const isPositive = item.amount >= 0;
+              const isStrictlyPositive = item.amount > 0;
               return (
                 <tr
                   key={idx}
@@ -110,7 +111,7 @@ export default function PointsLedger({ history }: PointsLedgerProps) {
                   <td
                     className={`py-3 pr-2 text-right font-mono font-bold ${isPositive ? "text-emerald-600" : "text-rose-500"}`}
                   >
-                    {isPositive ? "+" : ""}
+                    {isStrictlyPositive ? "+" : ""}
                     {item.amount * item.count} PTS
                   </td>
                 </tr>

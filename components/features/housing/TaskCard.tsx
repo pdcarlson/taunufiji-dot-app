@@ -77,8 +77,10 @@ export default function TaskCard(props: TaskCardProps) {
     <DutyCard
       task={task}
       userId={props.userId}
+      profileId={props.profileId}
       getJWT={props.getJWT}
       onEdit={props.onEdit}
+      variant={variant}
     />
   );
 }

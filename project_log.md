@@ -483,3 +483,19 @@
   - Updated DomainEventBus to propagate errors instead of swallowing them.
   - Updated AdminService.verifyTask to catch Event errors, **Rollback** task status to pending, and throw a visible error to the UI.
   - Validated with dmin.service.test.ts (mocking EventBus failure).
+
+## 2026-02-04: Dashboard UI Polish & Features
+
+- **UI Redesign**:
+  - **Main Dashboard**: Redesigned layout to use a Wide (2-column) 'My Duties' widget.
+  - **Horizontal Cards**: Created a new 'Horizontal' variant for 'TaskCard' to improve readability on the main dashboard.
+  - **Feedback**: Leaderboard widget styling fixed to prevent overlap with content below it.
+- **Features**:
+  - **Ad-Hoc Requests**: Implemented 'AdHocRequestCard' and full backend flow ('requestAdHocPoints' in 'DutyService') allowing users to submit points requests for unscheduled work.
+  - **Admin Override**: Updated 'ProofReviewModal' to allow Admins to adjust point values during approval.
+- **Visual Polish**:
+  - **Zero-Point Ledger**: Activities with 0 points (Completed Duties) now display as Green (Positive/Success) in the Ledger, instead of Red (Negative).
+- **Bug Fixes**:
+  - **Upload Button**: Fixed logic where 'Upload Proof' button was hidden because dashboard passed Auth ID instead of Discord Profile ID.
+  - **Build**: Fixed type errors in 'library/upload/page.tsx' and 'env.ts'.
+

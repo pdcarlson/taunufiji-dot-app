@@ -161,6 +161,7 @@ export default function HousingDashboardClient({
             <MyDutiesWidget
               initialTasks={myDuties}
               userId={currentUser?.$id || ""}
+              profileId={currentProfile?.discord_id || currentUser?.$id || ""}
             />
           </div>
         </div>

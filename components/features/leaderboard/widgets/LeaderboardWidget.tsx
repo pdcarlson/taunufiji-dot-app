@@ -99,7 +99,7 @@ export default function LeaderboardWidget({
 
   if (loading) {
     return (
-      <div className="h-full w-full rounded-xl border border-stone-800 bg-stone-900 p-6 flex items-center justify-center">
+      <div className="w-full rounded-xl border border-stone-800 bg-stone-900 p-6 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-stone-600" />
       </div>
     );
@@ -107,7 +107,7 @@ export default function LeaderboardWidget({
 
   if (error) {
     return (
-      <div className="h-full w-full rounded-xl border border-red-900/50 bg-stone-900 p-6 flex flex-col items-center justify-center text-center">
+      <div className="w-full rounded-xl border border-red-900/50 bg-stone-900 p-6 flex flex-col items-center justify-center text-center">
         <AlertCircle className="h-6 w-6 text-red-500 mb-2" />
         <span className="text-red-400 font-bebas tracking-wide text-sm">
           {error}
@@ -117,7 +117,7 @@ export default function LeaderboardWidget({
   }
 
   return (
-    <div className="h-full w-full rounded-xl border border-stone-800 bg-stone-900 shadow-xl flex flex-col relative overflow-hidden">
+    <div className="w-full rounded-xl border border-stone-800 bg-stone-900 shadow-xl flex flex-col relative overflow-hidden">
       {/* Background Glow */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-fiji-gold/5 rounded-full blur-3xl pointer-events-none" />
 

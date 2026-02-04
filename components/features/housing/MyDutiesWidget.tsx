@@ -11,11 +11,15 @@ import { useAuth } from "@/components/providers/AuthProvider";
 interface MyDutiesWidgetProps {
   initialTasks: HousingTask[];
   userId: string;
+  profileId?: string;
+  variant?: "default" | "wide";
 }
 
 export default function MyDutiesWidget({
   initialTasks,
   userId,
+  profileId,
+  variant = "default",
 }: MyDutiesWidgetProps) {
   const tasks = initialTasks;
 
@@ -39,8 +43,8 @@ export default function MyDutiesWidget({
   // If no tasks, show empty state
   if (tasks.length === 0) {
     return (
-      <Card className="border-dashed border-stone-200 bg-stone-50/50">
-        <CardContent className="flex flex-col items-center justify-center p-8 text-center text-stone-500">
+      <Card className="border-dashed border-stone-200 bg-stone-50/50 h-full">
+        <CardContent className="flex flex-col items-center justify-center p-8 text-center text-stone-500 h-full">
           <ClipboardList className="w-8 h-8 mb-3 opacity-20" />
           <p>No active duties assigned.</p>
         </CardContent>
@@ -49,13 +53,13 @@ export default function MyDutiesWidget({
   }
 
   return (
-    <div className="space-y-4 relative z-10 w-full max-w-full">
-      <div className="flex items-center gap-2 mb-2">
-        <ClipboardList className="w-5 h-5 text-stone-400" />
+    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5 h-full flex flex-col">
+      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-stone-100">
+        <ClipboardList className="w-5 h-5 text-fiji-purple" />
         <h2 className="font-bebas text-2xl text-stone-700">My Duties</h2>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 flex-1 overflow-y-auto">
         {tasks.map((task) => {
           const isActive = task.id === activeTaskId;
 
@@ -68,10 +72,11 @@ export default function MyDutiesWidget({
               <TaskCard
                 task={task}
                 userId={userId}
-                profileId={userId}
+                profileId={profileId || userId}
                 userName=""
                 isAdmin={false}
                 getJWT={getToken}
+                variant={variant === "wide" ? "horizontal" : "square"}
               />
             </div>
           ) : (
