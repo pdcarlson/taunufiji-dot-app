@@ -34,12 +34,12 @@ export const PointsHandler = {
       DomainEvents.TASK_APPROVED,
       async (payload) => {
         logger.log(
-          `[PointsHandler] Awarding points for Task Approved: ${payload.taskTitle}`,
+          `[PointsHandler] Awarding points for Task Approved: ${payload.title}`,
         );
         const { pointsService } = getContainer();
         await pointsService.awardPoints(payload.userId, {
           amount: payload.points,
-          reason: payload.taskTitle,
+          reason: payload.title,
           category: "task",
         });
       },

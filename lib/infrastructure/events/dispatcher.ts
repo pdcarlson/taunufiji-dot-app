@@ -45,13 +45,8 @@ class EventBus {
     // Execute all handlers in parallel, but await completion
     await Promise.all(
       subscribers.map(async (handler) => {
-        try {
-          await handler(payload);
-        } catch (e) {
-          logger.error(`[EventBus] Handler failed for ${event}`, e);
-          // We assume handlers are robust and don't crash the request logic
-          // but logging is critical.
-        }
+        // We propagate errors so the caller (Action) knows something failed.
+        await handler(payload);
       }),
     );
   }

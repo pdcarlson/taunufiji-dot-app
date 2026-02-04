@@ -67,12 +67,25 @@ export class AdminService {
     // Award Points & Notify (via Event)
     const awardAmount = task.points_value;
 
-    await DomainEventBus.publish(TaskEvents.TASK_APPROVED, {
-      taskId: task.id,
-      title: task.title,
-      userId: task.assigned_to,
-      points: awardAmount,
-    });
+    try {
+      await DomainEventBus.publish(TaskEvents.TASK_APPROVED, {
+        taskId: task.id,
+        title: task.title,
+        userId: task.assigned_to,
+        points: awardAmount,
+      });
+    } catch (error) {
+      // Rollback status if points fail?
+      // For now, we propagate the error so the UI shows failure.
+      // Ideally we would revert the transaction here.
+      await this.taskRepository.update(taskId, {
+        status: "pending",
+        completed_at: null,
+      });
+      throw new Error(
+        `Failed to complete approval process: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
 
     // Trigger Recurrence
     if (task.schedule_id) {

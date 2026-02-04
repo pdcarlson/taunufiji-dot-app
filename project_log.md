@@ -469,3 +469,17 @@
   - Fixed dependency injection in LibraryService.test.ts.
   - **Security**: Fixed uploadFileAction to enforce JWT authentication.
 - **Impact**: Cleaner imports, easier testing of cron jobs, and fixed a security/reliability bug in file uploads.
+
+## 2026-02-03: Fix 'completed_at' Schema Error
+- **Issue**: Task approval failed with Invalid document structure: Unknown attribute: "completed_at".
+- **Root Cause**: The AdminService logic was updated to set completed_at, but the Appwrite database schema was missing this attribute.
+- **Fix**:
+  - Created and ran migration script scripts/add-completed-at-attr.ts to add the missing datetime attribute.
+  - Added unit test lib/application/services/housing/admin.service.test.ts to verify erifyTask logic and prevent regressions.
+
+## 2026-02-03: Fix Silent Ledger Failure
+- **Issue**: Task approval showed success in UI even if Points/Ledger transaction failed (swallowed error).
+- **Fix**:
+  - Updated DomainEventBus to propagate errors instead of swallowing them.
+  - Updated AdminService.verifyTask to catch Event errors, **Rollback** task status to pending, and throw a visible error to the UI.
+  - Validated with dmin.service.test.ts (mocking EventBus failure).

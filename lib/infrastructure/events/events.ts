@@ -13,6 +13,6 @@ export interface LibraryUploadedEvent {
 export interface TaskApprovedEvent {
   userId: string; // The user who did the task (Discord ID)
   taskId: string;
-  taskTitle: string;
+  title: string;
   points: number;
 }
