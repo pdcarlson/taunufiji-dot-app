@@ -5,11 +5,11 @@ export const dynamic = "force-dynamic";
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import dynamic_ from "next/dynamic";
-import { useUploadQueue } from "@/components/library/upload/UploadContext";
+import { useUploadQueue } from "@/components/features/library/upload/UploadContext";
 import { useAuth } from "@/components/providers/AuthProvider";
 // import { account } from "@/lib/infrastructure/persistence/appwrite.web"; // Removed Direct Import
 import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
-import type { PdfRedactorRef } from "@/components/library/upload/PdfRedactor";
+import type { PdfRedactorRef } from "@/components/features/library/upload/PdfRedactor";
 import Combobox from "@/components/ui/Combobox";
 import {
   UploadCloud,
@@ -30,7 +30,7 @@ import { getMetadataAction } from "@/lib/presentation/actions/library.actions";
 
 // Dynamic import to prevent SSR evaluation of PDF library (uses DOMMatrix)
 const PdfRedactor = dynamic_(
-  () => import("@/components/library/upload/PdfRedactor"),
+  () => import("@/components/features/library/upload/PdfRedactor"),
   { ssr: false },
 );
 

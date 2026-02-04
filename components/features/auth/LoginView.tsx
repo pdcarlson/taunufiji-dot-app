@@ -3,7 +3,7 @@
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Shield, Lock } from "lucide-react";
 
-export default function LoginClient() {
+export default function LoginView() {
   const { login } = useAuth();
 
   return (

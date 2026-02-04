@@ -1,4 +1,4 @@
-import HousingDashboardClient from "@/components/housing/HousingDashboardClient";
+import HousingDashboardClient from "@/components/features/housing/HousingDashboardClient";
 import {
   fetchAllTasks,
   fetchAllMembers,

@@ -1,8 +1,8 @@
-import DashboardWidgets from "./_components/DashboardWidgets";
+import DashboardView from "@/components/features/dashboard/DashboardView";
 import { fetchLeaderboard } from "@/lib/presentation/queries/dashboard.queries";
 
 export default async function DashboardPage() {
   const leaderboard = await fetchLeaderboard();
 
-  return <DashboardWidgets initialLeaderboard={leaderboard} />;
+  return <DashboardView initialLeaderboard={leaderboard} />;
 }

@@ -11,7 +11,7 @@ import {
   LucideIcon,
   Loader2,
 } from "lucide-react";
-import Sidebar from "@/app/dashboard/_components/Sidebar";
+import Sidebar from "./Sidebar";
 
 export default function DashboardShell({
   children,

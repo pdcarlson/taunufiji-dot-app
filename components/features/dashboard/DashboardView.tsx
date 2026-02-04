@@ -4,21 +4,21 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getDashboardStatsAction } from "@/lib/presentation/actions/dashboard.actions";
 import { getMyTasksAction } from "@/lib/presentation/actions/tasks.actions";
-import GreetingCard from "@/components/home/GreetingCard";
-import LibraryWidget from "@/components/library/widgets/LibraryWidget";
-import LeaderboardWidget from "@/components/leaderboard/widgets/LeaderboardWidget";
-import MyDutiesWidget from "@/components/housing/MyDutiesWidget";
+import GreetingCard from "./GreetingCard";
+import LibraryWidget from "@/components/features/library/widgets/LibraryWidget";
+import LeaderboardWidget from "@/components/features/leaderboard/widgets/LeaderboardWidget";
+import MyDutiesWidget from "@/components/features/housing/MyDutiesWidget";
 import PointsLedger from "./PointsLedger";
 import { HousingTask } from "@/lib/domain/types/task";
 import { Loader2 } from "lucide-react";
 
-interface DashboardWidgetsProps {
+interface DashboardViewProps {
   initialLeaderboard: any[];
 }
 
-export default function DashboardWidgets({
+export default function DashboardView({
   initialLeaderboard,
-}: DashboardWidgetsProps) {
+}: DashboardViewProps) {
   const { getToken, user } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [myTasks, setMyTasks] = useState<HousingTask[]>([]);

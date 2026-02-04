@@ -1,4 +1,4 @@
-import LibraryClient from "@/components/library/LibraryClient";
+import LibraryClient from "@/components/features/library/LibraryClient";
 import {
   fetchInitialLibraryResources,
   fetchInitialLibraryTotal,
