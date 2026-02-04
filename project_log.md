@@ -490,4 +490,7 @@
   - **AdHocRequestCard**: Created a horizontal variant maintaining the brand gradient and implemented vertical stretching to align with adjacent columns.
   - **Dashboard Layout**: Restructured `DashboardView` grid to use a [2/3 | 1/3] split with `items-stretch`, moving AdHoc requests under the Duties list.
 - **Impact**: Improved visual hierarchy and information density on the main dashboard; standardized housing dashboard aesthetics.
+- **Mobile UI**:
+  - Implemented responsive stacking for `DutyCard` and `AdHocRequestCard` (`flex-col sm:flex-row`).
+  - Optimized `PointsLedger` by hiding non-essential columns (Category/Date) on mobile to prevent overlaps.
 - **Risk**: None. Build verified.

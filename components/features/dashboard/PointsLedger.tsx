@@ -66,8 +66,8 @@ export default function PointsLedger({ history }: PointsLedgerProps) {
             <tr>
               <th className="pb-3 pl-2">Brother</th>
               <th className="pb-3">Activity</th>
-              <th className="pb-3">Category</th>
-              <th className="pb-3 text-right">Date</th>
+              <th className="pb-3 hidden md:table-cell">Category</th>
+              <th className="pb-3 text-right hidden sm:table-cell">Date</th>
               <th className="pb-3 text-right pr-2">Points</th>
             </tr>
           </thead>
@@ -98,12 +98,12 @@ export default function PointsLedger({ history }: PointsLedgerProps) {
                       )}
                     </div>
                   </td>
-                  <td className="py-3">
+                  <td className="py-3 hidden md:table-cell">
                     <span className="capitalize text-stone-500 text-xs bg-stone-100 px-2 py-1 rounded">
                       {item.category}
                     </span>
                   </td>
-                  <td className="py-3 text-right text-stone-400 text-xs tabular-nums">
+                  <td className="py-3 text-right text-stone-400 text-xs tabular-nums hidden sm:table-cell whitespace-nowrap">
                     {formatDistanceToNow(new Date(item.timestamp), {
                       addSuffix: true,
                     })}

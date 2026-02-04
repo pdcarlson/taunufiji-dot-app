@@ -207,39 +207,42 @@ export default function DutyCard({
     </>
   );
 
-  // === HORIZONTAL LAYOUT (Compact) ===
+  // === HORIZONTAL LAYOUT (Compact & Responsive) ===
   if (variant === "horizontal") {
     return (
       <div
-        className={`relative bg-white border border-stone-200 rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-all group h-auto ${isReview ? "opacity-60 grayscale-[80%] bg-stone-50" : ""}`}
+        className={`relative bg-white border border-stone-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm hover:shadow-md transition-all group h-auto ${isReview ? "opacity-60 grayscale-[80%] bg-stone-50" : ""}`}
       >
-        {/* ICON */}
-        <div
-          className={`p-2.5 rounded-lg shrink-0 ${isOneOff ? "bg-indigo-50 text-indigo-600" : "bg-rose-50 text-rose-600"}`}
-        >
-          {isOneOff ? (
-            <Briefcase className="w-5 h-5" />
-          ) : (
-            <RefreshCw className="w-5 h-5" />
-          )}
-        </div>
-
-        {/* CONTENT */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <div className="flex items-center gap-2 mb-0.5">
-            <h3 className="font-bebas text-xl text-stone-800 leading-none group-hover:text-fiji-dark transition-colors truncate pt-0.5">
-              {task.title}
-            </h3>
+        {/* ICON & CONTENT WRAPPER */}
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          {/* ICON */}
+          <div
+            className={`p-2.5 rounded-lg shrink-0 ${isOneOff ? "bg-indigo-50 text-indigo-600" : "bg-rose-50 text-rose-600"}`}
+          >
+            {isOneOff ? (
+              <Briefcase className="w-5 h-5" />
+            ) : (
+              <RefreshCw className="w-5 h-5" />
+            )}
           </div>
-          <p className="text-stone-500 text-xs line-clamp-1">
-            {task.description || "No description provided."}
-          </p>
+
+          {/* CONTENT */}
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <div className="flex items-center gap-2 mb-0.5">
+              <h3 className="font-bebas text-xl text-stone-800 leading-none group-hover:text-fiji-dark transition-colors truncate pt-0.5">
+                {task.title}
+              </h3>
+            </div>
+            <p className="text-stone-500 text-xs line-clamp-1">
+              {task.description || "No description provided."}
+            </p>
+          </div>
         </div>
 
         {/* META & ACTIONS */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-3 sm:pt-0 border-t sm:border-0 border-stone-100">
           {/* POINTS & DUE DATE */}
-          <div className="flex flex-col items-end justify-center gap-0.5 min-w-[80px]">
+          <div className="flex flex-col items-start sm:items-end justify-center gap-0.5 min-w-[80px]">
             {task.points_value > 0 && (
               <span className="font-bold text-stone-700 text-sm">
                 {task.points_value} PTS
