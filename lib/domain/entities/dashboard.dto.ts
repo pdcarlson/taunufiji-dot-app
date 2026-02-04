@@ -9,6 +9,8 @@ export interface HistoryItem {
   amount: number;
   category: string;
   timestamp: string;
+  userName?: string;
+  userId?: string;
 }
 
 /**
@@ -23,4 +25,5 @@ export interface DashboardStats {
   fullName: string;
   housingHistory?: HistoryItem[];
   libraryHistory?: HistoryItem[];
+  ledgerHistory?: HistoryItem[];
 }

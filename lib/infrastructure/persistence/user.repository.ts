@@ -68,6 +68,21 @@ export class AppwriteUserRepository implements IUserRepository {
     }
   }
 
+  async findManyByDiscordIds(discordIds: string[]): Promise<User[]> {
+    if (discordIds.length === 0) return [];
+    try {
+      const db = getDatabase();
+      const result = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
+        Query.equal("discord_id", discordIds),
+        Query.limit(discordIds.length),
+      ]);
+
+      return result.documents.map((doc) => this.toDomain(doc));
+    } catch (error: unknown) {
+      throw new DatabaseError(`findManyByDiscordIds(${discordIds})`, error);
+    }
+  }
+
   async findTopByPoints(limit: number): Promise<User[]> {
     try {
       const db = getDatabase();

@@ -33,6 +33,7 @@ export const MockFactory = {
     findById: vi.fn(),
     findByAuthId: vi.fn(),
     findByDiscordId: vi.fn(),
+    findManyByDiscordIds: vi.fn(),
     findTopByPoints: vi.fn(),
     findMany: vi.fn(),
     create: vi.fn(),

@@ -50,7 +50,6 @@ describe("TaskCard", () => {
         userId="u1"
         userName="Tester"
         isAdmin={false}
-        onRefresh={vi.fn()}
         getJWT={mockGetJWT}
       />,
     );
@@ -79,7 +78,6 @@ describe("TaskCard", () => {
         userId="u1"
         userName="Tester"
         isAdmin={false}
-        onRefresh={vi.fn()}
         getJWT={mockGetJWT}
       />,
     );
@@ -110,7 +108,6 @@ describe("TaskCard", () => {
         profileId="p1"
         userName="Tester"
         isAdmin={false}
-        onRefresh={vi.fn()}
         getJWT={mockGetJWT}
       />,
     );

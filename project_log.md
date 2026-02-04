@@ -413,3 +413,19 @@
   - **Cleanup**: Removed components/dashboard/housing, library, and leaderboard directories. components/dashboard now strictly contains Shell/Layout components.
   - **Fixes**: Patched MyDutiesWidget props and resolved circular import dependencies in app/dashboard pages.
 - **Impact**: Enforces strict Domain-Driven directory structure. Eliminated 45% of component duplication.
+
+## 2026-02-03: Dashboard Overhaul & Global Ledger Implementation
+
+- **Context**: Improved the main dashboard to be more aesthetically pleasing and more informative by introducing a chapter-wide points ledger and cleaning up the Library card.
+- **Technical Changes**:
+  - **Global Ledger**: Transitioned the points ledger from a personal view to a chapter-wide "Recent Activity" feed.
+    - Updated `IUserRepository` with `findManyByDiscordIds` for efficient batch name resolution.
+    - Modified `getDashboardStatsAction` to fetch transactions for all users and resolve names in a single round-trip.
+  - **UI/UX**:
+    - **PointsLedger**: Created a new full-width component with transaction "stacking" logic (grouping consecutive identical actions by the same user with a "xN" badge).
+    - **LibraryWidget**: Redesigned the card to remove history lists and focus on a clean "Contribute" CTA.
+  - **Logic & Types**:
+    - Updated `HistoryItem` DTO to include `userName` and `userId`.
+    - Fixed pre-existing type errors in `TaskCard.test.tsx` and `PointsLedger.tsx` (name collisions and invalid props).
+    - Updated `MockFactory` to support the new repository methods.
+- **Impact**: Reduced visual clutter on the dashboard while providing a more engaging view of chapter activity. Improved code maintainability and type safety across dashboard components and services.

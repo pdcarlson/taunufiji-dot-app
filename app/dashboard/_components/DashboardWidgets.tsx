@@ -8,6 +8,7 @@ import GreetingCard from "@/components/home/GreetingCard";
 import LibraryWidget from "@/components/library/widgets/LibraryWidget";
 import LeaderboardWidget from "@/components/leaderboard/widgets/LeaderboardWidget";
 import MyDutiesWidget from "@/components/housing/MyDutiesWidget";
+import PointsLedger from "./PointsLedger";
 import { HousingTask } from "@/lib/domain/types/task";
 import { Loader2 } from "lucide-react";
 
@@ -67,6 +68,11 @@ export default function DashboardWidgets({
         <LibraryWidget stats={stats || {}} />
         {/* 3. Leaderboard */}
         <LeaderboardWidget initialLeaderboard={initialLeaderboard} />
+      </div>
+
+      {/* 4. Points Ledger (Full Width) */}
+      <div className="w-full">
+        <PointsLedger history={stats?.ledgerHistory || []} />
       </div>
     </div>
   );

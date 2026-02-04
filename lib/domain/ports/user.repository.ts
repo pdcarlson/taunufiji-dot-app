@@ -41,6 +41,11 @@ export interface IUserRepository {
   findByDiscordId(discordId: string): Promise<User | null>;
 
   /**
+   * Find users by a list of Discord IDs
+   */
+  findManyByDiscordIds(discordIds: string[]): Promise<User[]>;
+
+  /**
    * Find top users by points
    * @param limit Maximum number of users to return
    */

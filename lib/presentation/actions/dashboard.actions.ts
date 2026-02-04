@@ -42,26 +42,34 @@ export async function getDashboardStatsAction(
       // 6. History
       let housingHistory: any[] = [];
       let libraryHistory: any[] = [];
+      let ledgerHistory: any[] = [];
 
       try {
-        const [housingEntries, libraryEntries] = await Promise.all([
-          container.pointsService.getHistory(profile.discord_id, [
-            "task",
-            "fine",
-          ]),
-          container.ledgerRepository.findMany({
-            userId: profile.discord_id,
-            category: "event",
-            limit: 3,
-            orderBy: "timestamp",
-            orderDirection: "desc",
-          }),
-        ]);
+        const [housingEntries, libraryEntries, allLedgerEntries] =
+          await Promise.all([
+            container.pointsService.getHistory(profile.discord_id, [
+              "task",
+              "fine",
+            ]),
+            container.ledgerRepository.findMany({
+              userId: profile.discord_id,
+              category: "event",
+              limit: 3,
+              orderBy: "timestamp",
+              orderDirection: "desc",
+            }),
+            // Global Ledger Fetch (Last 20 items for everyone)
+            container.ledgerRepository.findMany({
+              limit: 20,
+              orderBy: "timestamp",
+              orderDirection: "desc",
+            }),
+          ]);
 
         housingHistory = housingEntries.slice(0, 3).map((d) => ({
           id: d.id,
           reason: d.reason,
-          amount: d.amount,
+          amount: d.is_debit ? -d.amount : d.amount,
           category: d.category,
           timestamp: d.timestamp,
         }));
@@ -69,10 +77,32 @@ export async function getDashboardStatsAction(
         libraryHistory = libraryEntries.map((d) => ({
           id: d.id,
           reason: d.reason,
-          amount: d.amount,
+          amount: d.is_debit ? -d.amount : d.amount,
           category: d.category,
           timestamp: d.timestamp,
         }));
+
+        // RESOLVE NAMES FOR GLOBAL LEDGER
+        const uniqueUserIds = Array.from(
+          new Set(allLedgerEntries.map((d) => d.user_id)),
+        );
+        const users =
+          await container.userRepository.findManyByDiscordIds(uniqueUserIds);
+        const userMap = new Map(users.map((u) => [u.discord_id, u]));
+
+        ledgerHistory = allLedgerEntries.map((d) => {
+          const user = userMap.get(d.user_id);
+          const realAmount = d.is_debit ? -d.amount : d.amount;
+          return {
+            id: d.id,
+            reason: d.reason,
+            amount: realAmount,
+            category: d.category,
+            timestamp: d.timestamp,
+            userId: d.user_id,
+            userName: user?.full_name || user?.discord_handle || "Unknown",
+          };
+        });
       } catch (err) {
         console.warn("Failed to fetch distributed history", err);
       }
@@ -84,6 +114,7 @@ export async function getDashboardStatsAction(
         fullName,
         housingHistory,
         libraryHistory,
+        ledgerHistory,
       };
     },
     { jwt },
@@ -101,6 +132,7 @@ function emptyStats() {
     fullName: "Brother",
     housingHistory: [],
     libraryHistory: [],
+    ledgerHistory: [],
   };
 }
 
