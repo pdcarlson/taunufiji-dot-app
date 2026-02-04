@@ -507,4 +507,6 @@
   - Replaced hard reloads with `router.refresh()` in `DutyCard`.
   - Added branded `not-found.tsx` and `error.tsx` pages.
   - Hardened types in `dashboard.actions` and `read.actions`.
+- **Documentation**:
+  - Created "Showcase" `README.md` highlighting Architecture and Features.
 - **Risk**: None. Build verified.
