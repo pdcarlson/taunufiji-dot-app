@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "test": "vitest"
   },
   "dependencies": {
@@ -43,7 +43,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "latest",
     "eslint": "latest",
-    "eslint-config-next": "15.1.6",
+    "eslint-config-next": "^16.1.6",
     "jsdom": "^27.4.0",
     "lightningcss": "^1.31.1",
     "postcss": "latest",
