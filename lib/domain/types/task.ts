@@ -12,7 +12,13 @@ export const TaskStatusSchema = z.enum([
   "expired",
   "locked",
 ]);
-export const TaskTypeSchema = z.enum(["duty", "bounty", "project", "one_off"]);
+export const TaskTypeSchema = z.enum([
+  "duty",
+  "bounty",
+  "project",
+  "one_off",
+  "ad_hoc",
+]);
 export const NotificationLevelSchema = z
   .enum(["none", "unlocked", "urgent", "expired"])
   .optional();

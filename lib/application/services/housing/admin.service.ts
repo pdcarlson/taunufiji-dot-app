@@ -48,7 +48,12 @@ export class AdminService {
    * Admin approves a task
    * Emits: TASK_APPROVED (Triggers PointsHandler & NotificationHandler)
    */
-  async verifyTask(taskId: string, _verifierId: string, _rating: number = 5) {
+  async verifyTask(
+    taskId: string,
+    _verifierId: string,
+    _rating: number = 5,
+    overridePoints?: number,
+  ) {
     const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Task not found.");
@@ -58,14 +63,22 @@ export class AdminService {
       throw new Error("Task is not pending approval.");
     }
 
-    // Update Task Status
-    await this.taskRepository.update(taskId, {
+    // Update Task Status & potentially Points
+    const updates: Partial<CreateAssignmentDTO> = {
       status: "approved",
       completed_at: new Date().toISOString(),
-    });
+    };
+
+    if (overridePoints !== undefined) {
+      updates.points_value = overridePoints;
+    }
+
+    await this.taskRepository.update(taskId, updates);
 
     // Award Points & Notify (via Event)
-    const awardAmount = task.points_value;
+    // Use override if provided, otherwise original
+    const awardAmount =
+      overridePoints !== undefined ? overridePoints : task.points_value;
 
     try {
       await DomainEventBus.publish(TaskEvents.TASK_APPROVED, {
@@ -107,6 +120,19 @@ export class AdminService {
     const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Task not found.");
+    }
+
+    // For ad-hoc tasks: delete entirely on rejection
+    if (task.type === "ad_hoc") {
+      await this.taskRepository.delete(taskId);
+
+      await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
+        taskId: task.id,
+        title: task.title,
+        userId: task.assigned_to,
+        reason,
+      });
+      return true;
     }
 
     // For bounties: unassign user so task returns to pool

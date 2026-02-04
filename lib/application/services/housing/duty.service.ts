@@ -120,6 +120,43 @@ export class DutyService implements IDutyService {
   }
 
   /**
+   * Request points for an ad-hoc task
+   * Emits: TASK_SUBMITTED (effectively created & submitted at once)
+   */
+  async requestAdHocPoints(
+    userId: string,
+    data: {
+      title: string;
+      description: string;
+      points: number;
+      proofKey: string;
+    },
+  ) {
+    // 1. Create the Task directly in 'pending' state
+    const task = await this.taskRepository.create({
+      title: data.title,
+      description: data.description,
+      points_value: data.points,
+      type: "ad_hoc",
+      status: "pending",
+      assigned_to: userId,
+      proof_s3_key: data.proofKey,
+      notification_level: "urgent", // Flag for admins
+      // No schedule or due date for ad-hoc
+    });
+
+    // 2. Emit Submitted Event
+    // We treat this as a submission so admins get notified
+    await DomainEventBus.publish(TaskEvents.TASK_SUBMITTED, {
+      taskId: task.id,
+      title: task.title,
+      userId: userId,
+    });
+
+    return task;
+  }
+
+  /**
    * Get tasks assigned to current user, with lazy evaluation for expiry/recurrence.
    */
   async getMyTasks(userId: string) {

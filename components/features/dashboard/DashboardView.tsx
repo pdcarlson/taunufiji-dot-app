@@ -5,10 +5,10 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { getDashboardStatsAction } from "@/lib/presentation/actions/dashboard.actions";
 import { getMyTasksAction } from "@/lib/presentation/actions/housing/tasks.actions";
 import GreetingCard from "./GreetingCard";
-import LibraryWidget from "@/components/features/library/widgets/LibraryWidget";
 import LeaderboardWidget from "@/components/features/leaderboard/widgets/LeaderboardWidget";
 import MyDutiesWidget from "@/components/features/housing/MyDutiesWidget";
 import PointsLedger from "./PointsLedger";
+import AdHocRequestCard from "@/components/features/housing/AdHocRequestCard";
 import { HousingTask } from "@/lib/domain/types/task";
 import { Loader2 } from "lucide-react";
 
@@ -64,8 +64,8 @@ export default function DashboardView({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* 1. My Duties (replaces Housing Stats) */}
         <MyDutiesWidget initialTasks={myTasks} userId={user?.$id || ""} />
-        {/* 2. Library */}
-        <LibraryWidget stats={stats || {}} />
+        {/* 2. Ad-Hoc Request (Replaces Library) */}
+        <AdHocRequestCard onSuccess={() => window.location.reload()} />
         {/* 3. Leaderboard */}
         <LeaderboardWidget initialLeaderboard={initialLeaderboard} />
       </div>

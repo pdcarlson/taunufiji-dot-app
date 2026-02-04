@@ -35,11 +35,20 @@ export async function deleteTaskAction(taskId: string, jwt: string) {
   );
 }
 
-export async function approveTaskAction(taskId: string, jwt: string) {
+export async function approveTaskAction(
+  taskId: string,
+  jwt: string,
+  pointsOverride?: number,
+) {
   return await actionWrapper(
     async ({ container, userId }) => {
       // We pass the authId (userId) as the 'verified_by'
-      return await container.adminService.verifyTask(taskId, userId);
+      return await container.adminService.verifyTask(
+        taskId,
+        userId,
+        5,
+        pointsOverride,
+      );
     },
     { jwt },
   );

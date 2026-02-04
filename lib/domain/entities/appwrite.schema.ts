@@ -57,7 +57,7 @@ export interface AssignmentSchema {
   title: string;
   description: string;
   status: "open" | "pending" | "approved" | "rejected" | "expired" | "locked";
-  type: "duty" | "bounty" | "project" | "one_off";
+  type: "duty" | "bounty" | "project" | "one_off" | "ad_hoc";
   points_value: number;
   schedule_id?: string; // Link to parent schedule
   initial_image_s3_key?: string; // "Before" photo

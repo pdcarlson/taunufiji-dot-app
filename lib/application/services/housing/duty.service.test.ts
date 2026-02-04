@@ -144,4 +144,40 @@ describe("DutyService", () => {
       expect(mockTaskRepo.update).not.toHaveBeenCalled();
     });
   });
+  describe("requestAdHocPoints", () => {
+    it("should create a task and emit submitted event", async () => {
+      const mockTask = createMockTask({
+        id: "adhoc_1",
+        title: "Ad Hoc Work",
+        points_value: 50,
+        type: "ad_hoc",
+        status: "pending",
+        assigned_to: "user_1",
+        proof_s3_key: "proof_key",
+      });
+
+      mockTaskRepo.create = vi.fn().mockResolvedValue(mockTask);
+
+      const result = await service.requestAdHocPoints("user_1", {
+        title: "Ad Hoc Work",
+        description: "Desc",
+        points: 50,
+        proofKey: "proof_key",
+      });
+
+      expect(mockTaskRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "ad_hoc",
+          status: "pending",
+          points_value: 50,
+          assigned_to: "user_1",
+          notification_level: "urgent",
+        }),
+      );
+
+      // Verify SUBMITTED event is emitted, not CREATED
+      // Because we want it to show up as "Pending Review" immediately
+      expect(result).toEqual(mockTask);
+    });
+  });
 });

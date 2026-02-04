@@ -11,4 +11,13 @@ export interface IDutyService {
   getMyTasks(
     userId: string,
   ): Promise<{ documents: HousingTask[]; total: number }>;
+  requestAdHocPoints(
+    userId: string,
+    data: {
+      title: string;
+      description: string;
+      points: number;
+      proofKey: string;
+    },
+  ): Promise<HousingTask>;
 }

@@ -67,9 +67,19 @@ export default function ProofReviewModal({
     fetchDetails();
   }, [task]);
 
-  if (!task) return null;
+  // Move hooks to top level (unconditional)
+  const [pointsReward, setPointsReward] = useState(task?.points_value || 0);
 
   const imageUrl = details.url;
+
+  // Sync points if task changes
+  useEffect(() => {
+    if (task) {
+      setPointsReward(task.points_value);
+    }
+  }, [task]);
+
+  if (!task) return null;
 
   const handleApprove = async () => {
     // Confirmation Removed per request
@@ -77,9 +87,10 @@ export default function ProofReviewModal({
     setLoading(true);
     try {
       const jwt = await getJWT();
-      const res = await approveTaskAction(task.id, jwt);
+      // Pass the potentially modified points
+      const res = await approveTaskAction(task.id, jwt, pointsReward);
       if (!res.success) throw new Error(res.error);
-      toast.success("Task Approved! Points Awarded.");
+      toast.success(`Task Approved! ${pointsReward} Points Awarded.`);
       onSuccess();
       onClose();
     } catch (err: unknown) {
@@ -152,7 +163,9 @@ export default function ProofReviewModal({
           <div className="p-6 border-b border-stone-100 flex justify-between items-start">
             <div>
               <h2 className="font-bebas text-3xl text-stone-800">
-                Review Proof
+                {task.type === "ad_hoc"
+                  ? "Review Ad-Hoc Request"
+                  : "Review Proof"}
               </h2>
               <p className="text-sm text-stone-500">
                 Submitted by{" "}
@@ -185,11 +198,19 @@ export default function ProofReviewModal({
             </div>
             <div>
               <label className="text-xs font-bold text-stone-400 uppercase">
-                Reward
+                Reward (Adjustable)
               </label>
-              <p className="font-bebas text-2xl text-fiji-gold-dark">
-                {task.points_value} PTS
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="number"
+                  value={pointsReward}
+                  onChange={(e) =>
+                    setPointsReward(parseInt(e.target.value) || 0)
+                  }
+                  className="w-24 bg-stone-50 border border-stone-200 rounded px-2 py-1 font-bebas text-2xl text-fiji-gold-dark focus:outline-none focus:border-fiji-gold"
+                />
+                <span className="font-bebas text-xl text-stone-400">PTS</span>
+              </div>
             </div>
           </div>
 

@@ -32,7 +32,7 @@ const parsed = isTest
 if (!parsed.success) {
   console.error(
     "❌ Invalid environment variables:",
-    JSON.stringify(parsed.error.format(), null, 4),
+    JSON.stringify((parsed as any).error.format(), null, 4),
   );
   // In development, we might not want to crash immediately if just scaffolding, but ideally we do.
   // process.exit(1);

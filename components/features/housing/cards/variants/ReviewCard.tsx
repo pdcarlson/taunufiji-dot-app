@@ -25,6 +25,10 @@ export default function ReviewCard({ task, onReview }: ReviewCardProps) {
               )}
               {isOneOff ? "Assigned Duty" : "Recurring Duty"}
             </span>
+          ) : task.type === "ad_hoc" ? (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] tracking-widest font-bold text-blue-600 bg-blue-50 border border-blue-100 uppercase mb-2">
+              <Zap className="w-3 h-3" /> Ad-Hoc Request
+            </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] tracking-widest font-bold text-fiji-gold-dark bg-yellow-50 border border-yellow-100 uppercase mb-2">
               <Zap className="w-3 h-3" /> Bounty

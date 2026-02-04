@@ -176,13 +176,18 @@ export default function UnifiedUploadPage() {
 
     try {
       let fileToUpload: File = currentFile;
+      // 0. CHECK DUPLICATE (Requires filename + version)
+      const stdName = generateFilename("pdf");
+      const isDuplicate = await checkDuplicateResourceAction(
+        {
+          department: stickyMetadata.department,
+          courseNumber: stickyMetadata.courseNumber,
+          assessmentType: stickyMetadata.assessmentType,
+          semester: stickyMetadata.semester,
+          year: stickyMetadata.year,
+          version: stickyMetadata.version,
         },
-        // Pass JWT - Wait, checkDuplicateResourceAction needs to be updated too if it requires auth?
-        // Let's assume for now I should pass it if the action accepts it.
-        // I will check the action signature first.
-        // Actually, let's just create the JWT here first.
-        
-        // Generate JWT once for all server actions
+        // Pass JWT
         await getToken(),
       );
 
@@ -235,7 +240,7 @@ export default function UnifiedUploadPage() {
         metadata: {
           ...stickyMetadata,
           courseName,
-          semester: currentSem,
+          semester: stickyMetadata.semester,
           standardizedFilename: stdName,
         },
       };

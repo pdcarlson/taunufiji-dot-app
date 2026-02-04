@@ -3,6 +3,8 @@ import { AdminService } from "./admin.service";
 import { MockFactory } from "@/lib/test/mock-factory";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 
+import { TaskEvents } from "@/lib/domain/events";
+
 // Mock dependencies
 const mockTaskRepo = MockFactory.createTaskRepository();
 // Partial mock for ScheduleService as it's complex
@@ -15,10 +17,6 @@ vi.mock("@/lib/infrastructure/events/dispatcher", () => ({
   DomainEventBus: {
     publish: vi.fn(),
   },
-  TaskEvents: {
-    // Must mock TaskEvents if used in publish mock matching
-    TASK_APPROVED: "TASK_APPROVED",
-  },
 }));
 
 describe("AdminService", () => {
@@ -26,6 +24,7 @@ describe("AdminService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (DomainEventBus.publish as any).mockResolvedValue(undefined);
     service = new AdminService(mockTaskRepo, mockScheduleService);
   });
 
@@ -60,7 +59,7 @@ describe("AdminService", () => {
       );
 
       expect(DomainEventBus.publish).toHaveBeenCalledWith(
-        "TASK_APPROVED",
+        TaskEvents.TASK_APPROVED,
         expect.objectContaining({
           taskId: taskId,
           title: "Test Task",
@@ -109,6 +108,73 @@ describe("AdminService", () => {
           completed_at: null,
         }),
       );
+    });
+    it("should use overridePoints if provided", async () => {
+      const taskId = "task-override";
+      mockTaskRepo.findById.mockResolvedValue({
+        id: taskId,
+        title: "Override Task",
+        status: "pending",
+        points_value: 10,
+        assigned_to: "user-1",
+      } as any);
+
+      await service.verifyTask(taskId, "admin-1", 5, 20);
+
+      // Verify update called with new points
+      expect(mockTaskRepo.update).toHaveBeenCalledWith(
+        taskId,
+        expect.objectContaining({
+          status: "approved",
+          points_value: 20,
+        }),
+      );
+
+      // Verify Event published with new points
+      expect(DomainEventBus.publish).toHaveBeenCalledWith(
+        TaskEvents.TASK_APPROVED,
+        expect.objectContaining({
+          points: 20,
+        }),
+      );
+    });
+  });
+  describe("rejectTask", () => {
+    it("should delete ad-hoc tasks upon rejection", async () => {
+      const taskId = "adhoc-1";
+      mockTaskRepo.findById.mockResolvedValue({
+        id: taskId,
+        type: "ad_hoc",
+        assigned_to: "user-1",
+        title: "Extra Work",
+      } as any);
+
+      await service.rejectTask(taskId, "Not needed");
+
+      expect(mockTaskRepo.delete).toHaveBeenCalledWith(taskId);
+      expect(mockTaskRepo.update).not.toHaveBeenCalled(); // Should NOT update status
+      expect(DomainEventBus.publish).toHaveBeenCalledWith(
+        TaskEvents.TASK_REJECTED,
+        expect.objectContaining({ taskId }),
+      );
+    });
+
+    it("should update status for normal tasks upon rejection", async () => {
+      const taskId = "duty-1";
+      mockTaskRepo.findById.mockResolvedValue({
+        id: taskId,
+        type: "duty",
+        assigned_to: "user-1",
+        title: "Clean",
+      } as any);
+
+      await service.rejectTask(taskId, "Bad proof");
+
+      expect(mockTaskRepo.update).toHaveBeenCalledWith(
+        taskId,
+        expect.objectContaining({ status: "rejected" }),
+      );
+      expect(mockTaskRepo.delete).not.toHaveBeenCalled();
     });
   });
 });
