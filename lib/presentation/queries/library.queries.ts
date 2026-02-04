@@ -1,13 +1,8 @@
 import "server-only";
 
-import { LibraryService } from "@/lib/application/services/library.service";
-import { AppwriteLibraryRepository } from "@/lib/infrastructure/persistence/library.repository";
+import { getContainer } from "@/lib/infrastructure/container";
 
-// REPOSITORIES (Uses getAdminClient() internally)
-const libraryRepo = new AppwriteLibraryRepository();
-
-// SERVICE
-const libraryService = new LibraryService(libraryRepo);
+// SERVICE accessed via container in functions
 
 /**
  * Fetch Initial Library Resources (Server Side)
@@ -15,6 +10,7 @@ const libraryService = new LibraryService(libraryRepo);
  */
 export async function fetchInitialLibraryResources() {
   try {
+    const { libraryService } = getContainer();
     const result = await libraryService.search({});
     // Serialize
     return JSON.parse(JSON.stringify(result.documents));
@@ -30,6 +26,7 @@ export async function fetchInitialLibraryResources() {
  */
 export async function fetchLibraryGlobalStats() {
   try {
+    const { libraryService } = getContainer();
     const stats = await libraryService.getStats();
     return {
       total: stats.totalFiles,
@@ -46,6 +43,7 @@ export async function fetchLibraryGlobalStats() {
  */
 export async function fetchInitialLibraryTotal() {
   try {
+    const { libraryService } = getContainer();
     const result = await libraryService.search({});
     return result.total;
   } catch (error) {

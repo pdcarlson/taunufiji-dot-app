@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import { X, Calendar, User, FileText, Check, Clock } from "lucide-react";
-import { createScheduleAction } from "@/lib/presentation/actions/housing.actions";
+import { createScheduleAction } from "@/lib/presentation/actions/housing/schedule.actions";
 import { useJWT } from "@/hooks/useJWT";
 import toast from "react-hot-toast";
 

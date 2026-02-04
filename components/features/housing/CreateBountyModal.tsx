@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import { X, Clock, DollarSign, FileText, Check } from "lucide-react";
-import { createTaskAction } from "@/lib/presentation/actions/housing.actions";
+import { createTaskAction } from "@/lib/presentation/actions/housing/admin.actions";
 import { useJWT } from "@/hooks/useJWT";
 import toast from "react-hot-toast";
-import { CreateAssignmentDTO } from "@/lib/application/services/task";
+import { CreateAssignmentDTO } from "@/lib/domain/types/task";
 
 interface Props {
   onClose: () => void;

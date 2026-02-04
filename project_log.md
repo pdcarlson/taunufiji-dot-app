@@ -428,4 +428,32 @@
     - Updated `HistoryItem` DTO to include `userName` and `userId`.
     - Fixed pre-existing type errors in `TaskCard.test.tsx` and `PointsLedger.tsx` (name collisions and invalid props).
     - Updated `MockFactory` to support the new repository methods.
-- **Impact**: Reduced visual clutter on the dashboard while providing a more engaging view of chapter activity. Improved code maintainability and type safety across dashboard components and services.
+
+## 2026-02-03: Frontend Architecture & Cleanup
+
+- **Context**: Standardized component architecture and cleaned up dead code.
+- **Technical Changes**:
+  - **Component Structure**: Enforced strict `components/features/[featureName]`, `components/layout/`, and `components/ui/` pattern.
+  - **Auth Module**: Migrated Login Logic to `features/auth`.
+  - **Static Assets**: Moved `favicon.ico` to `public/`.
+  - **Dead Code**: Removed unused Next.js SVGs (`next.svg`, `vercel.svg`, etc).
+- **Impact**: Codebase is clean, predictable, and ready for backend refactoring.
+
+## 2026-02-03: Backend Infrastructure Refactor
+
+- **Context**: Executed a comprehensive backend refactor to match the "Feature-First" architecture of the frontend. Enforced Clean Architecture and strictly typed Dependency Injection.
+- **Technical Changes**:
+  - **Dependency Injection**:
+    - Refactored `StorageService` to `S3StorageService` class using `IStorageService` port.
+    - Updated `container.ts` to manage storage dependencies properly.
+  - **Service Migration**:
+    - Moved services to feature-scoped directories: `identity/`, `ledger/`, `housing/`, `library/`.
+    - Relocated test files (`points.service.test.ts`, `auth.service.test.ts`) to match their services.
+  - **Action Segregation**:
+    - Split `housing.actions.ts` into `duty`, `admin`, `schedule`, and `query` actions.
+    - Split `library.actions.ts` into `manage` and `read` actions.
+    - Updated 15+ consumer components to import from granular action files.
+- **Verification**:
+  - `npm run build` passing with 0 errors.
+  - `npm test` passing (Fixed `TaskCard` userId mismatch and updated mocks).
+- **Impact**: Backend code is now highly modular, testable, and aligned with the project's long-term architectural goals.

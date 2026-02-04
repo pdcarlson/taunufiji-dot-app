@@ -9,8 +9,8 @@ import { getContainer } from "@/lib/infrastructure/container";
 import { HousingTask } from "@/lib/domain/entities";
 import { NotificationService } from "./notification.service";
 
-import { PointsService } from "@/lib/application/services/points.service";
-import { ScheduleService } from "./task";
+import { PointsService } from "@/lib/application/services/ledger/points.service";
+import { ScheduleService } from "./housing/schedule.service";
 
 // Helper function to safely get error message
 function getErrorMessage(error: unknown): string {

@@ -16,9 +16,9 @@ import toast from "react-hot-toast";
 // Actions for Client-Side Refreshing
 import {
   getAllActiveTasksAction,
-  getSchedulesAction,
   getAllMembersAction,
-} from "@/lib/presentation/actions/housing.actions";
+} from "@/lib/presentation/actions/housing/query.actions";
+import { getSchedulesAction } from "@/lib/presentation/actions/housing/schedule.actions";
 import { getMyTasksAction } from "@/lib/presentation/actions/tasks.actions";
 import MyDutiesWidget from "./MyDutiesWidget";
 // Note: We use useAuth for getToken and isHousingAdmin

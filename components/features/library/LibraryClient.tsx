@@ -12,7 +12,7 @@ import { toast } from "react-hot-toast";
 import {
   searchLibraryAction,
   getLibraryStatsAction,
-} from "@/lib/presentation/actions/library.actions";
+} from "@/lib/presentation/actions/library/read.actions";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 // We'll reuse the existing search API for infinite scroll/filtering interactions

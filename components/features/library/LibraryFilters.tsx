@@ -5,7 +5,7 @@ import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
 import { Search, Filter, Loader2 } from "lucide-react";
 import { account } from "@/lib/infrastructure/persistence/appwrite.web";
 import toast from "react-hot-toast";
-import { getMetadataAction } from "@/lib/presentation/actions/library.actions";
+import { getMetadataAction } from "@/lib/presentation/actions/library/read.actions";
 
 interface FilterProps {
   filters: any;

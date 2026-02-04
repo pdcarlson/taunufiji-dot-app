@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { HousingTask } from "@/lib/domain/entities";
-import { claimTaskAction } from "@/lib/presentation/actions/housing.actions";
+import { claimTaskAction } from "@/lib/presentation/actions/housing/duty.actions";
 import { Loader } from "@/components/ui/Loader";
 import toast from "react-hot-toast";
 

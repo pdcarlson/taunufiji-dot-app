@@ -1,4 +1,3 @@
-import { StorageService } from "@/lib/infrastructure/storage/storage";
 import {
   ILibraryRepository,
   LibrarySearchFilters,
@@ -8,8 +7,13 @@ import { LibraryResource } from "@/lib/domain/types/library";
 
 export type { LibrarySearchFilters, CreateResourceParams };
 
+import { IStorageService } from "@/lib/domain/ports/storage.service.port";
+
 export class LibraryService {
-  constructor(private readonly libraryRepository: ILibraryRepository) {}
+  constructor(
+    private readonly libraryRepository: ILibraryRepository,
+    private readonly storageService: IStorageService,
+  ) {}
 
   /**
    * Searches the Library metadata collection.
@@ -36,7 +40,7 @@ export class LibraryService {
 
     // 2. Generate Presigned URL
     // Pass filename to force "Save As" behavior with correct name
-    const url = await StorageService.getReadUrl(
+    const url = await this.storageService.getReadUrl(
       fileData.file_s3_key,
       fileData.original_filename,
     );

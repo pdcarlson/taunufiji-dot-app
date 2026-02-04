@@ -3,8 +3,8 @@
 import {
   approveTaskAction,
   rejectTaskAction,
-  getReviewDetailsAction,
-} from "@/lib/presentation/actions/housing.actions";
+} from "@/lib/presentation/actions/housing/admin.actions";
+import { getReviewDetailsAction } from "@/lib/presentation/actions/housing/query.actions";
 import { useJWT } from "@/hooks/useJWT";
 import { X, Check, AlertTriangle, ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";

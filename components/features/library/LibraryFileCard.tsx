@@ -11,7 +11,7 @@ import {
   User,
 } from "lucide-react";
 import { account } from "@/lib/infrastructure/persistence/appwrite.web";
-import { getDownloadLinkAction } from "@/lib/presentation/actions/library.actions";
+import { getDownloadLinkAction } from "@/lib/presentation/actions/library/read.actions";
 
 export default function LibraryFileCard({ file }: { file: any }) {
   const [loading, setLoading] = useState(false);

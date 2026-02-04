@@ -1,7 +1,7 @@
 import "server-only";
 
-import { QueryService } from "@/lib/application/services/task/query.service";
-import { PointsService } from "@/lib/application/services/points.service";
+import { QueryService } from "@/lib/application/services/housing/query.service";
+import { PointsService } from "@/lib/application/services/ledger/points.service";
 import { AppwriteTaskRepository } from "@/lib/infrastructure/persistence/task.repository";
 import { AppwriteUserRepository } from "@/lib/infrastructure/persistence/user.repository";
 import { AppwriteLedgerRepository } from "@/lib/infrastructure/persistence/ledger.repository";

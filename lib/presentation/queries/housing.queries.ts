@@ -1,7 +1,7 @@
 import "server-only";
 
-import { QueryService } from "@/lib/application/services/task/query.service";
-import { ScheduleService } from "@/lib/application/services/task/schedule.service";
+import { QueryService } from "@/lib/application/services/housing/query.service";
+import { ScheduleService } from "@/lib/application/services/housing/schedule.service";
 import { AppwriteTaskRepository } from "@/lib/infrastructure/persistence/task.repository";
 import { AppwriteUserRepository } from "@/lib/infrastructure/persistence/user.repository";
 

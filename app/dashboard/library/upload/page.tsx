@@ -24,9 +24,11 @@ import toast from "react-hot-toast";
 import {
   uploadFileAction,
   createLibraryResourceAction,
+} from "@/lib/presentation/actions/library/manage.actions";
+import {
   checkDuplicateResourceAction,
-} from "@/lib/presentation/actions/library.actions";
-import { getMetadataAction } from "@/lib/presentation/actions/library.actions";
+  getMetadataAction,
+} from "@/lib/presentation/actions/library/read.actions";
 
 // Dynamic import to prevent SSR evaluation of PDF library (uses DOMMatrix)
 const PdfRedactor = dynamic_(

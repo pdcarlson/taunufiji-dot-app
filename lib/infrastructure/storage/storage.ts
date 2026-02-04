@@ -12,6 +12,8 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@/lib/infrastructure/config/env";
 
+import { IStorageService } from "@/lib/domain/ports/storage.service.port";
+
 const s3 = new S3Client({
   region: env.AWS_REGION,
   credentials: {
@@ -20,7 +22,7 @@ const s3 = new S3Client({
   },
 });
 
-export const StorageService = {
+export class S3StorageService implements IStorageService {
   /**
    * Generates a signed URL for uploading a file directly to S3 (Client -> S3)
    */
@@ -31,7 +33,7 @@ export const StorageService = {
       ContentType: contentType,
     });
     return await getSignedUrl(s3, command, { expiresIn: 3600 });
-  },
+  }
 
   /**
    * Generates a signed URL for reading a file (Private Bucket -> Client)
@@ -47,7 +49,7 @@ export const StorageService = {
     });
     // 2 Minute Expiry for security (prevents scraping/sharing)
     return await getSignedUrl(s3, command, { expiresIn: 120 });
-  },
+  }
 
   /**
    * Uploads a file buffer directly to S3 (Server -> S3)
@@ -60,5 +62,5 @@ export const StorageService = {
       ContentType: contentType,
     });
     return await s3.send(command);
-  },
-};
+  }
+}

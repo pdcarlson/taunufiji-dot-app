@@ -10,7 +10,7 @@ vi.mock("@/hooks/useJWT", () => ({
   }),
 }));
 
-vi.mock("@/lib/presentation/actions/housing.actions", () => ({
+vi.mock("@/lib/presentation/actions/housing/duty.actions", () => ({
   claimTaskAction: vi.fn(),
   unclaimTaskAction: vi.fn(),
   submitProofAction: vi.fn(),
@@ -104,7 +104,7 @@ describe("TaskCard", () => {
     render(
       <TaskCard
         task={task}
-        userId="u1"
+        userId="p1"
         profileId="p1"
         userName="Tester"
         isAdmin={false}

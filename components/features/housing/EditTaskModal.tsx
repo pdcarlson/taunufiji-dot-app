@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import {
   updateTaskAction,
   deleteTaskAction,
+} from "@/lib/presentation/actions/housing/admin.actions";
+import {
   getScheduleAction,
   updateScheduleLeadTimeAction,
-} from "@/lib/presentation/actions/housing.actions";
+} from "@/lib/presentation/actions/housing/schedule.actions";
 import { useJWT } from "@/hooks/useJWT";
 import { Member, HousingTask } from "@/lib/domain/entities";
 import { Loader } from "@/components/ui/Loader";

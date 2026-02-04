@@ -1,6 +1,6 @@
 "use client";
 
-import { createTaskAction } from "@/lib/presentation/actions/housing.actions";
+import { createTaskAction } from "@/lib/presentation/actions/housing/admin.actions";
 import { useJWT } from "@/hooks/useJWT";
 import { X } from "lucide-react";
 import { useState } from "react";
@@ -8,7 +8,7 @@ import { useForm, FieldValues } from "react-hook-form";
 import toast from "react-hot-toast";
 
 import { Member } from "@/lib/domain/entities";
-import { CreateAssignmentDTO } from "@/lib/application/services/task";
+import { CreateAssignmentDTO } from "@/lib/domain/types/task";
 
 interface CreateOneOffModalProps {
   onClose: () => void;

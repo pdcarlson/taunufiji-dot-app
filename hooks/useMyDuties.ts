@@ -5,7 +5,7 @@ import { HousingTask } from "@/lib/domain/types/task";
 import {
   submitProofAction,
   unclaimTaskAction,
-} from "@/lib/presentation/actions/housing.actions";
+} from "@/lib/presentation/actions/housing/duty.actions";
 import { useAuth } from "@/components/providers/AuthProvider";
 // I see 'sonner' in previous conversations/files? No.
 // I'll stick to console.error for now or minimal feedback.

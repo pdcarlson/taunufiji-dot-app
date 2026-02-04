@@ -6,7 +6,7 @@ import {
   claimTaskAction,
   unclaimTaskAction,
   submitProofAction,
-} from "@/lib/presentation/actions/housing.actions";
+} from "@/lib/presentation/actions/housing/duty.actions";
 import toast from "react-hot-toast";
 
 interface UseTaskActionsProps {

@@ -20,6 +20,7 @@ import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
 import { ILibraryRepository } from "@/lib/domain/ports/library.repository";
 import { INotificationProvider } from "@/lib/domain/ports/notification.provider";
 import { IIdentityProvider } from "@/lib/domain/ports/identity.provider";
+import { IStorageService } from "@/lib/domain/ports/storage.service.port";
 import { IDutyService } from "@/lib/domain/ports/services/duty.service.port";
 import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
 import { AppwriteTaskRepository } from "./persistence/task.repository";
@@ -28,16 +29,17 @@ import { AppwriteLedgerRepository } from "./persistence/ledger.repository";
 import { AppwriteLibraryRepository } from "./persistence/library.repository";
 import { DiscordProvider } from "./messaging/discord.provider";
 import { AppwriteIdentityProvider } from "./auth/appwrite.identity";
+import { S3StorageService } from "./storage/storage";
 
-import { DutyService } from "@/lib/application/services/task/duty.service";
-import { PointsService } from "@/lib/application/services/points.service";
-import { UserService } from "@/lib/application/services/user.service";
-import { AuthService } from "@/lib/application/services/auth.service";
-import { ScheduleService } from "@/lib/application/services/task/schedule.service";
-import { QueryService } from "@/lib/application/services/task/query.service";
-import { MaintenanceService } from "@/lib/application/services/task/maintenance.service";
-import { AdminService } from "@/lib/application/services/task/admin.service";
-import { LibraryService } from "@/lib/application/services/library.service";
+import { DutyService } from "@/lib/application/services/housing/duty.service";
+import { PointsService } from "@/lib/application/services/ledger/points.service";
+import { UserService } from "@/lib/application/services/identity/user.service";
+import { AuthService } from "@/lib/application/services/identity/auth.service";
+import { ScheduleService } from "@/lib/application/services/housing/schedule.service";
+import { QueryService } from "@/lib/application/services/housing/query.service";
+import { MaintenanceService } from "@/lib/application/services/housing/maintenance.service";
+import { AdminService } from "@/lib/application/services/housing/admin.service";
+import { LibraryService } from "@/lib/application/services/library/library.service";
 
 // ...
 
@@ -48,6 +50,7 @@ export interface Container {
   libraryRepository: ILibraryRepository;
   notificationProvider: INotificationProvider;
   identityProvider: IIdentityProvider;
+  storageService: IStorageService;
   // Services
   userService: UserService;
   dutyService: IDutyService;
@@ -78,6 +81,7 @@ export function getContainer(): Container {
     // 2. Providers
     const notificationProvider = new DiscordProvider();
     const identityProvider = new AppwriteIdentityProvider();
+    const storageService = new S3StorageService();
 
     // 3. Services (Order matters!)
     const userService = new UserService(userRepository);
@@ -91,7 +95,10 @@ export function getContainer(): Container {
       dutyService,
     );
     const adminService = new AdminService(taskRepository, scheduleService);
-    const libraryService = new LibraryService(libraryRepository);
+    const libraryService = new LibraryService(
+      libraryRepository,
+      storageService,
+    );
 
     container = {
       taskRepository,
@@ -100,6 +107,7 @@ export function getContainer(): Container {
       libraryRepository,
       notificationProvider,
       identityProvider,
+      storageService,
       // Services
       userService,
       dutyService,

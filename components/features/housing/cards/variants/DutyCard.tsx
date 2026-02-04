@@ -18,7 +18,7 @@ import {
   claimTaskAction,
   unclaimTaskAction, // Note: Import paths might need adjusting if they changed?
   submitProofAction,
-} from "@/lib/presentation/actions/housing.actions";
+} from "@/lib/presentation/actions/housing/duty.actions";
 
 interface DutyCardProps {
   task: HousingTask;

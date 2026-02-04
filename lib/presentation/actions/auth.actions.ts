@@ -1,6 +1,6 @@
 "use server";
 
-import { AuthService } from "@/lib/application/services/auth.service";
+import { AuthService } from "@/lib/application/services/identity/auth.service";
 import { getContainer } from "@/lib/infrastructure/container";
 import { logger } from "@/lib/utils/logger";
 
