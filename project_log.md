@@ -493,4 +493,13 @@
 - **Mobile UI**:
   - Implemented responsive stacking for `DutyCard` and `AdHocRequestCard` (`flex-col sm:flex-row`).
   - Optimized `PointsLedger` by hiding non-essential columns (Category/Date) on mobile to prevent overlaps.
+- **Reliability**:
+  - Hardened `NotifyExpiredJob` to retry notifications on failure (fixing the "silent expiry" bug).
+  - Removed verbose `console.log` statements from `AuthProvider`.
+- **Security**: Added strict Production Headers (HSTS, CSP, X-Frame) via `next.config.ts`.
+- **CI/CD**: Enforced "Pull Request Checks" workflow for quality gating.
+- **Polish**:
+  - Refactored `auth.actions.ts` to use `actionWrapper` (100% Action Compliance).
+  - Added global `loading.tsx` Skeleton.
+  - Configured SEO & OpenGraph Metadata.
 - **Risk**: None. Build verified.

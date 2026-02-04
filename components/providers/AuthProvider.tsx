@@ -43,9 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        console.log("[AuthProvider] Checking session...");
         const currentUser = await account.get();
-        console.log("[AuthProvider] Session found:", currentUser.$id);
         setUser(currentUser);
         setError(null);
 
@@ -55,20 +53,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Fetch Profile
-        console.log("[AuthProvider] Fetching profile for:", currentUser.$id);
-
         // Create JWT for Server Action Verification
-        console.log("[AuthProvider] Creating JWT...");
         const jwtResponse = await account.createJWT();
-        console.log("[AuthProvider] JWT Created");
 
         const [userProfile, adminStatus] = await Promise.all([
           getProfileAction(jwtResponse.jwt),
           checkHousingAdminAction(jwtResponse.jwt),
         ]);
-        console.log("[AuthProvider] Profile fetched:", userProfile);
-        console.log("[AuthProvider] Housing Admin:", adminStatus);
+
         setProfile(userProfile);
         setIsHousingAdmin(adminStatus);
       } catch (err: any) {

@@ -27,12 +27,16 @@ export const NotifyExpiredJob = {
         try {
           if (task.type === "bounty") continue;
 
+          let notifiedUser = false;
+
           if (task.assigned_to) {
+            // 1. Notify Admins (Channel) - Non-blocking
             await NotificationService.notifyAdmins(
               `🚨 **MISSED TASK**: <@${task.assigned_to}> failed to complete **${task.title}**. Task expired.`,
             );
 
-            await NotificationService.sendNotification(
+            // 2. Notify User (DM) - Critical
+            notifiedUser = await NotificationService.sendNotification(
               task.assigned_to,
               "expired",
               {
@@ -40,8 +44,16 @@ export const NotifyExpiredJob = {
                 taskId: task.id,
               },
             );
+
+            if (!notifiedUser) {
+              console.error(
+                `[NotifyExpiredJob] Failed to send DM to user ${task.assigned_to}. Retrying next run.`,
+              );
+              continue; // Skip DB update
+            }
           }
 
+          // 3. Mark as Notified only if DM succeeded (or no assignee)
           await taskRepository.update(task.id, {
             notification_level: "expired",
           });

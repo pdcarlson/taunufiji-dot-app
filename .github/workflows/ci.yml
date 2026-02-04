@@ -1,4 +1,4 @@
-name: CI Quality Gate
+name: Pull Request Checks
 
 on:
     push:

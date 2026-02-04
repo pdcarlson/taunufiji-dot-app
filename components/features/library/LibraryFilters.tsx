@@ -1,9 +1,10 @@
 "use client";
 
+import { useAuth } from "@/components/providers/AuthProvider";
 import { useEffect, useState } from "react";
 import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
 import { Search, Filter, Loader2 } from "lucide-react";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+
 import toast from "react-hot-toast";
 import { getMetadataAction } from "@/lib/presentation/actions/library/read.actions";
 
@@ -13,6 +14,7 @@ interface FilterProps {
 }
 
 export default function LibraryFilters({ filters, setFilters }: FilterProps) {
+  const { getToken } = useAuth();
   const [loading, setLoading] = useState(true);
 
   // Dynamic Data State
@@ -27,7 +29,7 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
       try {
         // We can pass undefined JWT if purely public, or create one if strict auth needed.
         // getMetadataAction handles it.
-        const { jwt } = await account.createJWT();
+        const jwt = await getToken();
         const data = await getMetadataAction(jwt);
 
         if (data) {

@@ -16,8 +16,27 @@ const langdon = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Tau Nu Fiji | App",
-  description: "Tau Nu Fiji Chapter App",
+  title: {
+    template: "%s | Taunufiji",
+    default: "Taunufiji - Tau Nu Chapter of Phi Gamma Delta",
+  },
+  description:
+    "The official portal for the Tau Nu Chapter of Phi Gamma Delta at Rensselaer Polytechnic Institute. Manage duties, library resources, and chapter scheduling.",
+  keywords: ["Fiji", "Tau Nu", "RPI", "Fraternity", "Dashboard"],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://taunufiji.app",
+    siteName: "Taunufiji",
+    title: "Taunufiji Dashboard",
+    description: "The digital headquarters for Tau Nu Brothers.",
+    // images: [openGraphImage], // Uncomment if you add an opengraph-image.tsx or .png
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Taunufiji",
+    description: "Tau Nu Chapter Portal",
+  },
 };
 
 export default function RootLayout({

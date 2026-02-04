@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/components/providers/AuthProvider";
 import {
   Download,
   FileText,
@@ -10,10 +11,11 @@ import {
   Calendar,
   User,
 } from "lucide-react";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+
 import { getDownloadLinkAction } from "@/lib/presentation/actions/library/read.actions";
 
 export default function LibraryFileCard({ file }: { file: any }) {
+  const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +24,7 @@ export default function LibraryFileCard({ file }: { file: any }) {
     setError(null);
 
     try {
-      const { jwt } = await account.createJWT();
+      const jwt = await getToken();
       const { url } = await getDownloadLinkAction(file.id, jwt);
 
       const a = document.createElement("a");

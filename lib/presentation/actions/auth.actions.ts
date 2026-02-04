@@ -1,81 +1,74 @@
 "use server";
 
-import { AuthService } from "@/lib/application/services/identity/auth.service";
-import { getContainer } from "@/lib/infrastructure/container";
+import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 import { logger } from "@/lib/utils/logger";
+import { HOUSING_ADMIN_ROLES } from "@/lib/infrastructure/config/roles";
 
 export async function syncUserAction(authId: string) {
+  // syncUserAction is often called by webhooks or background processes where JWT might not be present.
+  // If it's called client-side, it should probably be protected.
+  // However, looking at usage, it might be legacy or internal.
+  // The user didn't ask to change this one explicitly, but let's wrap it if possible.
+  // If it requires no auth (public sync?), we can leave it or wrap as public.
+  // Current implementation: `getContainer().authService.syncUser(authId)`.
+  // Let's leave syncUserAction as is if it's not critical, OR wrap it.
+  // Given strict instructions: "Standardize auth.actions.ts".
+  // Let's assume it needs a wrapper.
+  // But wait, it takes `authId` as arg. Usually actions taking explicit ID are admin or internal.
+  // Let's just wrap `getProfileAction` and `checkHousingAdmin` as requested.
+  // Keeping syncUserAction as-is for safety unless we know its caller.
   try {
+    const { getContainer } = await import("@/lib/infrastructure/container");
     const { authService } = getContainer();
     await authService.syncUser(authId);
     logger.log(`SyncUser Success for ${authId}`);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     logger.error(`SyncUser Failed: ${msg}`);
-    // Don't throw, just log. We don't want to crash the dashboard if sync fails momentarily.
   }
 }
 
 export async function getProfileAction(jwt: string) {
-  try {
-    const { authService } = getContainer();
-    const { createJWTClient } =
-      await import("@/lib/presentation/server/appwrite");
+  const result = await actionWrapper(
+    async ({ container, userId }) => {
+      // 1. Sync User (Create/Update Profile)
+      // We use the ID from the JWT (secure), ignoring any client-passed ID if there was one.
+      const profile = await container.authService.syncUser(userId);
 
-    // 1. Verify JWT & Identity
-    const client = createJWTClient(jwt);
-    const account = client.account;
-    const user = await account.get();
-    const authId = user.$id;
+      // 2. Check Auth
+      const isAuthorized = await container.authService.verifyBrother(userId);
 
-    // 2. Attempt to Sync (Create/Update) User
-    // ALERTS: This performs a write operation and hits the Discord API.
-    const profile = await authService.syncUser(authId);
+      if (process.env.NODE_ENV === "development") {
+        logger.log(
+          `[getProfileAction] ${userId} -> Authorized: ${isAuthorized}`,
+        );
+      }
 
-    // 3. Check Authorization (Brother Role)
-    const isAuthorized = await authService.verifyBrother(authId);
+      return {
+        ...JSON.parse(JSON.stringify(profile)),
+        isAuthorized,
+      };
+    },
+    { jwt, public: true }, // public: true skips the default Brother Check, allowing us to return isAuthorized: false
+  );
 
-    if (process.env.NODE_ENV === "development") {
-      logger.log(`[getProfileAction] ${authId} -> Authorized: ${isAuthorized}`);
-    }
-
-    // 4. Return Profile + Auth Status
-    return {
-      ...JSON.parse(JSON.stringify(profile)),
-      isAuthorized,
-    };
-  } catch (e) {
-    logger.error(`Sync User Failed`, e);
-    // If JWT is invalid or sync fails, return null
-    return null;
-  }
+  if (result.success && result.data) return result.data;
+  return null;
 }
 
 /**
  * Check if the current user has Housing Admin privileges.
- * Verifies Discord roles against HOUSING_ADMIN_ROLES (Housing Chair, Cabinet, Dev).
  */
 export async function checkHousingAdminAction(jwt: string): Promise<boolean> {
-  try {
-    const { authService } = getContainer();
-    const { createJWTClient } =
-      await import("@/lib/presentation/server/appwrite");
-    const { HOUSING_ADMIN_ROLES } =
-      await import("@/lib/infrastructure/config/roles");
+  const result = await actionWrapper(
+    async ({ container, userId }) => {
+      return await container.authService.verifyRole(
+        userId,
+        HOUSING_ADMIN_ROLES.map((r) => r as string),
+      );
+    },
+    { jwt, public: true }, // We just want boolean result, don't throw
+  );
 
-    // 1. Verify JWT & get auth ID
-    const client = createJWTClient(jwt);
-    const account = client.account;
-    const user = await account.get();
-    const authId = user.$id;
-
-    // 2. Check if user has any housing admin role
-    return await authService.verifyRole(
-      authId,
-      HOUSING_ADMIN_ROLES.map((r) => r as string),
-    );
-  } catch (e) {
-    logger.error(`checkHousingAdmin Failed`, e);
-    return false;
-  }
+  return result.success && (result.data ?? false);
 }

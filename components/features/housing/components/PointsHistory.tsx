@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getTransactionHistoryAction } from "@/lib/presentation/actions/ledger.actions";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+
 import { Models } from "appwrite";
 import { LedgerSchema } from "@/lib/domain/entities/appwrite.schema";
 import { ArrowDownLeft, ArrowUpRight, History } from "lucide-react";
