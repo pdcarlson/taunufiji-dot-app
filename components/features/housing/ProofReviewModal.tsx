@@ -131,8 +131,9 @@ export default function ProofReviewModal({
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={imageUrl}
+                src={`/api/images?key=${encodeURIComponent(task.proof_s3_key || "")}`}
                 alt="Proof"
+                referrerPolicy="no-referrer"
                 className="max-w-full max-h-full object-contain"
               />
               <a

@@ -8,8 +8,25 @@ import { getContainer } from "@/lib/infrastructure/container";
 import { UnlockTasksJob } from "./handlers/unlock-tasks.job";
 import { NotifyRecurringJob } from "./handlers/notify-recurring.job";
 import { NotifyUrgentJob } from "./handlers/notify-urgent.job";
-import { ExpireDutiesJob } from "./handlers/expire-duties.job";
+import { expireDutiesJob } from "./handlers/expire-duties.job";
 import { NotifyExpiredJob } from "./handlers/notify-expired.job";
+import { ensureFutureTasksJob } from "./handlers/ensure-future-tasks.job";
+
+export function initCronJobs() {
+  console.log("⏰ Initializing Cron Jobs...");
+
+  // 1. Expire Duties (Every 30 mins)
+  // Checks for overdue tasks and triggers next instance
+  // Cron: "*/30 * * * *"
+  // Note: For now, we simulate this via an API call or external trigger
+  // In a real Vercel app, use Vercel Cron.
+  // Here we just export the handlers for the API route to call.
+}
+
+export const CRON_JOBS = {
+  EXPIRE_DUTIES: expireDutiesJob,
+  ENSURE_FUTURE_TASKS: ensureFutureTasksJob,
+};
 
 export const CronService = {
   /**
@@ -18,7 +35,7 @@ export const CronService = {
    */
   async runHourly() {
     console.log("🚀 Starting Cron Job...");
-    const { taskRepository, pointsService, scheduleService } = getContainer();
+    const { taskRepository } = getContainer();
 
     // Aggregated Stats
     let unlocked = 0;
@@ -33,7 +50,7 @@ export const CronService = {
 
     // 2. Notify Recurring
     const recurringResult = await NotifyRecurringJob.run(taskRepository);
-    unlocked += recurringResult.notified; // "unlocked" count included recurring notifications in original logic
+    unlocked += recurringResult.notified;
     errors.push(...recurringResult.errors);
 
     // 3. Notify Urgent
@@ -41,18 +58,17 @@ export const CronService = {
     urgent += urgentResult.urgent;
     errors.push(...urgentResult.errors);
 
-    // 4. Expire Duties
-    const expireResult = await ExpireDutiesJob.run(
-      taskRepository,
-      pointsService,
-      scheduleService,
-    );
+    // 4. Expire Duties (Self-Contained)
+    const expireResult = await expireDutiesJob();
     errors.push(...expireResult.errors);
 
     // 5. Notify Expired
     const notifyExpiredResult = await NotifyExpiredJob.run(taskRepository);
     expired_notified += notifyExpiredResult.expired_notified;
     errors.push(...notifyExpiredResult.errors);
+
+    // 6. Ensure Future Tasks (Self-Healing)
+    await ensureFutureTasksJob();
 
     // Summary
     const stats = { unlocked, urgent, expired_notified, errors };
@@ -62,5 +78,13 @@ export const CronService = {
     }
 
     return stats;
+  },
+
+  async expireDuties() {
+    return await expireDutiesJob();
+  },
+
+  async ensureFutureTasks() {
+    return await ensureFutureTasksJob();
   },
 };
