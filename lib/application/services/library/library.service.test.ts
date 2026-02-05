@@ -13,6 +13,7 @@ describe("LibraryService", () => {
   const mockRepo = MockFactory.createLibraryRepository();
   const mockStorageService = {
     getReadUrl: vi.fn().mockResolvedValue("https://S3-URL"),
+    getUploadUrl: vi.fn().mockResolvedValue("https://S3-UPLOAD-URL"),
     uploadFile: vi.fn(),
     deleteFile: vi.fn(),
   };

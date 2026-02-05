@@ -53,7 +53,7 @@ export async function actionWrapper<T>(
 
     // If public and no JWT, we skip user fetching?
     let user = null;
-    if (options.jwt) {
+    if (options.jwt && account) {
       user = await account.get();
     }
 
@@ -71,6 +71,7 @@ export async function actionWrapper<T>(
 
     // 3. Role-Based Authorization
     if (options.allowedRoles && options.allowedRoles.length > 0) {
+      if (!user) throw new Error("Unauthorized: User required for role check.");
       const hasRole = await authService.verifyRole(
         user.$id,
         options.allowedRoles,

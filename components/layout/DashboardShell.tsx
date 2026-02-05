@@ -10,7 +10,7 @@ import {
   LucideIcon,
   Loader2,
 } from "lucide-react";
-import { User, Profile } from "@/lib/domain/entities";
+import { User } from "@/lib/domain/entities";
 import Sidebar from "./Sidebar";
 
 export default function DashboardShell({
@@ -20,7 +20,7 @@ export default function DashboardShell({
 }: {
   children: React.ReactNode;
   initialUser?: User | null;
-  initialProfile?: Profile | null;
+  initialProfile?: any;
 }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();

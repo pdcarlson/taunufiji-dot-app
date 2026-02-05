@@ -33,7 +33,7 @@ describe("AdminService", () => {
       const taskId = "task-123";
 
       // Mock findById to return a pending task
-      mockTaskRepo.findById.mockResolvedValue({
+      (mockTaskRepo.findById as any).mockResolvedValue({
         id: taskId,
         title: "Test Task",
         status: "pending",
@@ -70,7 +70,7 @@ describe("AdminService", () => {
     });
 
     it("should throw error if task is not pending", async () => {
-      mockTaskRepo.findById.mockResolvedValue({
+      (mockTaskRepo.findById as any).mockResolvedValue({
         id: "task-open",
         status: "open",
       } as any);
@@ -82,7 +82,7 @@ describe("AdminService", () => {
 
     it("should rollback status and throw if EventBus fails", async () => {
       const taskId = "task-fail";
-      mockTaskRepo.findById.mockResolvedValue({
+      (mockTaskRepo.findById as any).mockResolvedValue({
         id: taskId,
         title: "Fail Task",
         status: "pending",
@@ -111,7 +111,7 @@ describe("AdminService", () => {
     });
     it("should use overridePoints if provided", async () => {
       const taskId = "task-override";
-      mockTaskRepo.findById.mockResolvedValue({
+      (mockTaskRepo.findById as any).mockResolvedValue({
         id: taskId,
         title: "Override Task",
         status: "pending",
@@ -142,7 +142,7 @@ describe("AdminService", () => {
   describe("rejectTask", () => {
     it("should delete ad-hoc tasks upon rejection", async () => {
       const taskId = "adhoc-1";
-      mockTaskRepo.findById.mockResolvedValue({
+      (mockTaskRepo.findById as any).mockResolvedValue({
         id: taskId,
         type: "ad_hoc",
         assigned_to: "user-1",
@@ -161,7 +161,7 @@ describe("AdminService", () => {
 
     it("should update status for normal tasks upon rejection", async () => {
       const taskId = "duty-1";
-      mockTaskRepo.findById.mockResolvedValue({
+      (mockTaskRepo.findById as any).mockResolvedValue({
         id: taskId,
         type: "duty",
         assigned_to: "user-1",
