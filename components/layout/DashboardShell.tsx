@@ -7,10 +7,10 @@ import {
   Home,
   ListTodo,
   GraduationCap,
-  LogOut,
   LucideIcon,
   Loader2,
 } from "lucide-react";
+import { User, Profile } from "@/lib/domain/entities";
 import Sidebar from "./Sidebar";
 
 export default function DashboardShell({
@@ -19,10 +19,10 @@ export default function DashboardShell({
   initialProfile,
 }: {
   children: React.ReactNode;
-  initialUser?: any;
-  initialProfile?: any;
+  initialUser?: User | null;
+  initialProfile?: Profile | null;
 }) {
-  const { user, profile, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -86,26 +86,6 @@ export default function DashboardShell({
         </div>
       </nav>
     </div>
-  );
-}
-
-function NavLink({
-  href,
-  icon: Icon,
-  label,
-}: {
-  href: string;
-  icon: LucideIcon;
-  label: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 text-stone-300 hover:text-white transition-colors"
-    >
-      <Icon className="w-5 h-5" />
-      <span className="font-medium">{label}</span>
-    </Link>
   );
 }
 

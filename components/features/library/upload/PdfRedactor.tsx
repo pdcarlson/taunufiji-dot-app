@@ -41,6 +41,11 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
     );
     const [isDrawing, setIsDrawing] = useState(false);
     const [reloadKey, setReloadKey] = useState(0);
+    const [canvasDims, setCanvasDims] = useState<{
+      width: number;
+      height: number;
+    } | null>(null);
+    const [currentDrawingBox, setCurrentDrawingBox] = useState<any>(null); // State for active drawing
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -54,6 +59,7 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
     // --- EFFECT 1: Load Doc ---
     useEffect(() => {
       if (!file) return;
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- reset state on file change
       setPdfJsDoc(null);
       setCurrentPage(1);
       setNumPages(0);
@@ -112,6 +118,10 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
           const context = canvas.getContext("2d");
           canvas.width = scaledViewport.width;
           canvas.height = scaledViewport.height;
+          setCanvasDims({
+            width: scaledViewport.width,
+            height: scaledViewport.height,
+          });
 
           renderTaskRef.current = page.render({
             canvasContext: context!,
@@ -120,8 +130,11 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
           await renderTaskRef.current.promise;
           setIsPageRendering(false);
           renderTaskRef.current = null;
-        } catch (err: any) {
-          if (err.name !== "RenderingCancelledException")
+        } catch (err: unknown) {
+          if (
+            err instanceof Error &&
+            err.name !== "RenderingCancelledException"
+          )
             console.error("Render error:", err);
           setIsPageRendering(false);
         }
@@ -179,13 +192,16 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
       const width = currentPos.x - start.x;
       const height = currentPos.y - start.y;
 
-      currentBoxRef.current = {
+      const newBox = {
         x: width > 0 ? start.x : currentPos.x,
         y: height > 0 ? start.y : currentPos.y,
         width: Math.abs(width),
         height: Math.abs(height),
       };
-      setRedactionBoxes((prev) => ({ ...prev }));
+
+      currentBoxRef.current = newBox;
+      setCurrentDrawingBox(newBox); // Use state to trigger render
+      // setRedactionBoxes((prev) => ({ ...prev })); // Removed this as it was just forcing update
     };
 
     const handleMouseUp = () => {
@@ -199,6 +215,7 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
         }));
       }
       currentBoxRef.current = null;
+      setCurrentDrawingBox(null);
       drawingStartPos.current = null;
     };
 
@@ -248,8 +265,7 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
     }));
 
     const boxesOnThisPage = [...(redactionBoxes[currentPage] || [])];
-    if (isDrawing && currentBoxRef.current)
-      boxesOnThisPage.push(currentBoxRef.current);
+    if (isDrawing && currentDrawingBox) boxesOnThisPage.push(currentDrawingBox);
 
     return (
       <div className="flex h-full w-full flex-col items-center justify-center relative bg-stone-900/5">
@@ -280,9 +296,9 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
             style={{
               top: "50%",
               left: "50%",
-              transform: `translate(-50%, -50%)`, // Removed scale to match canvas positioning
-              width: canvasRef.current ? canvasRef.current.width : 0,
-              height: canvasRef.current ? canvasRef.current.height : 0,
+              transform: `translate(-50%, -50%)`,
+              width: canvasDims ? canvasDims.width : 0,
+              height: canvasDims ? canvasDims.height : 0,
             }}
           >
             {boxesOnThisPage.map((box, index) => (

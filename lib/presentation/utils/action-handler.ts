@@ -1,8 +1,7 @@
 import { getContainer, Container } from "@/lib/infrastructure/container";
-import {
-  createSessionClient,
-  createJWTClient,
-} from "@/lib/presentation/server/appwrite";
+import { createJWTClient } from "@/lib/presentation/server/appwrite";
+import { getAdminClient } from "@/lib/infrastructure/persistence/client";
+import { Account } from "node-appwrite";
 
 type ActionContext = {
   container: Container;
@@ -36,11 +35,7 @@ export async function actionWrapper<T>(
       account = client.account;
     } else if (options.public) {
       // For public actions, we might not have a user
-      const {
-        getAdminClient,
-      } = require("@/lib/infrastructure/persistence/client");
       const client = getAdminClient();
-      const { Account } = require("node-appwrite");
       account = new Account(client); // This might be wrong if we need session, but public usually implies no session or admin.
       // Actually, if it's public, do we even need an account?
       // The action might need 'account' context.

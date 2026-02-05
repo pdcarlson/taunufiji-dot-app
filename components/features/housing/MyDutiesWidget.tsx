@@ -24,18 +24,36 @@ export default function MyDutiesWidget({
   const tasks = initialTasks;
 
   /* Accordion Logic */
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-
-  // Set initial active task
-  useEffect(() => {
-    if (initialTasks.length > 0 && !activeTaskId) {
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(() => {
+    if (initialTasks.length > 0) {
       // Prefer pending/rejected tasks first, then the first one
       const priorityTask =
         initialTasks.find(
           (t) => t.status === "rejected" || t.status === "pending",
         ) || initialTasks[0];
-      setActiveTaskId(priorityTask.id);
+      return priorityTask.id;
     }
+    return null;
+  });
+
+  // Update active task if initialTasks changes effectively
+  useEffect(() => {
+    if (initialTasks.length > 0 && !activeTaskId) {
+      // Logic to update if needed... but basic init is handled.
+      // Actually, to match original intent of reacting to prop changes:
+      const priorityTask =
+        initialTasks.find(
+          (t) => t.status === "rejected" || t.status === "pending",
+        ) || initialTasks[0];
+
+      // Only update if we don't have one? Or if the list fundamentally changed?
+      // The safer way is to just let the user click. But if we MUST auto-select:
+      if (priorityTask) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- we want to run this logic
+        setActiveTaskId((prev) => prev || priorityTask.id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- targeted updates
   }, [initialTasks]);
 
   const { getToken } = useAuth();

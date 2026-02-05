@@ -3,14 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
-import {
-  Home,
-  ListTodo,
-  GraduationCap,
-  User,
-  LogOut,
-  Globe,
-} from "lucide-react";
+import { Home, ListTodo, GraduationCap, LogOut, Globe } from "lucide-react";
 
 // Nav Items Definition
 const NAV_ITEMS = [
@@ -21,7 +14,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { logout, user } = useAuth(); // TODO: Add isWebmaster check if available
+  const { logout } = useAuth(); // TODO: Add isWebmaster check if available
 
   // Mock isWebmaster until fully implemented in AuthContext or use Role Check
   // Assuming 'webmaster' or 'dev' role in user.roles (if synced) or position_key (deleted).

@@ -5,8 +5,11 @@
  * session handling via cookies.
  */
 
-import { Client, Account, Databases } from "appwrite";
-import { cookies } from "next/headers";
+import {
+  Account as NodeAccount,
+  Databases as NodeDatabases,
+} from "node-appwrite";
+import { getSessionClient } from "@/lib/infrastructure/persistence/client";
 
 // Re-export from core for backwards compatibility
 export {
@@ -49,13 +52,6 @@ export async function createSessionClient() {
 // NOTE: Use getSessionClient from @/lib/infrastructure/persistence/client instead
 // This is kept for backwards compatibility
 export function createJWTClient(jwt: string) {
-  const {
-    getSessionClient,
-  } = require("@/lib/infrastructure/persistence/client");
-  const {
-    Account: NodeAccount,
-    Databases: NodeDatabases,
-  } = require("node-appwrite");
   const client = getSessionClient(jwt);
 
   return {
