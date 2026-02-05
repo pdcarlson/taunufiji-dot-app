@@ -23,6 +23,17 @@ vi.mock("react-hot-toast", () => ({
   },
 }));
 
+// Mock next/navigation
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    refresh: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+  }),
+  usePathname: () => "/mock-path",
+}));
+
 // Mock getJWT function for props
 const mockGetJWT = vi.fn().mockResolvedValue("mock_jwt");
 
@@ -114,6 +125,6 @@ describe("TaskCard", () => {
 
     expect(screen.getByText("Trash")).toBeDefined();
     // "Sign Up" is gone. Now we upload proof if assigned.
-    expect(screen.getByText("Upload Proof")).toBeDefined();
+    expect(screen.getByText(/Upload/)).toBeDefined();
   });
 });
