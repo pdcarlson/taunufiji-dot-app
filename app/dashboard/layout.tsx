@@ -5,7 +5,9 @@ import { getContainer } from "@/lib/infrastructure/container";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Home | Tau Nu Fiji",
+  title: {
+    absolute: "Home | Tau Nu Fiji",
+  },
 };
 
 export default async function DashboardLayout({
