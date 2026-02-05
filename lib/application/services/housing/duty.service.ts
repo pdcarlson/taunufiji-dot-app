@@ -70,6 +70,9 @@ export class DutyService implements IDutyService {
 
     // 1b. Check Expiry
     if (task.due_at && new Date() > new Date(task.due_at)) {
+      console.error(
+        `[Submission Rejected] Task Expired. Server Time: ${new Date().toISOString()}, Due: ${task.due_at}, TaskID: ${taskId}`,
+      );
       throw new Error("Task is expired. You cannot submit late.");
     }
 

@@ -10,12 +10,14 @@ export interface ScheduleCalculation {
  * @param recurrenceRule - RRule string (FREQ=...) or Legacy Number string ("7")
  * @param lastCompletedAt - Date of last completion (or creation)
  * @param leadTimeHours - How many hours before Due Date to unlock
+ * @param referenceDate - Optional. If provided, the result must be strictly AFTER this date.
  * @returns { dueAt, unlockAt } or null if invalid
  */
 export function calculateNextInstance(
   recurrenceRule: string,
   lastCompletedAt: Date,
   leadTimeHours: number = 24,
+  referenceDate?: Date,
 ): ScheduleCalculation | null {
   try {
     const legacyDays = parseInt(recurrenceRule);
@@ -26,8 +28,12 @@ export function calculateNextInstance(
     if (isLegacy) {
       // --- LEGACY MODE: Interval from Completion ---
       // Due = Completed + X Days
+      // If referenceDate is provided, keep adding interval until > referenceDate
       dueAt = new Date(lastCompletedAt.getTime());
-      dueAt.setDate(dueAt.getDate() + legacyDays);
+
+      do {
+        dueAt.setDate(dueAt.getDate() + legacyDays);
+      } while (referenceDate && dueAt <= referenceDate);
     } else {
       // --- RRULE MODE: Calendar Strict ---
       // We need to find the next occurrence AFTER the last completion.
@@ -51,8 +57,13 @@ export function calculateNextInstance(
         }
       }
 
-      // Find next date strictly AFTER last completion
-      const nextDate = rule.after(lastCompletedAt);
+      // Find next date strictly AFTER last completion (or reference date if provided)
+      const basisDate =
+        referenceDate && referenceDate > lastCompletedAt
+          ? referenceDate
+          : lastCompletedAt;
+
+      const nextDate = rule.after(basisDate);
 
       if (!nextDate) {
         // No future occurrences (e.g., COUNT reached)

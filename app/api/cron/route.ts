@@ -14,8 +14,26 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Run cron job
-    const result = await CronService.runHourly();
+    // 2. Run cron job based on 'job' parameter
+    const job = searchParams.get("job");
+    let result: any;
+
+    switch (job) {
+      case "HOURLY":
+        result = await CronService.runHourly();
+        break;
+      case "EXPIRE_DUTIES":
+        result = await CronService.expireDuties(); // Assuming a method like this exists
+        break;
+      case "ENSURE_FUTURE_TASKS":
+        result = await CronService.ensureFutureTasks(); // Assuming a method like this exists
+        break;
+      default:
+        return NextResponse.json(
+          { error: "Invalid or missing job parameter" },
+          { status: 400 },
+        );
+    }
 
     // 3. Log result for GitHub Actions visibility
     console.log("Cron Result:", JSON.stringify(result));
