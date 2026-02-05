@@ -1,4 +1,4 @@
-import { CronService } from "@/lib/services/cron.service";
+import { CronService } from "@/lib/application/services/jobs/cron.service";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic"; // ensure no caching

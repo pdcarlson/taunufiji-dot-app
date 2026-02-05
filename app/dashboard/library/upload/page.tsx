@@ -1,13 +1,15 @@
 "use client";
 
+// Disable prerendering - PDF library uses browser APIs
+export const dynamic = "force-dynamic";
+
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useUploadQueue } from "@/components/dashboard/library/upload/UploadContext";
-import { useAuth } from "@/components/auth/AuthProvider"; // Updated import
-import { account } from "@/lib/client/appwrite";
-import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/courseData";
-import PdfRedactor, {
-  PdfRedactorRef,
-} from "@/components/dashboard/library/upload/PdfRedactor";
+import dynamic_ from "next/dynamic";
+import { useUploadQueue } from "@/components/features/library/upload/UploadContext";
+import { useAuth } from "@/components/providers/AuthProvider";
+// import { account } from "@/lib/infrastructure/persistence/appwrite.web"; // Removed Direct Import
+import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
+import type { PdfRedactorRef } from "@/components/features/library/upload/PdfRedactor";
 import Combobox from "@/components/ui/Combobox";
 import {
   UploadCloud,
@@ -22,12 +24,20 @@ import toast from "react-hot-toast";
 import {
   uploadFileAction,
   createLibraryResourceAction,
-  checkDuplicateResourceAction, // Imported
-} from "@/lib/actions/library.actions"; // Need these actions
-import { getMetadataAction } from "@/lib/actions/library.actions"; // Need this action
+} from "@/lib/presentation/actions/library/manage.actions";
+import {
+  checkDuplicateResourceAction,
+  getMetadataAction,
+} from "@/lib/presentation/actions/library/read.actions";
+
+// Dynamic import to prevent SSR evaluation of PDF library (uses DOMMatrix)
+const PdfRedactor = dynamic_(
+  () => import("@/components/features/library/upload/PdfRedactor"),
+  { ssr: false },
+);
 
 export default function UnifiedUploadPage() {
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   const {
     addFilesToQueue,
     removeCurrentFileFromQueue,
@@ -57,10 +67,9 @@ export default function UnifiedUploadPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        // Use Server Action instead of API Route
-        // Generate JWT for stateless auth
-        const { jwt } = await account.createJWT();
-        const data = await getMetadataAction(jwt);
+        // Use Server Action (Cookie Auth)
+        // const { jwt } = await account.createJWT();
+        const data = await getMetadataAction(); // No JWT needed
         if (data) {
           setCourseData(data.courses);
           setProfessors(data.professors);
@@ -167,25 +176,20 @@ export default function UnifiedUploadPage() {
 
     try {
       let fileToUpload: File = currentFile;
+      // 0. CHECK DUPLICATE (Requires filename + version)
       const stdName = generateFilename("pdf");
-      const currentSem = stickyMetadata.semester || "Unknown";
-
-      // Generate JWT once for all server actions
-      const { jwt } = await account.createJWT();
-
-      // 0. CHECK FOR DUPLICATES
-      toast.loading("Checking for duplicates...", { id: toastId });
       const isDuplicate = await checkDuplicateResourceAction(
         {
           department: stickyMetadata.department,
           courseNumber: stickyMetadata.courseNumber,
           assessmentType: stickyMetadata.assessmentType,
-          semester: currentSem,
+          semester: stickyMetadata.semester,
           year: stickyMetadata.year,
           version: stickyMetadata.version,
         },
-        jwt,
-      ); // Pass JWT
+        // Pass JWT
+        await getToken(),
+      );
 
       if (isDuplicate) {
         toast.error("This exam already exists!", { id: toastId });
@@ -213,10 +217,11 @@ export default function UnifiedUploadPage() {
       // Use jwt generated earlier
       const formData = new FormData();
       formData.append("file", fileToUpload);
-      formData.append("jwt", jwt); // Pass JWT
+      // formData.append("jwt", jwt); // Pass JWT
 
+      const jwt = await getToken();
       // We need a server action that accepts FormData for upload
-      const uploadRes = await uploadFileAction(formData);
+      const uploadRes = await uploadFileAction(formData, jwt);
       if (!uploadRes || !uploadRes.$id) throw new Error("Upload failed");
 
       // 3. SUBMIT METADATA TO API
@@ -235,7 +240,7 @@ export default function UnifiedUploadPage() {
         metadata: {
           ...stickyMetadata,
           courseName,
-          semester: currentSem,
+          semester: stickyMetadata.semester,
           standardizedFilename: stdName,
         },
       };
@@ -243,7 +248,7 @@ export default function UnifiedUploadPage() {
       // Generate JWT for secure server-side verification
       // WE ALREADY HAVE JWT from step 2 (Upload)
       // const { jwt } = await account.createJWT(); <--- REMOVED
-      await createLibraryResourceAction(resourceData, jwt);
+      await createLibraryResourceAction(resourceData);
 
       toast.success("Success! (+10 PTS)", { id: toastId });
       removeCurrentFileFromQueue();
