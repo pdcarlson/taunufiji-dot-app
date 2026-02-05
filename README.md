@@ -174,4 +174,4 @@ Code quality is enforced via GitHub Actions (`.github/workflows/ci.yml`).
 
 ---
 
-_Engineered by [Patrick Carlson](https://github.com/pdcarlson) for Phi Gamma Delta._
+_Engineered by [Paul Carlson](https://github.com/pdcarlson) for Phi Gamma Delta._
