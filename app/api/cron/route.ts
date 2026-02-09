@@ -1,4 +1,7 @@
-import { CronService } from "@/lib/application/services/jobs/cron.service";
+import {
+  CronService,
+  CronResult,
+} from "@/lib/application/services/jobs/cron.service";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic"; // ensure no caching
@@ -8,15 +11,15 @@ export async function GET(req: Request) {
     // 1. Security check
     const { searchParams } = new URL(req.url);
     const key = searchParams.get("key");
-    const CRON_SECRET = process.env.CRON_SECRET || "cron_secret_123";
+    const CRON_SECRET = process.env.CRON_SECRET;
 
-    if (key !== CRON_SECRET) {
+    if (!key || !CRON_SECRET || key !== CRON_SECRET) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 2. Run cron job based on 'job' parameter
     const job = searchParams.get("job");
-    let result: any;
+    let result: CronResult | { errors: string[] } | void;
 
     switch (job) {
       case "HOURLY":

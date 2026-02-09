@@ -543,3 +543,14 @@
   - **Self-Healing Architecture**: Implemented `EnsureFutureTasksJob` (Cron). This acts as a permanent safety net, scanning hourly for broken chains and healing them automatically using "Future-Only" math (no overdue spam).
   - **Build Hardening**: Fixed latent dependency injection errors in `CronService` and `ExpireDutiesJob` to ensure 100% build stability (`npm run build`).
 - **Status**: All missing tasks restored. Images loading 100%. System is now resilient to process crashes.
+
+## 2026-02-09: Cron Workflow Fix
+
+- **Issue**: GitHub Actions cron workflow failing with 400 error for ~6 days.
+- **Root Cause**: Workflow called `/api/cron?key=xxx` but API route required a `job` parameter (e.g., `job=HOURLY`). Missing parameter triggered the default switch case returning 400.
+- **Fixes**:
+  - `.github/workflows/cron.yml`: Added `&job=HOURLY` to the curl command.
+  - `lib/application/services/jobs/cron.service.ts`: Removed stale Vercel comments (app is on Appwrite).
+  - `app/api/cron/housing/`: **Deleted** — insecure route with no auth guard. Main `/api/cron` route already handles all jobs.
+- **Verification**: Build passes, 29/29 tests pass.
+- **Impact**: Cron workflow should now succeed on next scheduled run (every 12 minutes).
