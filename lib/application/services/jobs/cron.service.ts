@@ -12,21 +12,13 @@ import { expireDutiesJob } from "./handlers/expire-duties.job";
 import { NotifyExpiredJob } from "./handlers/notify-expired.job";
 import { ensureFutureTasksJob } from "./handlers/ensure-future-tasks.job";
 
-export function initCronJobs() {
-  console.log("⏰ Initializing Cron Jobs...");
-
-  // 1. Expire Duties (Every 30 mins)
-  // Checks for overdue tasks and triggers next instance
-  // Cron: "*/30 * * * *"
-  // Note: For now, we simulate this via an API call or external trigger
-  // In a real Vercel app, use Vercel Cron.
-  // Here we just export the handlers for the API route to call.
+/** Result type for cron job execution */
+export interface CronResult {
+  unlocked: number;
+  urgent: number;
+  expired_notified: number;
+  errors: string[];
 }
-
-export const CRON_JOBS = {
-  EXPIRE_DUTIES: expireDutiesJob,
-  ENSURE_FUTURE_TASKS: ensureFutureTasksJob,
-};
 
 export const CronService = {
   /**
