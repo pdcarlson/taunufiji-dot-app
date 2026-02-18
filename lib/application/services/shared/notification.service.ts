@@ -1,7 +1,7 @@
 import { getContainer } from "@/lib/infrastructure/container";
 import { env } from "@/lib/infrastructure/config/env";
 
-const BASE_URL = "https://taunufiji.app"; // Or env.NEXT_PUBLIC_APP_URL
+const BASE_URL = env.NEXT_PUBLIC_APP_URL || "https://taunufiji.app";
 
 // Notification Types matching the Matrix
 export type NotificationType =

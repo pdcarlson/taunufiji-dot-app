@@ -1,0 +1,63 @@
+name: Deploy to Production
+
+on:
+    push:
+        tags:
+            - "v*"
+
+jobs:
+    quality-gate:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Lint
+              run: npm run lint
+
+            - name: Type check
+              run: npx tsc --noEmit
+
+            - name: Test
+              run: npm run test
+
+    deploy:
+        needs: quality-gate
+        runs-on: ubuntu-latest
+        environment: production
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Setup Appwrite CLI
+              uses: appwrite/setup-for-appwrite@v2
+
+            - name: Deploy to Appwrite Sites
+              env:
+                  APPWRITE_PROJECT_ID: ${{ secrets.APPWRITE_PROJECT_ID }}
+                  APPWRITE_ENDPOINT: https://appwrite.taunufiji.app/v1
+              run: |
+                  echo "🚀 Deploying tag ${{ github.ref_name }} to production..."
+                  appwrite push sites \
+                    --project-id ${{ secrets.APPWRITE_PROJECT_ID }} \
+                    --api-key ${{ secrets.APPWRITE_API_KEY }}
