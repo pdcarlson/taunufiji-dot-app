@@ -37,11 +37,8 @@ export const NotifyUrgentJob = {
             continue;
           }
 
-          await taskRepository.update(task.id, {
-            notification_level: "urgent",
-          });
-
-          await NotificationService.sendNotification(
+          // Send notification FIRST, update DB only on success
+          const result = await NotificationService.sendNotification(
             task.assigned_to!,
             "urgent",
             {
@@ -49,6 +46,18 @@ export const NotifyUrgentJob = {
               taskId: task.id,
             },
           );
+
+          if (!result.success) {
+            const errMsg = `Urgent DM failed for task ${task.id}: ${result.error}`;
+            console.error(`[NotifyUrgentJob] ${errMsg}`);
+            errors.push(errMsg);
+            continue; // Don't update DB — retry next run
+          }
+
+          await taskRepository.update(task.id, {
+            notification_level: "urgent",
+          });
+
           urgent++;
         } catch (error: unknown) {
           const errMsg = `Failed to process urgent task ${task.id}: ${error instanceof Error ? error.message : String(error)}`;

@@ -1,5 +1,6 @@
 import { getContainer } from "@/lib/infrastructure/container";
 import { env } from "@/lib/infrastructure/config/env";
+import { NotificationResult } from "@/lib/domain/ports/notification.provider";
 
 const BASE_URL = env.NEXT_PUBLIC_APP_URL || "https://taunufiji.app";
 
@@ -28,24 +29,32 @@ export const NotificationService = {
       points?: number;
       reason?: string;
     },
-  ) {
+  ): Promise<NotificationResult> {
     try {
       const { notificationProvider } = getContainer();
       const { message, link } = this.formatMessage(type, payload);
       const finalContent = link ? `${message} \n[View Task](${link})` : message;
       return await notificationProvider.sendDM(userId, finalContent);
     } catch (e) {
-      // Fail Safe: Don't block business logic if Discord is down
-      console.error("Notification Failed silently:", e);
-      return false;
+      const error = `Notification to ${userId} (${type}) failed: ${e instanceof Error ? e.message : String(e)}`;
+      console.error(`[NotificationService] ${error}`);
+      return { success: false, error };
     }
   },
 
   /**
    * Post to Admin Channel (e.g. for Proof Submission)
    */
-  async notifyAdmins(message: string, payload?: { taskId?: string }) {
-    if (!env.DISCORD_HOUSING_CHANNEL_ID) return false;
+  async notifyAdmins(
+    message: string,
+    payload?: { taskId?: string },
+  ): Promise<NotificationResult> {
+    if (!env.DISCORD_HOUSING_CHANNEL_ID) {
+      return {
+        success: false,
+        error: "DISCORD_HOUSING_CHANNEL_ID not configured",
+      };
+    }
 
     const { notificationProvider } = getContainer();
     let content = message;
