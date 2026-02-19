@@ -30,3 +30,9 @@ jobs:
 
             - name: Test
               run: npm run test
+
+            - name: Build
+              env:
+                  NEXT_PUBLIC_APPWRITE_ENDPOINT: https://appwrite.taunufiji.app/v1
+                  NEXT_PUBLIC_APPWRITE_PROJECT_ID: mock-id
+              run: npm run build

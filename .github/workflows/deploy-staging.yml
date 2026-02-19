@@ -31,6 +31,12 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Build
+        env:
+          NEXT_PUBLIC_APPWRITE_ENDPOINT: https://appwrite.taunufiji.app/v1
+          NEXT_PUBLIC_APPWRITE_PROJECT_ID: mock-id
+        run: npm run build
+
   deploy:
     needs: quality-gate
     runs-on: ubuntu-latest
@@ -51,18 +57,22 @@ jobs:
 
       - name: Sync Database from Production
         env:
-          PROD_API_KEY: ${{ secrets.PROD_API_KEY }}
-          STAGING_API_KEY: ${{ secrets.APPWRITE_API_KEY }}
-          PROD_PROJECT_ID: ${{ secrets.PROD_PROJECT_ID }}
-          STAGING_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }}
+          SOURCE_APPWRITE_ENDPOINT: ${{ secrets.PROD_APPWRITE_ENDPOINT }}
+          SOURCE_APPWRITE_PROJECT_ID: ${{ secrets.PROD_PROJECT_ID }}
+          SOURCE_APPWRITE_API_KEY: ${{ secrets.PROD_API_KEY }}
+          NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
+          NEXT_PUBLIC_APPWRITE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }}
+          APPWRITE_API_KEY: ${{ secrets.APPWRITE_API_KEY }}
         run: npx tsx scripts/sync-staging.ts
-        continue-on-error: true # Don't block deploy if sync fails (e.g. standard timeout or rate limit)
+        continue-on-error: true # Don't block deploy if sync fails
 
       - name: Build with staging env vars
         env:
           NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
           NEXT_PUBLIC_APPWRITE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }}
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_APP_NAME: ${{ secrets.NEXT_PUBLIC_APP_NAME }}
+          NEXT_PUBLIC_APP_DESCRIPTION: ${{ secrets.NEXT_PUBLIC_APP_DESCRIPTION }}
         run: npm run build
 
       - name: Setup Appwrite CLI
