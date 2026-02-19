@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Plus, Clock, Users, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CreateScheduleModal from "./CreateScheduleModal";
-import toast from "react-hot-toast";
 
 import { HousingSchedule, Member } from "@/lib/domain/entities";
 

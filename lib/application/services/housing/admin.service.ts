@@ -51,7 +51,6 @@ export class AdminService {
   async verifyTask(
     taskId: string,
     _verifierId: string,
-    _rating: number = 5,
     overridePoints?: number,
   ) {
     const task = await this.taskRepository.findById(taskId);

@@ -1,4 +1,4 @@
-import { createResponse, createEphemeralResponse } from "../utils";
+import { createEphemeralResponse } from "../utils";
 import { getContainer } from "@/lib/infrastructure/container";
 import { CommandHandler } from "../types";
 

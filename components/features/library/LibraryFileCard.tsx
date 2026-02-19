@@ -8,7 +8,6 @@ import {
   AlertCircle,
   ShieldCheck,
   GraduationCap,
-  Calendar,
   User,
 } from "lucide-react";
 

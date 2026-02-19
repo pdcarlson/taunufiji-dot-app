@@ -1,7 +1,6 @@
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents, TaskExpiredEvent } from "@/lib/domain/events";
 import { getContainer } from "@/lib/infrastructure/container";
-import { ScheduleService } from "@/lib/application/services/housing/schedule.service";
 import { logger } from "@/lib/utils/logger";
 
 export const TaskExpiredHandler = {

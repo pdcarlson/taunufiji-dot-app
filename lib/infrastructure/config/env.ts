@@ -48,6 +48,9 @@ const parsed = schema.safeParse({
 
 if (!parsed.success) {
   console.error("❌ Environment validation failed:", parsed.error.format());
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Critical environment variables are missing in production.");
+  }
 }
 
 export const env = parsed.success ? parsed.data : (process.env as any);

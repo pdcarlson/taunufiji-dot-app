@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { HousingTask, HousingSchedule, Member } from "@/lib/domain/entities";
+import { HousingTask, Member } from "@/lib/domain/entities";
 import TaskCard from "./TaskCard";
 
 import DutyRoster from "./DutyRoster";
@@ -18,7 +18,6 @@ import {
   getAllActiveTasksAction,
   getAllMembersAction,
 } from "@/lib/presentation/actions/housing/query.actions";
-import { getSchedulesAction } from "@/lib/presentation/actions/housing/schedule.actions";
 import MyDutiesWidget from "./MyDutiesWidget";
 // Note: We use useAuth for getToken and isHousingAdmin
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -26,13 +25,11 @@ import { useAuth } from "@/components/providers/AuthProvider";
 interface HousingDashboardClientProps {
   initialTasks?: HousingTask[];
   initialMembers?: Member[];
-  initialSchedules?: HousingSchedule[];
 }
 
 export default function HousingDashboardClient({
   initialTasks = [],
   initialMembers = [],
-  initialSchedules = [],
 }: HousingDashboardClientProps) {
   const { user: currentUser, getToken, isHousingAdmin } = useAuth();
 

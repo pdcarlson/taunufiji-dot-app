@@ -119,7 +119,7 @@ describe("AdminService", () => {
         assigned_to: "user-1",
       } as any);
 
-      await service.verifyTask(taskId, "admin-1", 5, 20);
+      await service.verifyTask(taskId, "admin-1", 20);
 
       // Verify update called with new points
       expect(mockTaskRepo.update).toHaveBeenCalledWith(
