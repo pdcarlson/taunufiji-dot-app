@@ -554,3 +554,19 @@
   - `app/api/cron/housing/`: **Deleted** — insecure route with no auth guard. Main `/api/cron` route already handles all jobs.
 - **Verification**: Build passes, 29/29 tests pass.
 - **Impact**: Cron workflow should now succeed on next scheduled run (every 12 minutes).
+
+## 2026-02-19: CI/CD Consolidation & Staging Environment
+
+- **Infrastructure**:
+  - Implemented **CI-Only Deployments**: Removed reliance on Appwrite Sites auto-deploy.
+  - Created `.github/workflows/deploy-staging.yml`: Deploys `staging` branch to Staging environment.
+  - Updated `.github/workflows/deploy-prod.yml`: Deploys `v*` tags to Production environment.
+  - Secrets are now strictly managed via **GitHub Environments** (`production` vs `staging`).
+- **Data Sync**:
+  - Created `scripts/sync-staging.ts`: Automated script to clone Production schema and data to Staging during deploy.
+  - **Safety**: Sensitive data (Housing Schedules, Assignments) is synced as Schema-Only to prevent accidental test notifications.
+  - **Data**: Users, Professors, Courses, Ledger, and Library Resources are fully synced.
+- **Observability**:
+  - Enhanced `NotificationService` to return detailed `NotificationResult`.
+  - Fixed `NotifyUrgentJob` ordering bug (notification now sent before DB update).
+  - Added `WORKFLOW.md` documentation.
