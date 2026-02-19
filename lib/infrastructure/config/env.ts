@@ -74,9 +74,19 @@ const parsed = schema.safeParse({
 
 if (!parsed.success) {
   console.error("❌ Environment validation failed:", parsed.error.format());
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Critical environment variables are missing in production.");
+  // Fail fast in production OR staging to prevent runtime magic number drift
+  if (process.env.NODE_ENV !== "development") {
+    throw new Error(
+      `Critical environment variables are missing or invalid in ${process.env.NODE_ENV}.`,
+    );
   }
 }
 
-export const env = parsed.success ? parsed.data : (process.env as any);
+/**
+ * Validated Environment Object
+ * In development, we fallback to process.env if parsing fails to allow startup,
+ * but in CI/Staging/Prod we require strict validation.
+ */
+export const env = parsed.success
+  ? parsed.data
+  : (process.env as unknown as z.infer<typeof schema>);

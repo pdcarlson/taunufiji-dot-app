@@ -33,9 +33,11 @@ All tasks follow a strict lifecycle:
    - Rerun tests to ensure they still pass after refactoring.
 
 6. **Verify Coverage:** Run coverage reports using the project's chosen tools. For example, in a Python project, this might look like:
+
    ```bash
    pytest --cov=app --cov-report=html
    ```
+
    Target: >80% coverage for new code. The specific tools and commands will vary by language and framework.
 
 7. **Document Deviations:** If implementation differs from tech stack:
@@ -50,9 +52,11 @@ All tasks follow a strict lifecycle:
    - Perform the commit.
 
 9. **Attach Task Summary with Git Notes:**
+
    - **Step 9.1: Get Commit Hash:** Obtain the hash of the *just-completed commit* (`git log -1 --format="%H"`).
    - **Step 9.2: Draft Note Content:** Create a detailed summary for the completed task. This should include the task name, a summary of changes, a list of all created/modified files, and the core "why" for the change.
    - **Step 9.3: Attach Note:** Use the `git notes` command to attach the summary to the commit.
+
      ```bash
      # The note content from the previous step is passed via the -m flag.
      git notes add -m "<note content>" <commit_hash>
@@ -92,7 +96,8 @@ All tasks follow a strict lifecycle:
     -   The plan you present to the user **must** follow this format:
 
         **For a Frontend Change:**
-        ```
+
+        ```text
         The automated tests have passed. For manual verification, please follow these steps:
 
         **Manual Verification Steps:**
@@ -102,7 +107,8 @@ All tasks follow a strict lifecycle:
         ```
 
         **For a Backend Change:**
-        ```
+
+        ```text
         The automated tests have passed. For manual verification, please follow these steps:
 
         **Manual Verification Steps:**
@@ -148,14 +154,16 @@ Before marking any task complete, verify:
 - [ ] Documentation updated if needed
 - [ ] No security vulnerabilities introduced
 
-## Project Specific Rules
+## Project-Specific Rules
 
 ### Clean Architecture Enforcement
+
 - **Domain Independence**: The `lib/domain` layer must remain pure and have zero dependencies on infrastructure (e.g., Appwrite, Discord) or presentation layers.
 - **Dependency Flow**: Dependencies must only point inwards. Presentation -> Application -> Domain <- Infrastructure.
 - **Interface Segregation**: All infrastructure adapters must implement a domain port (interface). Never use concrete infrastructure classes directly in application services.
 
 ### Code Cleanup & Refactoring
+
 - **Consolidate Configuration**: Move hardcoded values from services and components into central configuration files in `lib/infrastructure/config/`.
 - **Remove Redundancy**: During implementation, actively identify and remove unused dependencies or duplicated logic.
 - **AI-Agent Alignment**: Maintain clear, descriptive naming and structure to ensure the codebase remains "AI-readable."

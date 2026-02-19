@@ -33,9 +33,9 @@ jobs:
 
       - name: Build
         env:
-          NEXT_PUBLIC_APPWRITE_ENDPOINT: https://appwrite.taunufiji.app/v1
-          NEXT_PUBLIC_APPWRITE_PROJECT_ID: mock-id
-          APPWRITE_API_KEY: mock-key
+          NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ vars.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://appwrite.taunufiji.app/v1' }}
+          NEXT_PUBLIC_APPWRITE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_APPWRITE_PROJECT_ID || 'mock-id' }}
+          APPWRITE_API_KEY: ${{ secrets.APPWRITE_API_KEY || 'mock-key' }}
         run: npm run build
 
   deploy:

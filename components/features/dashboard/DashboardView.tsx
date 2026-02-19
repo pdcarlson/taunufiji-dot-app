@@ -11,14 +11,8 @@ import PointsLedger from "./PointsLedger";
 import AdHocRequestCard from "@/components/features/housing/AdHocRequestCard";
 import { HousingTask } from "@/lib/domain/types/task";
 import { DashboardStats } from "@/lib/domain/entities/dashboard.dto";
+import { LeaderboardEntry } from "@/lib/presentation/queries/dashboard.queries";
 import { Loader2 } from "lucide-react";
-
-interface LeaderboardEntry {
-  id: string;
-  userId: string;
-  name: string;
-  points: number;
-}
 
 interface DashboardViewProps {
   initialLeaderboard: LeaderboardEntry[];

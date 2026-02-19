@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import useDebounce from "@/hooks/useDebounce";
 import LibraryFilters from "./LibraryFilters";
 import LibraryFileCard from "./LibraryFileCard";
@@ -28,7 +28,17 @@ interface LibraryClientProps {
   initialResources?: LibraryResource[];
 }
 
-const INITIAL_FILTERS = {
+interface Filters {
+  department: string;
+  course_number: string;
+  professor: string;
+  semester: string;
+  year: string;
+  assessment_type: string;
+  version: string;
+}
+
+const INITIAL_FILTERS: Filters = {
   department: "All",
   course_number: "All",
   professor: "",
@@ -44,8 +54,8 @@ export default function LibraryClient({
   initialResources = [],
 }: LibraryClientProps) {
   const { getToken, user } = useAuth();
-  const [filters, setFilters] = useState(INITIAL_FILTERS);
-  const debouncedFilters = useDebounce(filters, 500);
+  const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
+  const debouncedFilters = useDebounce<Filters>(filters, 500);
 
   // Stats State
   const [stats, setStats] = useState({
@@ -70,31 +80,29 @@ export default function LibraryClient({
   }, [user, getToken]);
 
   // Data State
-  const [results, setResults] = useState<LibraryResource[] | null>(initialResources);
+  const [results, setResults] = useState<LibraryResource[] | null>(
+    initialResources,
+  );
   const [searchTotal, setSearchTotal] = useState(initialTotal);
   // If we have initial resources, we aren't loading initially
   const [loading, setLoading] = useState(initialResources.length === 0);
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
-    // Skip the very first run if we have initial data AND filters haven't changed
-    // But debouncedFilters changes on mount? No, it initializes with value.
-    // We want to skip search if filters are default AND we have initial data.
-
     const isDefaultFilters = Object.keys(INITIAL_FILTERS).every(
       (k) =>
-        (filters as any)[k] === (INITIAL_FILTERS as any)[k],
+        (debouncedFilters as any)[k] === (INITIAL_FILTERS as any)[k],
     );
 
-    if (isFirstLoad && initialResources.length > 0 && isDefaultFilters) {
-      setIsFirstLoad(false);
+    if (isFirstLoad.current && initialResources.length > 0 && isDefaultFilters) {
+      isFirstLoad.current = false;
       return;
     }
 
     const runSearch = async () => {
       setLoading(true);
       try {
-        const apiFilters: any = {};
+        const apiFilters: Record<string, any> = {};
         Object.keys(debouncedFilters).forEach((key) => {
           const value = (debouncedFilters as any)[key];
           if (value && value !== "All") {
@@ -121,7 +129,7 @@ export default function LibraryClient({
     };
 
     runSearch();
-    setIsFirstLoad(false);
+    isFirstLoad.current = false;
   }, [debouncedFilters, getToken]);
 
   return (

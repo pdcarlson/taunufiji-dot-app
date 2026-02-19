@@ -51,7 +51,7 @@ export const expireDutiesJob = async (): Promise<{ errors: string[] }> => {
         if (task.assigned_to) {
           try {
             await pointsService.awardPoints(task.assigned_to, {
-              amount: -HOUSING_CONSTANTS.FINE_MISSING_DUTY,
+              amount: -Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY),
               reason: `Missed Duty: ${task.title}`,
               category: "fine",
             });

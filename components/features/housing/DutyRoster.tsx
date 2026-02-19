@@ -16,7 +16,6 @@ interface DutyRosterProps {
   tasks: HousingTask[];
   members: Member[];
   isAdmin: boolean;
-  userId: string;
   onRefresh: () => void;
   onEdit?: (task: HousingTask) => void;
 }

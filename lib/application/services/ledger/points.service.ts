@@ -96,6 +96,7 @@ export class PointsService implements IPointsService {
     const members = await this.userRepository.findTopByPoints(limit);
     return members.map((m, i) => ({
       id: m.id,
+      discord_id: m.discord_id,
       name: m.full_name || m.discord_handle || "Unknown",
       points: m.details_points_current || 0,
       rank: i + 1,

@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
   ReactNode,
 } from "react";
 import { account } from "@/lib/infrastructure/persistence/appwrite.web";
@@ -58,12 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Create JWT for Server Action Verification
         const jwtResponse = await account.createJWT();
 
-        const [userProfile, adminStatus] = await Promise.all([
+        const [userProfileData, adminStatus] = await Promise.all([
           getProfileAction(jwtResponse.jwt),
           checkHousingAdminAction(jwtResponse.jwt),
         ]);
 
-        setProfile(userProfile as Member);
+        // getProfileAction returns { profile: Member | null, isAuthorized: boolean } | null
+        setProfile(userProfileData?.profile ?? null);
         setIsHousingAdmin(adminStatus);
       } catch (err: unknown) {
         console.warn("[AuthProvider] No session found", err);
@@ -86,10 +88,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const getToken = async () => {
+  const getToken = useCallback(async () => {
     const { jwt } = await account.createJWT();
     return jwt;
-  };
+  }, []);
 
   const logout = async () => {
     await account.deleteSession("current");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 // import { getLeaderboard } from "@/lib/tasks"; // Need to check where this function is in internal-os
 import { useAuth } from "@/components/providers/AuthProvider";
 import {
@@ -9,7 +9,6 @@ import {
 } from "@/lib/presentation/actions/dashboard.actions";
 import { Trophy, Medal, Crown, Loader2, AlertCircle } from "lucide-react";
 import clsx from "clsx";
-import { useCallback } from "react";
 
 interface LeaderboardMember {
   id: string;
@@ -34,6 +33,7 @@ export default function LeaderboardWidget({
   } | null>(null);
   const [loading, setLoading] = useState(initialLeaderboard.length === 0);
   const [error, setError] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
 
   const fetchLeaders = useCallback(async () => {
     try {
@@ -44,7 +44,7 @@ export default function LeaderboardWidget({
       // Use Server Action
       // If we already have leaders, we only need my rank
       const promises: Promise<any>[] = [getLeadersMyRank(token)];
-      if (leaders.length === 0) {
+      if (!hasFetchedRef.current) {
         promises.push(getLeaderboardAction(token));
       }
 
@@ -52,6 +52,7 @@ export default function LeaderboardWidget({
 
       if (data && Array.isArray(data)) {
         setLeaders(data as LeaderboardMember[]);
+        hasFetchedRef.current = true;
       }
       if (myData) {
         setMyStats(myData);
@@ -63,7 +64,7 @@ export default function LeaderboardWidget({
     } finally {
       setLoading(false);
     }
-  }, [user, getToken, leaders.length]);
+  }, [user, getToken]);
 
   // Helper to handle conditional my rank call
   const getLeadersMyRank = async (token: string) => {
@@ -79,7 +80,7 @@ export default function LeaderboardWidget({
     } else if (initialLeaderboard.length > 0) {
       setLoading(false);
     }
-  }, [user, profile, fetchLeaders, initialLeaderboard.length]);
+  }, [user, fetchLeaders, initialLeaderboard.length]);
 
   // Standardized Name Formatter
   const formatName = (fullName: string) => {

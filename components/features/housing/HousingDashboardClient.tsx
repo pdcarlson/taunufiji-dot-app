@@ -233,7 +233,6 @@ export default function HousingDashboardClient({
           tasks={tasks}
           members={members}
           isAdmin={isAdmin}
-          userId={currentUser?.$id || ""}
           onRefresh={handleRefresh}
           onEdit={(t) => setEditingTask(t)}
         />

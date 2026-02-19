@@ -29,7 +29,7 @@ export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
     // Map to View Model & Serialize
     return leaderboard.map((entry) => ({
       id: entry.id,
-      userId: entry.id, // entry.id is the discord userId in this context
+      userId: entry.discord_id,
       name: entry.name,
       points: entry.points,
     }));

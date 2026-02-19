@@ -24,11 +24,11 @@ import * as path from "path";
 
 // ─── Configuration ─────────────────────────────────────────────────────────────
 
-// Load all potential env files
-[".env.local", ".env.production", ".env.staging", ".env"].forEach(file => {
+// Load all potential env files in order of precedence (last wins)
+[".env", ".env.staging", ".env.production", ".env.local"].forEach((file) => {
   const envPath = path.resolve(process.cwd(), file);
   if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath });
+    dotenv.config({ path: envPath, override: true });
   }
 });
 
@@ -202,6 +202,10 @@ async function createAttribute(db: Databases, collectionId: string, attr: any): 
     case "datetime":
       await db.createDatetimeAttribute({ ...base, default: def });
       break;
+    default:
+      throw new Error(
+        `Unsupported attribute type "${attr.type}" for key "${attr.key}" in collection "${collectionId}"`,
+      );
   }
 }
 
