@@ -8,7 +8,7 @@ import { z } from "zod";
  */
 
 const schema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  NODE_ENV: z.enum(["development", "test", "staging", "production"]).default("development"),
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
   
   // Appwrite
@@ -76,9 +76,10 @@ if (!parsed.success) {
   console.error("❌ Environment validation failed:", parsed.error.format());
   // Fail fast in production OR staging to prevent runtime magic number drift
   // We allow 'development' and 'test' to proceed with console errors
-  if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging") {
+  const currentEnv = process.env.NODE_ENV as string;
+  if (currentEnv === "production" || currentEnv === "staging") {
     throw new Error(
-      `Critical environment variables are missing or invalid in ${process.env.NODE_ENV}.`,
+      `Critical environment variables are missing or invalid in ${currentEnv}.`,
     );
   }
 }
