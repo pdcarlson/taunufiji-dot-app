@@ -67,6 +67,13 @@ jobs:
         run: npx tsx scripts/sync-staging.ts
         continue-on-error: true # Don't block deploy if sync fails
 
+      - name: Sync Discord Commands
+        env:
+          DISCORD_APP_ID: ${{ secrets.DISCORD_APP_ID }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+        run: npm run discord:register
+
       - name: Build with staging env vars
         env:
           NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
