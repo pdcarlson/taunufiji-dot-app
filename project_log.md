@@ -570,3 +570,21 @@
   - Enhanced `NotificationService` to return detailed `NotificationResult`.
   - Fixed `NotifyUrgentJob` ordering bug (notification now sent before DB update).
   - Added `WORKFLOW.md` documentation.
+
+## 2026-02-19: Architecture Isolation & Configuration Refactor
+
+- **Full Environment Isolation**:
+  - Eliminated hardcoded production URLs and IDs from the codebase.
+  - Refactored `scripts/sync-staging.ts` to be fully configuration-driven, using dedicated source/target environment variables.
+  - Removed hardcoded production domain fallbacks in `NotificationService`.
+- **Configuration-Driven Logic**:
+  - Expanded `lib/infrastructure/config/env.ts` to centralize all external dependencies and domain constants (branding, fine amounts, lead times).
+  - Centralized magic numbers into `lib/constants.ts` (e.g., `MISSING_DUTY_FINE`, `HISTORY_LIMIT`).
+  - Implemented runtime configuration validation via Zod, ensuring missing critical variables fail fast in production.
+- **Branding & UI**:
+  - Centralized branding strings (`APP_NAME`, `APP_DESCRIPTION`) to ensure consistency across Layout, Metadata, and Notifications.
+  - Implemented dynamic page titles that automatically prefix the environment name (e.g., `[STAGING]`) for better visual distinction.
+- **Verification**:
+  - Executed successful production build (`npm run build`).
+  - Verified 100% test pass rate across 31 units.
+  - Resolved type safety issues in `DashboardView` and `PointsService`.

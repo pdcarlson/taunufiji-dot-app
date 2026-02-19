@@ -1,8 +1,7 @@
 import { getContainer } from "@/lib/infrastructure/container";
 import { env } from "@/lib/infrastructure/config/env";
 import { NotificationResult } from "@/lib/domain/ports/notification.provider";
-
-const BASE_URL = env.NEXT_PUBLIC_APP_URL || "https://taunufiji.app";
+import { BASE_URL, HOUSING_CONSTANTS } from "@/lib/constants";
 
 // Notification Types matching the Matrix
 export type NotificationType =
@@ -111,7 +110,7 @@ export const NotificationService = {
         message = `Task rejected: ${title}${reason ? `. Reason: ${reason}` : ""}`;
         break;
       case "expired":
-        message = `Task expired: ${title}. A fine of -50 points has been applied.`;
+        message = `Task expired: ${title}. A fine of -${HOUSING_CONSTANTS.FINE_MISSING_DUTY} points has been applied.`;
         break;
       default:
         message = `Notification: ${title}`;

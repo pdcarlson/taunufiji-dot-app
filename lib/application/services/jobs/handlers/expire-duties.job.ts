@@ -3,6 +3,7 @@ import { PointsService } from "@/lib/application/services/ledger/points.service"
 import { ScheduleService } from "@/lib/application/services/housing/schedule.service";
 import { AppwriteLedgerRepository } from "@/lib/infrastructure/persistence/ledger.repository";
 import { AppwriteUserRepository } from "@/lib/infrastructure/persistence/user.repository";
+import { HOUSING_CONSTANTS } from "@/lib/constants";
 
 // Helper to construct services (DI Container Lite)
 function getServices() {
@@ -50,7 +51,7 @@ export const expireDutiesJob = async (): Promise<{ errors: string[] }> => {
         if (task.assigned_to) {
           try {
             await pointsService.awardPoints(task.assigned_to, {
-              amount: -50,
+              amount: -HOUSING_CONSTANTS.FINE_MISSING_DUTY,
               reason: `Missed Duty: ${task.title}`,
               category: "fine",
             });

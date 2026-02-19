@@ -1,6 +1,7 @@
 import { logger } from "@/lib/utils/logger";
 import { IUserRepository } from "@/lib/domain/ports/user.repository";
 import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
+import { LEDGER_CONSTANTS } from "@/lib/constants";
 
 import {
   IPointsService,
@@ -65,7 +66,7 @@ export class PointsService implements IPointsService {
     return await this.ledgerRepository.findMany({
       userId,
       category: validCategory,
-      limit: 50,
+      limit: LEDGER_CONSTANTS.HISTORY_LIMIT,
       orderBy: "timestamp",
       orderDirection: "desc",
     });
@@ -90,7 +91,7 @@ export class PointsService implements IPointsService {
     };
   }
 
-  async getLeaderboard(limit = 20) {
+  async getLeaderboard(limit: number = LEDGER_CONSTANTS.DEFAULT_LEADERBOARD_LIMIT) {
     // Direct DB Call
     const members = await this.userRepository.findTopByPoints(limit);
     return members.map((m, i) => ({

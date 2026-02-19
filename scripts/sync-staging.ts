@@ -6,13 +6,15 @@
  * What it does:
  *   1. Creates the database in staging (if not exists)
  *   2. Clones ALL collection schemas (attributes + indexes)
- *   3. Copies full data for: users, housing_schedules, professors, courses
- *   4. Leaves empty (schema only): assignments, ledger, library_resources
+ *   3. Copies full data for: professors, courses, ledger, library_resources
+ *   4. Leaves empty (schema only): users, assignments, housing_schedules
  *
  * Usage:
  *   npx tsx scripts/sync-staging.ts
  *
- * Reads API keys from .env.production and .env.staging files.
+ * Config:
+ *   Requires SOURCE_APPWRITE_ENDPOINT, SOURCE_APPWRITE_PROJECT_ID, SOURCE_APPWRITE_API_KEY
+ *   and NEXT_PUBLIC_APPWRITE_ENDPOINT, NEXT_PUBLIC_APPWRITE_PROJECT_ID, APPWRITE_API_KEY (Target)
  */
 
 import { Client, Databases, Query } from "node-appwrite";
@@ -22,22 +24,35 @@ import * as path from "path";
 
 // ─── Configuration ─────────────────────────────────────────────────────────────
 
-const ENDPOINT =
-  process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ||
-  "https://appwrite.taunufiji.app/v1";
+// Load all potential env files
+[".env.local", ".env.production", ".env.staging", ".env"].forEach(file => {
+  const envPath = path.resolve(process.cwd(), file);
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+  }
+});
 
-// Production config (defaults to known prod ID for local convenience, but overridable)
-const PROD_PROJECT = process.env.PROD_PROJECT_ID || "695ebb2e000e07f0f7a3";
-const PROD_API_KEY = process.env.PROD_API_KEY; // Must be provided in CI or .env.production
-
-// Staging config (defaults to known staging ID, but overridable)
-const STAGING_PROJECT =
-  process.env.STAGING_PROJECT_ID || "69962e76002d70a10c9d";
-const STAGING_API_KEY =
-  process.env.STAGING_API_KEY || process.env.APPWRITE_API_KEY;
-
-const DB_ID = "v2_internal_ops";
-const DB_NAME = "V2 Internal Ops";
+const CONFIG = {
+  SOURCE: {
+    ENDPOINT: process.env.SOURCE_APPWRITE_ENDPOINT,
+    PROJECT: process.env.SOURCE_APPWRITE_PROJECT_ID,
+    KEY: process.env.SOURCE_APPWRITE_API_KEY,
+  },
+  TARGET: {
+    ENDPOINT: process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT,
+    PROJECT: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID,
+    KEY: process.env.APPWRITE_API_KEY || process.env.STAGING_API_KEY,
+  },
+  DB: {
+    ID: "v2_internal_ops",
+    NAME: "V2 Internal Ops",
+  },
+  THROTTLE: {
+    COLLECTION_DELAY: 500,
+    ATTRIBUTE_DELAY: 300,
+    BATCH_DELAY: 500,
+  }
+};
 
 // Collections to copy data for (schema + data)
 const COPY_DATA_COLLECTIONS = [
@@ -52,23 +67,18 @@ const SCHEMA_ONLY_COLLECTIONS = ["users", "assignments", "housing_schedules"];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
-function loadEnv(envFile: string): void {
-  const envPath = path.resolve(process.cwd(), envFile);
-  if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath });
+function getDb(config: { ENDPOINT?: string; PROJECT?: string; KEY?: string }): Databases {
+  if (!config.ENDPOINT || !config.PROJECT || !config.KEY) {
+    throw new Error(`Missing configuration for project ${config.PROJECT || 'unknown'}`);
   }
-}
-
-function getDb(projectId: string, apiKey: string): Databases {
   const client = new Client()
-    .setEndpoint(ENDPOINT)
-    .setProject(projectId)
-    .setKey(apiKey);
+    .setEndpoint(config.ENDPOINT)
+    .setProject(config.PROJECT)
+    .setKey(config.KEY);
   return new Databases(client);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function sleep(ms: number): Promise<any> {
+function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -80,17 +90,13 @@ async function waitForAttributes(
 ): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
-    const result = await db.listAttributes(DB_ID, collectionId, [
+    const result = await db.listAttributes(CONFIG.DB.ID, collectionId, [
       Query.limit(100),
     ]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const attrs = result.attributes as any[];
 
-    // Check missing attributes (not in list)
     const presentKeys = attrs.map((a: any) => a.key);
     const missing = expectedKeys.filter((k) => !presentKeys.includes(k));
-
-    // Check processing attributes (in list but not ready)
     const processing = attrs.filter((a) => a.status !== "available");
 
     if (missing.length === 0 && processing.length === 0) {
@@ -98,22 +104,14 @@ async function waitForAttributes(
       return true;
     }
 
-    const failed = attrs.filter(
-      (a) => a.status === "failed" || a.status === "stuck",
-    );
-    if (failed.length > 0) {
-      console.error(
-        `  ❌ Some attributes failed: ${failed.map((a: any) => a.key).join(", ")}`,
-      );
+    if (attrs.some(a => a.status === "failed" || a.status === "stuck")) {
+      console.error(`  ❌ Some attributes failed synchronization.`);
       return false;
     }
 
-    console.log(
-      `  ⏳ Waiting... Missing: ${missing.length}, Processing: ${processing.length}`,
-    );
+    console.log(`  ⏳ Waiting... Missing: ${missing.length}, Processing: ${processing.length}`);
     await sleep(2000);
   }
-  console.warn(`  ⚠️  Timeout waiting for attributes (${maxWaitMs}ms)`);
   return false;
 }
 
@@ -121,54 +119,33 @@ async function waitForAttributes(
 
 async function ensureDatabase(db: Databases): Promise<void> {
   try {
-    await db.get(DB_ID);
-    console.log(`  ✅ Database "${DB_ID}" already exists`);
+    await db.get(CONFIG.DB.ID);
+    console.log(`  ✅ Database "${CONFIG.DB.ID}" already exists`);
   } catch {
-    console.log(`  📦 Creating database "${DB_ID}"...`);
-    await db.create(DB_ID, DB_NAME);
-    console.log(`  ✅ Database created`);
+    console.log(`  📦 Creating database "${CONFIG.DB.ID}"...`);
+    await db.create(CONFIG.DB.ID, CONFIG.DB.NAME);
   }
 }
 
 async function cloneCollectionSchema(
-  prodDb: Databases,
-  stagingDb: Databases,
+  sourceDb: Databases,
+  targetDb: Databases,
   collectionId: string,
 ): Promise<boolean> {
-  // Check if already exists in staging
   try {
-    await stagingDb.getCollection(DB_ID, collectionId);
-    console.log(
-      `  ⏭️  Collection "${collectionId}" already exists — skipping schema`,
-    );
+    await targetDb.getCollection(CONFIG.DB.ID, collectionId);
+    console.log(`  ⏭️  Collection "${collectionId}" exists — skipping schema`);
     return true;
-  } catch {
-    // Doesn't exist, proceed
-  }
+  } catch {}
 
-  // Get the source collection
-  const collection = await prodDb.getCollection(DB_ID, collectionId);
+  const collection = await sourceDb.getCollection(CONFIG.DB.ID, collectionId);
+  const attrResult = await sourceDb.listAttributes(CONFIG.DB.ID, collectionId, [Query.limit(100)]);
+  const indexResult = await sourceDb.listIndexes(CONFIG.DB.ID, collectionId);
 
-  // Get attributes from prod
-  const attrResult = await prodDb.listAttributes(DB_ID, collectionId, [
-    Query.limit(100),
-  ]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const attributes = attrResult.attributes as any[];
+  console.log(`  📋 Cloning "${collectionId}": ${attrResult.total} attrs, ${indexResult.total} indexes`);
 
-  // Get indexes from prod
-  const indexResult = await prodDb.listIndexes(DB_ID, collectionId);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const indexes = indexResult.indexes as any[];
-
-  console.log(
-    `  📋 Cloning "${collectionId}": ${attributes.length} attrs, ${indexes.length} indexes`,
-  );
-
-  // Create collection with inline attributes and indexes
-  // The createCollection API accepts attributes[] and indexes[] for batch creation
-  await stagingDb.createCollection(
-    DB_ID,
+  await targetDb.createCollection(
+    CONFIG.DB.ID,
     collectionId,
     collection.name,
     collection.$permissions,
@@ -176,309 +153,129 @@ async function cloneCollectionSchema(
     collection.enabled,
   );
 
-  // Create attributes one by one (createCollection with inline attrs has limitations)
-  for (const attr of attributes) {
+  for (const attr of attrResult.attributes) {
     if (attr.status !== "available") continue;
-
     try {
-      await createAttribute(stagingDb, collectionId, attr);
+      await createAttribute(targetDb, collectionId, attr);
     } catch (e) {
-      console.error(
-        `    ❌ Failed to create attr "${attr.key}": ${e instanceof Error ? e.message : String(e)}`,
-      );
+      console.error(`    ❌ Attr "${attr.key}" failed: ${e instanceof Error ? e.message : String(e)}`);
     }
-    await sleep(300); // Rate limiting for attribute creation
+    await sleep(CONFIG.THROTTLE.ATTRIBUTE_DELAY);
   }
 
-  // Wait for all attributes to be ready before creating indexes
-  const expectedKeys = attributes.map((a: any) => a.key);
-  await waitForAttributes(stagingDb, collectionId, expectedKeys);
+  const expectedKeys = attrResult.attributes.map((a: any) => a.key);
+  await waitForAttributes(targetDb, collectionId, expectedKeys);
 
-  // Create indexes
-  for (const idx of indexes) {
+  for (const idx of indexResult.indexes) {
     if (idx.status !== "available") continue;
-
     try {
-      await stagingDb.createIndex(
-        DB_ID,
-        collectionId,
-        idx.key,
-        idx.type,
-        idx.attributes,
-        idx.orders || [],
-      );
+      await targetDb.createIndex(CONFIG.DB.ID, collectionId, idx.key, idx.type, idx.attributes, idx.orders || []);
     } catch (e) {
-      console.error(
-        `    ❌ Failed to create index "${idx.key}": ${e instanceof Error ? e.message : String(e)}`,
-      );
+      console.error(`    ❌ Index "${idx.key}" failed.`);
     }
   }
 
-  console.log(`  ✅ Schema cloned for "${collectionId}"`);
   return true;
 }
 
-async function createAttribute(
-  db: Databases,
-  collectionId: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  attr: any,
-): Promise<void> {
-  const base = {
-    databaseId: DB_ID,
-    collectionId,
-    key: attr.key,
-    required: attr.required,
-    array: attr.array || false,
-  };
+async function createAttribute(db: Databases, collectionId: string, attr: any): Promise<void> {
+  const base = { databaseId: CONFIG.DB.ID, collectionId, key: attr.key, required: attr.required, array: attr.array || false };
+  const def = attr.required ? undefined : (attr.default ?? undefined);
 
   switch (attr.type) {
     case "string":
-      if (attr.format === "email") {
-        await db.createEmailAttribute({
-          ...base,
-          default: attr.required ? undefined : (attr.default ?? undefined),
-        });
-      } else if (attr.format === "url") {
-        await db.createUrlAttribute({
-          ...base,
-          default: attr.required ? undefined : (attr.default ?? undefined),
-        });
-      } else if (attr.format === "ip") {
-        await db.createIpAttribute({
-          ...base,
-          default: attr.required ? undefined : (attr.default ?? undefined),
-        });
-      } else if (attr.format === "enum") {
-        await db.createEnumAttribute({
-          ...base,
-          elements: attr.elements,
-          default: attr.required ? undefined : (attr.default ?? undefined),
-        });
-      } else {
-        await db.createStringAttribute({
-          ...base,
-          size: attr.size,
-          default: attr.required ? undefined : (attr.default ?? undefined),
-        });
-      }
+      if (attr.format === "email") await db.createEmailAttribute({ ...base, default: def });
+      else if (attr.format === "url") await db.createUrlAttribute({ ...base, default: def });
+      else if (attr.format === "ip") await db.createIpAttribute({ ...base, default: def });
+      else if (attr.format === "enum") await db.createEnumAttribute({ ...base, elements: attr.elements, default: def });
+      else await db.createStringAttribute({ ...base, size: attr.size, default: def });
       break;
-
-    case "integer": {
-      // Check if min/max are within safe integer range
-      const minSafe =
-        attr.min !== null &&
-        attr.min >= Number.MIN_SAFE_INTEGER &&
-        attr.min <= Number.MAX_SAFE_INTEGER
-          ? attr.min
-          : undefined;
-      const maxSafe =
-        attr.max !== null &&
-        attr.max >= Number.MIN_SAFE_INTEGER &&
-        attr.max <= Number.MAX_SAFE_INTEGER
-          ? attr.max
-          : undefined;
-
-      await db.createIntegerAttribute({
-        ...base,
-        min: minSafe,
-        max: maxSafe,
-        default: attr.required ? undefined : (attr.default ?? undefined),
-      });
+    case "integer":
+      await db.createIntegerAttribute({ ...base, min: attr.min, max: attr.max, default: def });
       break;
-    }
-
     case "double":
-      await db.createFloatAttribute({
-        ...base,
-        min: attr.min ?? undefined,
-        max: attr.max ?? undefined,
-        default: attr.required ? undefined : (attr.default ?? undefined),
-      });
+      await db.createFloatAttribute({ ...base, min: attr.min, max: attr.max, default: def });
       break;
-
     case "boolean":
-      await db.createBooleanAttribute({
-        ...base,
-        default: attr.required ? undefined : (attr.default ?? undefined),
-      });
+      await db.createBooleanAttribute({ ...base, default: def });
       break;
-
     case "datetime":
-      await db.createDatetimeAttribute({
-        ...base,
-        default: attr.required ? undefined : (attr.default ?? undefined),
-      });
+      await db.createDatetimeAttribute({ ...base, default: def });
       break;
-
-    default:
-      console.warn(
-        `    ⚠️  Unknown attribute type "${attr.type}" for key "${attr.key}"`,
-      );
   }
 }
 
 // ─── Data Copying ───────────────────────────────────────────────────────────────
 
-async function copyCollectionData(
-  prodDb: Databases,
-  stagingDb: Databases,
-  collectionId: string,
-): Promise<{ copied: number; skipped: number; errors: number }> {
-  let copied = 0;
-  let skipped = 0;
-  let errors = 0;
-  let offset = 0;
+async function copyCollectionData(sourceDb: Databases, targetDb: Databases, collectionId: string) {
+  let copied = 0, skipped = 0, errors = 0, offset = 0;
   const limit = 100;
   let hasMore = true;
 
   while (hasMore) {
-    const result = await prodDb.listDocuments(DB_ID, collectionId, [
-      Query.limit(limit),
-      Query.offset(offset),
-    ]);
-
+    const result = await sourceDb.listDocuments(CONFIG.DB.ID, collectionId, [Query.limit(limit), Query.offset(offset)]);
     for (const doc of result.documents) {
-      // Check if already exists
       try {
-        await stagingDb.getDocument(DB_ID, collectionId, doc.$id);
+        await targetDb.getDocument(CONFIG.DB.ID, collectionId, doc.$id);
         skipped++;
         continue;
-      } catch {
-        // Not found — create it
-      }
+      } catch {}
 
-      // Strip Appwrite metadata
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data: Record<string, any> = {};
       for (const [key, value] of Object.entries(doc)) {
-        if (!key.startsWith("$")) {
-          data[key] = value;
-        }
+        if (!key.startsWith("$")) data[key] = value;
       }
 
       try {
-        await stagingDb.createDocument(
-          DB_ID,
-          collectionId,
-          doc.$id,
-          data,
-          doc.$permissions,
-        );
+        await targetDb.createDocument(CONFIG.DB.ID, collectionId, doc.$id, data, doc.$permissions);
         copied++;
       } catch (e) {
         errors++;
-        console.error(
-          `    ❌ Doc ${doc.$id}: ${e instanceof Error ? e.message : String(e)}`,
-        );
       }
     }
-
     offset += limit;
     hasMore = result.documents.length === limit;
   }
-
   return { copied, skipped, errors };
 }
 
 // ─── Main ───────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("🔄 Sync Staging Database");
-  console.log("========================\n");
+  console.log("🔄 Sync Staging Database (Isolated)\n");
 
-  // Load env files only if API keys are missing (Local dev mode)
-  if (!process.env.PROD_API_KEY || !process.env.APPWRITE_API_KEY) {
-    console.log("📂 Loading .env files...");
-    loadEnv(".env.production");
-    loadEnv(".env.staging");
-  }
+  try {
+    const sourceDb = getDb(CONFIG.SOURCE);
+    const targetDb = getDb(CONFIG.TARGET);
 
-  // Resolving keys after potential dotenv load
-  const prodKey =
-    PROD_API_KEY ||
-    process.env.APPWRITE_API_KEY_PROD ||
-    process.env.APPWRITE_API_KEY; // Fallback for local dev where we might just have one loaded?
-  // Actually, local dev has two files with same key name APPWRITE_API_KEY.
-  // We need to carefully load them if we are local.
+    console.log(`  Source: ${CONFIG.SOURCE.PROJECT} @ ${CONFIG.SOURCE.ENDPOINT}`);
+    console.log(`  Target: ${CONFIG.TARGET.PROJECT} @ ${CONFIG.TARGET.ENDPOINT}\n`);
 
-  let finalProdKey = PROD_API_KEY;
-  let finalStagingKey = STAGING_API_KEY;
+    await ensureDatabase(targetDb);
 
-  // Re-implement local dev loading logic if keys are missing
-  if (!finalProdKey || !finalStagingKey) {
-    // Since dotenv overwrites, we need to manually parse if we are depending on files
-    // Use separate parse if not provided in env
-    if (fs.existsSync(".env.production")) {
-      const parsed = dotenv.parse(fs.readFileSync(".env.production"));
-      if (parsed.APPWRITE_API_KEY) finalProdKey = parsed.APPWRITE_API_KEY;
+    const allCollections = [...COPY_DATA_COLLECTIONS, ...SCHEMA_ONLY_COLLECTIONS];
+    for (const col of allCollections) {
+      await cloneCollectionSchema(sourceDb, targetDb, col);
+      await sleep(CONFIG.THROTTLE.COLLECTION_DELAY);
     }
-    if (fs.existsSync(".env.staging")) {
-      const parsed = dotenv.parse(fs.readFileSync(".env.staging"));
-      if (parsed.APPWRITE_API_KEY) finalStagingKey = parsed.APPWRITE_API_KEY;
-    }
-  }
 
-  if (!finalProdKey || !finalStagingKey) {
-    console.error(
-      "❌ Missing API Keys. Ensure PROD_API_KEY and STAGING_API_KEY are set (or APPWRITE_API_KEY in .env files)",
-    );
+    const summary: any = {};
+    for (const col of COPY_DATA_COLLECTIONS) {
+      console.log(`  📦 Copying data: "${col}"...`);
+      summary[col] = await copyCollectionData(sourceDb, targetDb, col);
+      await sleep(CONFIG.THROTTLE.BATCH_DELAY);
+    }
+
+    console.log("\n📊 Summary:");
+    Object.entries(summary).forEach(([name, r]: [string, any]) => {
+      console.log(`  ${name}: ${r.copied} copied, ${r.skipped} skipped, ${r.errors} errors`);
+    });
+    console.log(`  Empty (Schema Only): ${SCHEMA_ONLY_COLLECTIONS.join(", ")}`);
+    console.log("\n✨ Done!");
+  } catch (e) {
+    console.error("\n❌ Sync Failed:", e instanceof Error ? e.message : e);
     process.exit(1);
   }
-
-  console.log(`  Source Project: ${PROD_PROJECT}`);
-  console.log(`  Target Project: ${STAGING_PROJECT}`);
-
-  const prodDb = getDb(PROD_PROJECT, finalProdKey);
-  const stagingDb = getDb(STAGING_PROJECT, finalStagingKey);
-
-  const allCollections = [...COPY_DATA_COLLECTIONS, ...SCHEMA_ONLY_COLLECTIONS];
-
-  // Step 1: Create database
-  console.log("Step 1: Ensure database exists");
-  await ensureDatabase(stagingDb);
-
-  // Step 2: Clone schemas
-  console.log("\nStep 2: Clone collection schemas");
-  for (const col of allCollections) {
-    await cloneCollectionSchema(prodDb, stagingDb, col);
-    await sleep(500); // Rate limiting
-  }
-
-  // Step 3: Copy data for selected collections
-  console.log("\nStep 3: Copy data");
-  const summary: Record<
-    string,
-    { copied: number; skipped: number; errors: number }
-  > = {};
-
-  for (const col of COPY_DATA_COLLECTIONS) {
-    console.log(`  📦 Copying "${col}"...`);
-    summary[col] = await copyCollectionData(prodDb, stagingDb, col);
-    const r = summary[col];
-    console.log(
-      `  ✅ ${col}: ${r.copied} copied, ${r.skipped} skipped, ${r.errors} errors`,
-    );
-    await sleep(500);
-  }
-
-  for (const col of SCHEMA_ONLY_COLLECTIONS) {
-    console.log(`  ⏭️  "${col}" — schema only, no data copied`);
-  }
-
-  // Summary
-  console.log("\n📊 Final Summary");
-  console.log("─".repeat(50));
-  for (const [name, result] of Object.entries(summary)) {
-    console.log(
-      `  ${name}: ${result.copied} copied, ${result.skipped} skipped, ${result.errors} errors`,
-    );
-  }
-  console.log(`  ${SCHEMA_ONLY_COLLECTIONS.join(", ")}: schema only (empty)`);
-  console.log("\n✨ Done!");
 }
 
-main().catch((e) => {
-  console.error("❌ Fatal error:", e);
-  process.exit(1);
-});
+main();
