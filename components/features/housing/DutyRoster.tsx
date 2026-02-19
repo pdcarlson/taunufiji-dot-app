@@ -10,6 +10,7 @@ import {
   Pen,
 } from "lucide-react";
 import { HousingTask, Member } from "@/lib/domain/entities";
+import { HOUSING_CONSTANTS } from "@/lib/constants";
 
 interface DutyRosterProps {
   tasks: HousingTask[];
@@ -27,9 +28,9 @@ export default function DutyRoster({
   onRefresh,
   onEdit,
 }: DutyRosterProps) {
-  // Filter: All tasks, exclude approved/expired older than 7 days
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  // Filter: All tasks, exclude approved/expired older than X days
+  const recentThreshold = new Date();
+  recentThreshold.setDate(recentThreshold.getDate() - HOUSING_CONSTANTS.RECENT_TASK_THRESHOLD_DAYS);
 
   const filteredTasks = tasks.filter((t) => {
     // Always show open, pending, rejected, locked
@@ -38,7 +39,7 @@ export default function DutyRoster({
 
     // For approved/expired, only show if recent
     const updatedAt = new Date(t.updatedAt);
-    return updatedAt > sevenDaysAgo;
+    return updatedAt > recentThreshold;
   });
 
   // Sort: Open/Pending first, then by due date
