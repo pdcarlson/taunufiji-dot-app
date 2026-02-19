@@ -42,13 +42,14 @@ const DB_NAME = "V2 Internal Ops";
 // Collections to copy data for (schema + data)
 const COPY_DATA_COLLECTIONS = [
   "users",
-  "housing_schedules",
   "professors",
   "courses",
+  "ledger",
+  "library_resources",
 ];
 
 // Collections for schema only (no data)
-const SCHEMA_ONLY_COLLECTIONS = ["assignments", "ledger", "library_resources"];
+const SCHEMA_ONLY_COLLECTIONS = ["assignments", "housing_schedules"];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
