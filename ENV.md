@@ -57,7 +57,23 @@ Copy these from your Discord Server settings:
 - `AWS_SECRET_ACCESS_KEY`: IAM secret.
 - `AWS_BUCKET_NAME`: Name of the bucket for proofs.
 
-## 4. Troubleshooting 'invalid_client'
+## 4. CI/CD GitHub Secrets
+
+To enable automated deployments, you must configure **GitHub Environments** (`staging` and `production`) and add the following secrets:
+
+### Required for All Environments
+- `NEXT_PUBLIC_APPWRITE_ENDPOINT`: e.g., `https://appwrite.taunufiji.app/v1`
+- `NEXT_PUBLIC_APPWRITE_PROJECT_ID`: The project ID for that environment.
+- `APPWRITE_API_KEY`: The API key for that environment.
+- `NEXT_PUBLIC_APP_URL`: The URL where the app is hosted (including `https://`).
+- `CRON_SECRET`: A long random string to protect the `/api/cron` endpoint.
+
+### Required for Staging (to enable Data Sync)
+- `PROD_APPWRITE_ENDPOINT`: The production Appwrite URL.
+- `PROD_PROJECT_ID`: The production project ID.
+- `PROD_API_KEY`: A read-only API key from Production.
+
+## 5. Troubleshooting 'invalid_client'
 If login fails with `invalid_client`:
 1. Verify the **Client Secret** in the Appwrite Console matches Discord.
 2. Verify the **Redirect URI** in Discord matches your project ID.

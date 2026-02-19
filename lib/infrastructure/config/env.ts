@@ -10,8 +10,6 @@ import { z } from "zod";
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
-  NEXT_PUBLIC_APP_NAME: z.string().default("Taunufiji"),
-  NEXT_PUBLIC_APP_DESCRIPTION: z.string().default("The digital headquarters for Tau Nu Brothers."),
   
   // Appwrite
   NEXT_PUBLIC_APPWRITE_ENDPOINT: z.string().min(1),
@@ -50,8 +48,6 @@ const schema = z.object({
 const parsed = schema.safeParse({
   NODE_ENV: process.env.NODE_ENV,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-  NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
-  NEXT_PUBLIC_APP_DESCRIPTION: process.env.NEXT_PUBLIC_APP_DESCRIPTION,
   NEXT_PUBLIC_APPWRITE_ENDPOINT: process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT,
   NEXT_PUBLIC_APPWRITE_PROJECT_ID: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID,
   APPWRITE_API_KEY: process.env.APPWRITE_API_KEY,

@@ -1,8 +1,8 @@
 import { env } from "./infrastructure/config/env";
 
 // Branding
-export const APP_NAME = env.NEXT_PUBLIC_APP_NAME;
-export const APP_DESCRIPTION = env.NEXT_PUBLIC_APP_DESCRIPTION;
+export const APP_NAME = "Tau Nu Fiji";
+export const APP_DESCRIPTION = "The official portal for the Tau Nu Chapter of Phi Gamma Delta at Rensselaer Polytechnic Institute.";
 export const BASE_URL = env.NEXT_PUBLIC_APP_URL;
 
 // Infrastructure

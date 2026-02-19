@@ -578,8 +578,8 @@
   - Refactored `scripts/sync-staging.ts` to be fully configuration-driven, using dedicated source/target environment variables.
   - Removed hardcoded production domain fallbacks in `NotificationService`.
 - **Configuration-Driven Logic**:
-  - Expanded `lib/infrastructure/config/env.ts` to centralize all external dependencies and domain constants (branding, fine amounts, lead times).
-  - Centralized magic numbers into `lib/constants.ts` (e.g., `MISSING_DUTY_FINE`, `HISTORY_LIMIT`).
+  - Expanded `lib/infrastructure/config/env.ts` to centralize all external dependencies and domain constants (fine amounts, lead times).
+  - Centralized magic numbers and **branding literals** (`APP_NAME`, `APP_DESCRIPTION`) into `lib/constants.ts` for easy single-point maintenance without infrastructure changes.
   - Implemented runtime configuration validation via Zod, ensuring missing critical variables fail fast in production.
 - **Branding & UI**:
   - Centralized branding strings (`APP_NAME`, `APP_DESCRIPTION`) to ensure consistency across Layout, Metadata, and Notifications.
