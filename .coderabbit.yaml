@@ -1,23 +1,18 @@
-# CodeRabbit Configuration
-version: "2"
-
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 reviews:
-  profile: "assertive" # Strict, professional reviews focused on quality and architectural integrity
+  profile: "assertive"
+  request_changes_workflow: true
   auto_review:
     enabled: true
-    drafts: false # Do not review draft PRs to save noise
+    drafts: false
   
-  # Enabling this allows CodeRabbit to use the 'Request Changes' status on GitHub,
-  # which can be used to block merges via GitHub Branch Protection rules.
-  request_changes_workflow: true
-
-  # Custom instructions for the AI reviewer
-  knowledge_base:
-    - "Architecture: This project follows Clean Architecture (Onion Pattern). Inner layers (lib/domain) must have zero external dependencies. Application logic (lib/application) orchestrates use cases. Implementation details (Appwrite, Discord API, S3) reside in lib/infrastructure."
-    - "Environment Isolation: Strictly enforce zero hardcoded production URLs, IDs, or branding strings. All must be driven by lib/infrastructure/config/env.ts or lib/constants.ts."
-    - "Validation: Ensure all environment variables are validated via Zod in env.ts. All Server Actions must use the safe-action wrapper and validate input with Zod schemas."
-    - "Tech Stack: Next.js 15 (Turbopack), TypeScript, Appwrite (Node SDK), Discord Bot API, Vitest."
-    - "Quality: Flag any magic numbers that aren't externalized to lib/constants.ts. Flag any direct usage of process.env outside of the centralized config."
+  # Custom instructions to guide the AI's review behavior
+  system_instructions: |
+    - Architecture: This project follows Clean Architecture (Onion Pattern). Inner layers (lib/domain) must have zero external dependencies. Application logic (lib/application) orchestrates use cases. Implementation details (Appwrite, Discord API, S3) reside in lib/infrastructure.
+    - Environment Isolation: Strictly enforce zero hardcoded production URLs, IDs, or branding strings. All must be driven by lib/infrastructure/config/env.ts or lib/constants.ts.
+    - Validation: Ensure all environment variables are validated via Zod in env.ts. All Server Actions must use the safe-action wrapper and validate input with Zod schemas.
+    - Tech Stack: Next.js 15 (Turbopack), TypeScript, Appwrite (Node SDK), Discord Bot API, Vitest.
+    - Quality: Flag any magic numbers that aren't externalized to lib/constants.ts. Flag any direct usage of process.env outside of the centralized config.
 
 chat:
   auto_reply: true
