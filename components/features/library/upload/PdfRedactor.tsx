@@ -134,6 +134,7 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
           renderTaskRef.current = page.render({
             canvasContext: context!,
             viewport: scaledViewport,
+            canvas: canvas,
           });
           await renderTaskRef.current.promise;
           setIsPageRendering(false);
@@ -243,7 +244,11 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
           const ctx = offscreenCanvas.getContext("2d");
           if (!ctx) continue;
 
-          await page.render({ canvasContext: ctx, viewport }).promise;
+          await page.render({
+            canvasContext: ctx,
+            viewport,
+            canvas: offscreenCanvas,
+          }).promise;
 
           const boxes = redactionBoxes[i] || [];
           ctx.fillStyle = "black";

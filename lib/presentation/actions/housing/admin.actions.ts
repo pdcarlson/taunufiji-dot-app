@@ -46,7 +46,6 @@ export async function approveTaskAction(
       return await container.adminService.verifyTask(
         taskId,
         userId,
-        5,
         pointsOverride,
       );
     },

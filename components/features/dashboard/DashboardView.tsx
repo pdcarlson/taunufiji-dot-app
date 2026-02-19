@@ -10,16 +10,14 @@ import MyDutiesWidget from "@/components/features/housing/MyDutiesWidget";
 import PointsLedger from "./PointsLedger";
 import AdHocRequestCard from "@/components/features/housing/AdHocRequestCard";
 import { HousingTask } from "@/lib/domain/types/task";
-import { Loader2 } from "lucide-react";
-
 import { DashboardStats } from "@/lib/domain/entities/dashboard.dto";
 import { Loader2 } from "lucide-react";
 
 interface LeaderboardEntry {
   id: string;
+  userId: string;
   name: string;
   points: number;
-  rank: number;
 }
 
 interface DashboardViewProps {

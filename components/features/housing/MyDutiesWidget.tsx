@@ -140,7 +140,6 @@ export default function MyDutiesWidget({
             <CollapsedDutyCard
               key={task.id}
               task={task}
-              isActive={false}
               onClick={() => setActiveTaskId(task.id)}
             />
           );

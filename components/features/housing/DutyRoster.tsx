@@ -24,8 +24,9 @@ export default function DutyRoster({
   tasks,
   members,
   isAdmin,
+  onRefresh,
   onEdit,
-}: Omit<DutyRosterProps, 'userId' | 'onRefresh'>) {
+}: DutyRosterProps) {
   // Filter: All tasks, exclude approved/expired older than 7 days
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -137,13 +138,22 @@ export default function DutyRoster({
   return (
     <div className="space-y-8">
       <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="p-6 border-b border-stone-100 bg-stone-50">
-          <h2 className="font-bebas text-2xl text-stone-700">
-            Master Task Roster
-          </h2>
-          <p className="text-stone-500 text-sm">
-            All active and recent tasks in the system.
-          </p>
+        <div className="p-6 border-b border-stone-100 bg-stone-50 flex justify-between items-center">
+          <div>
+            <h2 className="font-bebas text-2xl text-stone-700">
+              Master Task Roster
+            </h2>
+            <p className="text-stone-500 text-sm">
+              All active and recent tasks in the system.
+            </p>
+          </div>
+          <button
+            onClick={onRefresh}
+            className="p-2 text-stone-400 hover:text-fiji-purple transition-colors"
+            title="Refresh Roster"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="overflow-x-auto">

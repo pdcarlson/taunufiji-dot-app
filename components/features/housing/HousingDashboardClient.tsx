@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { HousingTask, Member } from "@/lib/domain/entities";
 import TaskCard from "./TaskCard";
 
@@ -49,7 +49,17 @@ export default function HousingDashboardClient({
     return task.assigned_to === targetId;
   });
 
-  const [profile, setProfile] = useState<Member | null>(null);
+  // Derived Profile
+  const profile = useMemo(() => {
+    if (!currentUser || members.length === 0) return null;
+    return (
+      members.find(
+        (m) =>
+          m.discord_id === currentUser.$id || m.auth_id === currentUser.$id,
+      ) || null
+    );
+  }, [currentUser, members]);
+
   const isAdmin = isHousingAdmin;
 
   // Modals
@@ -58,17 +68,6 @@ export default function HousingDashboardClient({
   const [editingTask, setEditingTask] = useState<HousingTask | null>(null);
   const [showBountyModal, setShowBountyModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-
-  // Resolve Profile on mount if user exists
-  useEffect(() => {
-    if (currentUser && members.length > 0) {
-      const myProfile = members.find(
-        (m) =>
-          m.discord_id === currentUser.$id || m.auth_id === currentUser.$id,
-      );
-      if (myProfile) setProfile(myProfile);
-    }
-  }, [currentUser, members]);
 
   // Handle manual refresh
   const handleRefresh = async () => {
@@ -87,8 +86,6 @@ export default function HousingDashboardClient({
     } catch (error) {
       console.error("Refresh failed", error);
       toast.error("Failed to refresh data");
-    } finally {
-      setRefreshing(false);
     }
   };
 
