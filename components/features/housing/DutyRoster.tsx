@@ -24,10 +24,8 @@ export default function DutyRoster({
   tasks,
   members,
   isAdmin,
-  userId,
-  onRefresh,
   onEdit,
-}: DutyRosterProps) {
+}: Omit<DutyRosterProps, 'userId' | 'onRefresh'>) {
   // Filter: All tasks, exclude approved/expired older than 7 days
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);

@@ -2,14 +2,12 @@ import LibraryClient from "@/components/features/library/LibraryClient";
 import {
   fetchInitialLibraryResources,
   fetchInitialLibraryTotal,
-  fetchLibraryGlobalStats,
 } from "@/lib/presentation/queries/library.queries";
 
 export default async function LibraryPage() {
-  const [resources, totalCount, stats] = await Promise.all([
+  const [resources, totalCount] = await Promise.all([
     fetchInitialLibraryResources(),
     fetchInitialLibraryTotal(),
-    fetchLibraryGlobalStats(),
   ]);
 
   return (

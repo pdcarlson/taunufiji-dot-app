@@ -9,6 +9,7 @@ import {
 } from "@/lib/presentation/actions/dashboard.actions";
 import { Trophy, Medal, Crown, Loader2, AlertCircle } from "lucide-react";
 import clsx from "clsx";
+import { useCallback } from "react";
 
 interface LeaderboardMember {
   id: string;
@@ -34,7 +35,7 @@ export default function LeaderboardWidget({
   const [loading, setLoading] = useState(initialLeaderboard.length === 0);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchLeaders = async () => {
+  const fetchLeaders = useCallback(async () => {
     try {
       if (!user) return;
 
@@ -50,7 +51,7 @@ export default function LeaderboardWidget({
       const [myData, data] = await Promise.all(promises);
 
       if (data && Array.isArray(data)) {
-        setLeaders(data as any);
+        setLeaders(data as LeaderboardMember[]);
       }
       if (myData) {
         setMyStats(myData);
@@ -62,7 +63,7 @@ export default function LeaderboardWidget({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, getToken, leaders.length]);
 
   // Helper to handle conditional my rank call
   const getLeadersMyRank = async (token: string) => {
@@ -78,7 +79,7 @@ export default function LeaderboardWidget({
     } else if (initialLeaderboard.length > 0) {
       setLoading(false);
     }
-  }, [user, profile]);
+  }, [user, profile, fetchLeaders, initialLeaderboard.length]);
 
   // Standardized Name Formatter
   const formatName = (fullName: string) => {

@@ -16,11 +16,9 @@ import Sidebar from "./Sidebar";
 export default function DashboardShell({
   children,
   initialUser,
-  initialProfile,
 }: {
   children: React.ReactNode;
   initialUser?: User | null;
-  initialProfile?: any;
 }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();

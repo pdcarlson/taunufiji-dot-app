@@ -17,8 +17,7 @@ export default function BountyCard({
   task,
   userId,
   getJWT,
-  onEdit,
-}: BountyCardProps) {
+}: Omit<BountyCardProps, 'onEdit'>) {
   const [loading, setLoading] = useState(false);
 
   const handleClaim = async () => {

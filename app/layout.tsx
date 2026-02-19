@@ -4,6 +4,8 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
+import { env } from "@/lib/infrastructure/config/env";
+
 // Font Setup
 const bebas = localFont({
   src: "../public/fonts/BebasNeue.otf",
@@ -14,6 +16,8 @@ const langdon = localFont({
   src: "../public/fonts/Langdon.otf",
   variable: "--font-langdon",
 });
+
+const BASE_URL = env.NEXT_PUBLIC_APP_URL || "https://taunufiji.app";
 
 export const metadata: Metadata = {
   title: {
@@ -26,7 +30,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://taunufiji.app",
+    url: BASE_URL,
     siteName: "Taunufiji",
     title: "Taunufiji Dashboard",
     description: "The digital headquarters for Tau Nu Brothers.",

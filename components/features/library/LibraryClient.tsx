@@ -20,10 +20,12 @@ import { useAuth } from "@/components/providers/AuthProvider";
 // unless we want to use generic Search Actions.
 // For now, keeping the API fetch for dynamic search is fine, but we accept initial data.
 
+import { LibraryResource } from "@/lib/domain/types/library";
+
 interface LibraryClientProps {
   initialTotal: number;
   initialUserFiles: number;
-  initialResources?: any[];
+  initialResources?: LibraryResource[];
 }
 
 const INITIAL_FILTERS = {
@@ -65,10 +67,10 @@ export default function LibraryClient({
       }
     };
     fetchStats();
-  }, [user]);
+  }, [user, getToken]);
 
   // Data State
-  const [results, setResults] = useState<any[] | null>(initialResources);
+  const [results, setResults] = useState<LibraryResource[] | null>(initialResources);
   const [searchTotal, setSearchTotal] = useState(initialTotal);
   // If we have initial resources, we aren't loading initially
   const [loading, setLoading] = useState(initialResources.length === 0);
@@ -81,8 +83,7 @@ export default function LibraryClient({
 
     const isDefaultFilters = Object.keys(INITIAL_FILTERS).every(
       (k) =>
-        // @ts-ignore
-        filters[k] === INITIAL_FILTERS[k],
+        (filters as any)[k] === (INITIAL_FILTERS as any)[k],
     );
 
     if (isFirstLoad && initialResources.length > 0 && isDefaultFilters) {
@@ -95,8 +96,7 @@ export default function LibraryClient({
       try {
         const apiFilters: any = {};
         Object.keys(debouncedFilters).forEach((key) => {
-          // @ts-ignore
-          const value = debouncedFilters[key];
+          const value = (debouncedFilters as any)[key];
           if (value && value !== "All") {
             apiFilters[key] = value;
           }
@@ -110,7 +110,7 @@ export default function LibraryClient({
         // Server Action Call
         const data = await searchLibraryAction(apiFilters, jwt);
 
-        setResults(data.documents);
+        setResults(data.documents as LibraryResource[]);
         setSearchTotal(data.total);
       } catch (err) {
         console.error("Search failed:", err);
@@ -122,7 +122,7 @@ export default function LibraryClient({
 
     runSearch();
     setIsFirstLoad(false);
-  }, [debouncedFilters]);
+  }, [debouncedFilters, getToken]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">

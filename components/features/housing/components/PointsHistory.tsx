@@ -33,7 +33,7 @@ export default function PointsHistory() {
       }
     };
     loadData();
-  }, [user]);
+  }, [user, getToken]);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden">

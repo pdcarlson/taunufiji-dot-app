@@ -32,7 +32,6 @@ export default function CreateScheduleModal({
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -85,6 +84,7 @@ export default function CreateScheduleModal({
         toast.error(res.error || "Failed to create schedule");
       }
     } catch (e) {
+      console.error(e);
       toast.error("An error occurred");
     } finally {
       setLoading(false);

@@ -1,0 +1,8 @@
+{
+  "track_id": "staging_setup_20260219",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-19T11:00:00Z",
+  "updated_at": "2026-02-19T11:00:00Z",
+  "description": "Establish staging environment, audit infrastructure config, and resolve PR errors."
+}

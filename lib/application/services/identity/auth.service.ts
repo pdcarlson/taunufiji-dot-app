@@ -9,6 +9,7 @@ import { IUserRepository } from "@/lib/domain/ports/user.repository";
 import { IIdentityProvider } from "@/lib/domain/ports/identity.provider";
 import { LIBRARY_ACCESS_ROLES } from "@/lib/infrastructure/config/roles";
 import { CreateUserDTO, User } from "@/lib/domain/types/user";
+import { env } from "@/lib/infrastructure/config/env";
 
 // Discord API Helpers
 const DISCORD_API = "https://discord.com/api/v10";
@@ -28,12 +29,16 @@ interface DiscordMember {
 }
 
 async function getDiscordMember(discordUserId: string) {
-  const GUILD_ID = process.env.DISCORD_GUILD_ID;
-  const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+  const GUILD_ID = env.DISCORD_GUILD_ID;
+  const BOT_TOKEN = env.DISCORD_BOT_TOKEN;
 
   if (!GUILD_ID || !BOT_TOKEN) {
-    console.error("Missing Discord Env Vars");
+    console.error("Missing Discord Env Vars (GUILD_ID or BOT_TOKEN)");
     return null;
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[DiscordAPI] Fetching member ${discordUserId} from Guild ${GUILD_ID}`);
   }
 
   // 1. Check Cache

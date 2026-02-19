@@ -25,7 +25,7 @@ export default function LeaderboardList() {
       }
     };
     fetchUsers();
-  }, [user]);
+  }, [user, getToken]);
 
   if (loading) {
     return (

@@ -15,7 +15,7 @@ interface LibraryWidgetProps {
   };
 }
 
-export default function LibraryWidget({ stats }: LibraryWidgetProps) {
+export default function LibraryWidget() {
   // const history = stats?.libraryHistory || []; // unused
 
   return (

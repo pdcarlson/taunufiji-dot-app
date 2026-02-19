@@ -43,7 +43,7 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
       }
     };
     load();
-  }, []);
+  }, [getToken]);
 
   // Derived Options
   const deptOptions = Object.keys(courseData).sort();

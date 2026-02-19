@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import { PDFDocument } from "pdf-lib";
 import * as pdfjsLib from "pdfjs-dist";
+import { PDFDocumentProxy, RenderTask } from "pdfjs-dist/types/src/display/api";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // --- Loading Component ---
@@ -19,6 +20,13 @@ const PageLoading = () => (
     <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-fiji-purple border-r-transparent" />
   </div>
 );
+
+interface RedactionBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 interface PdfRedactorProps {
   file: File;
@@ -30,13 +38,13 @@ export interface PdfRedactorRef {
 
 const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
   ({ file }, ref) => {
-    const [pdfJsDoc, setPdfJsDoc] = useState<any>(null);
+    const [pdfJsDoc, setPdfJsDoc] = useState<PDFDocumentProxy | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [numPages, setNumPages] = useState(0);
     const [baseScale, setBaseScale] = useState(1.0); // Fit-to-screen scale
     const [zoomLevel, setZoomLevel] = useState(1.0); // User multiplier
     const [isPageRendering, setIsPageRendering] = useState(false);
-    const [redactionBoxes, setRedactionBoxes] = useState<Record<number, any[]>>(
+    const [redactionBoxes, setRedactionBoxes] = useState<Record<number, RedactionBox[]>>(
       {},
     );
     const [isDrawing, setIsDrawing] = useState(false);
@@ -45,15 +53,15 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
       width: number;
       height: number;
     } | null>(null);
-    const [currentDrawingBox, setCurrentDrawingBox] = useState<any>(null); // State for active drawing
+    const [currentDrawingBox, setCurrentDrawingBox] = useState<RedactionBox | null>(null); // State for active drawing
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     // Derived scale
     const scale = baseScale * zoomLevel;
-    const renderTaskRef = useRef<any>(null);
+    const renderTaskRef = useRef<RenderTask | null>(null);
     const drawingStartPos = useRef<{ x: number; y: number } | null>(null);
-    const currentBoxRef = useRef<any>(null);
+    const currentBoxRef = useRef<RedactionBox | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // --- EFFECT 1: Load Doc ---

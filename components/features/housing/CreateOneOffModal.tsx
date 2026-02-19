@@ -8,7 +8,6 @@ import { useForm, FieldValues } from "react-hook-form";
 import toast from "react-hot-toast";
 
 import { Member } from "@/lib/domain/entities";
-import { CreateAssignmentDTO } from "@/lib/domain/types/task";
 
 interface CreateOneOffModalProps {
   onClose: () => void;

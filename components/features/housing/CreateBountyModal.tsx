@@ -61,6 +61,7 @@ export default function CreateBountyModal({ onClose, onSuccess }: Props) {
       }
     } catch (e) {
       toast.error("An error occurred");
+      console.error(e);
     } finally {
       setLoading(false);
     }
