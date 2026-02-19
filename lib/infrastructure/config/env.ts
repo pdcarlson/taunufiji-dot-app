@@ -29,6 +29,7 @@ const schema = z.object({
   
   // Discord
   DISCORD_APP_ID: z.string().optional(),
+  DISCORD_PUBLIC_KEY: z.string().optional(),
   DISCORD_BOT_TOKEN: z.string().optional(),
   DISCORD_GUILD_ID: z.string().optional(),
   DISCORD_HOUSING_CHANNEL_ID: z.string().optional(),
@@ -59,6 +60,7 @@ const parsed = schema.safeParse({
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
   AWS_BUCKET_NAME: process.env.AWS_BUCKET_NAME,
   DISCORD_APP_ID: process.env.DISCORD_APP_ID,
+  DISCORD_PUBLIC_KEY: process.env.DISCORD_PUBLIC_KEY,
   DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
   DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID,
   DISCORD_HOUSING_CHANNEL_ID: process.env.DISCORD_HOUSING_CHANNEL_ID,
