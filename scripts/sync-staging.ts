@@ -22,9 +22,20 @@ import * as path from "path";
 
 // ─── Configuration ─────────────────────────────────────────────────────────────
 
-const ENDPOINT = "https://appwrite.taunufiji.app/v1";
-const PROD_PROJECT = "695ebb2e000e07f0f7a3";
-const STAGING_PROJECT = "69962e76002d70a10c9d";
+const ENDPOINT =
+  process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ||
+  "https://appwrite.taunufiji.app/v1";
+
+// Production config (defaults to known prod ID for local convenience, but overridable)
+const PROD_PROJECT = process.env.PROD_PROJECT_ID || "695ebb2e000e07f0f7a3";
+const PROD_API_KEY = process.env.PROD_API_KEY; // Must be provided in CI or .env.production
+
+// Staging config (defaults to known staging ID, but overridable)
+const STAGING_PROJECT =
+  process.env.STAGING_PROJECT_ID || "69962e76002d70a10c9d";
+const STAGING_API_KEY =
+  process.env.STAGING_API_KEY || process.env.APPWRITE_API_KEY;
+
 const DB_ID = "v2_internal_ops";
 const DB_NAME = "V2 Internal Ops";
 
@@ -41,13 +52,11 @@ const SCHEMA_ONLY_COLLECTIONS = ["assignments", "ledger", "library_resources"];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
-function loadEnv(envFile: string): Record<string, string> {
+function loadEnv(envFile: string): void {
   const envPath = path.resolve(process.cwd(), envFile);
-  if (!fs.existsSync(envPath)) {
-    throw new Error(`${envFile} not found at ${envPath}`);
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
   }
-  const parsed = dotenv.parse(fs.readFileSync(envPath));
-  return parsed;
 }
 
 function getDb(projectId: string, apiKey: string): Databases {
@@ -378,22 +387,50 @@ async function main() {
   console.log("🔄 Sync Staging Database");
   console.log("========================\n");
 
-  // Load env files
-  const prodEnv = loadEnv(".env.production");
-  const stagingEnv = loadEnv(".env.staging");
+  // Load env files only if API keys are missing (Local dev mode)
+  if (!process.env.PROD_API_KEY || !process.env.APPWRITE_API_KEY) {
+    console.log("📂 Loading .env files...");
+    loadEnv(".env.production");
+    loadEnv(".env.staging");
+  }
 
-  const prodApiKey = prodEnv.APPWRITE_API_KEY;
-  const stagingApiKey = stagingEnv.APPWRITE_API_KEY;
+  // Resolving keys after potential dotenv load
+  const prodKey =
+    PROD_API_KEY ||
+    process.env.APPWRITE_API_KEY_PROD ||
+    process.env.APPWRITE_API_KEY; // Fallback for local dev where we might just have one loaded?
+  // Actually, local dev has two files with same key name APPWRITE_API_KEY.
+  // We need to carefully load them if we are local.
 
-  if (!prodApiKey || !stagingApiKey) {
+  let finalProdKey = PROD_API_KEY;
+  let finalStagingKey = STAGING_API_KEY;
+
+  // Re-implement local dev loading logic if keys are missing
+  if (!finalProdKey || !finalStagingKey) {
+    // Since dotenv overwrites, we need to manually parse if we are depending on files
+    // Use separate parse if not provided in env
+    if (fs.existsSync(".env.production")) {
+      const parsed = dotenv.parse(fs.readFileSync(".env.production"));
+      if (parsed.APPWRITE_API_KEY) finalProdKey = parsed.APPWRITE_API_KEY;
+    }
+    if (fs.existsSync(".env.staging")) {
+      const parsed = dotenv.parse(fs.readFileSync(".env.staging"));
+      if (parsed.APPWRITE_API_KEY) finalStagingKey = parsed.APPWRITE_API_KEY;
+    }
+  }
+
+  if (!finalProdKey || !finalStagingKey) {
     console.error(
-      "❌ Missing APPWRITE_API_KEY in .env.production or .env.staging",
+      "❌ Missing API Keys. Ensure PROD_API_KEY and STAGING_API_KEY are set (or APPWRITE_API_KEY in .env files)",
     );
     process.exit(1);
   }
 
-  const prodDb = getDb(PROD_PROJECT, prodApiKey);
-  const stagingDb = getDb(STAGING_PROJECT, stagingApiKey);
+  console.log(`  Source Project: ${PROD_PROJECT}`);
+  console.log(`  Target Project: ${STAGING_PROJECT}`);
+
+  const prodDb = getDb(PROD_PROJECT, finalProdKey);
+  const stagingDb = getDb(STAGING_PROJECT, finalStagingKey);
 
   const allCollections = [...COPY_DATA_COLLECTIONS, ...SCHEMA_ONLY_COLLECTIONS];
 
