@@ -21,8 +21,8 @@ const BASE_URL = env.NEXT_PUBLIC_APP_URL || "https://taunufiji.app";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Taunufiji",
-    default: "Taunufiji - Tau Nu Chapter of Phi Gamma Delta",
+    template: "%s | Tau Nu Fiji",
+    default: "Tau Nu Fiji - Tau Nu Chapter of Phi Gamma Delta",
   },
   description:
     "The official portal for the Tau Nu Chapter of Phi Gamma Delta at Rensselaer Polytechnic Institute. Manage duties, library resources, and chapter scheduling.",
@@ -31,14 +31,15 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: BASE_URL,
-    siteName: "Taunufiji",
-    title: "Taunufiji Dashboard",
-    description: "The digital headquarters for Tau Nu Brothers.",
+    siteName: "Tau Nu Fiji",
+    title: "Tau Nu Fiji | App",
+    description:
+      "The official app for the Tau Nu Chapter of Phi Gamma Delta at Rensselaer Polytechnic Institute. Manage duties, library resources, and chapter scheduling.",
     // images: [openGraphImage], // Uncomment if you add an opengraph-image.tsx or .png
   },
   twitter: {
     card: "summary_large_image",
-    title: "Taunufiji",
+    title: "Tau Nu Fiji App",
     description: "Tau Nu Chapter Portal",
   },
 };
