@@ -75,7 +75,8 @@ const parsed = schema.safeParse({
 if (!parsed.success) {
   console.error("❌ Environment validation failed:", parsed.error.format());
   // Fail fast in production OR staging to prevent runtime magic number drift
-  if (process.env.NODE_ENV !== "development") {
+  // We allow 'development' and 'test' to proceed with console errors
+  if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging") {
     throw new Error(
       `Critical environment variables are missing or invalid in ${process.env.NODE_ENV}.`,
     );

@@ -25,7 +25,7 @@ describe("Environment Configuration", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     
     await expect(import("@/lib/infrastructure/config/env")).rejects.toThrow(
-      "Critical environment variables are missing in production."
+      "Critical environment variables are missing or invalid in production."
     );
   });
 });
