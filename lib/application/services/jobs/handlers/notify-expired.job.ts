@@ -40,7 +40,8 @@ export const NotifyExpiredJob = {
 
           // 1. Notify Admins (Channel)
           const channelResult = await NotificationService.notifyAdmins(
-            `🚨 **MISSED TASK**: <@${task.assigned_to}> failed to complete **${task.title}**. Task expired.`,
+            `🚨 **MISSED TASK**: <@${task.assigned_to}> failed to complete **${task.title}**. Task expired.
+            https://tenor.com/view/what%27s-this-barn-owl-robert-e-fuller-what%27s-here-this-is-unfamiliar-gif-17821474186565185401`,
           );
 
           if (!channelResult.success) {

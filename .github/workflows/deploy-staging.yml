@@ -1,0 +1,67 @@
+name: Deploy to Staging
+
+on:
+    push:
+        branches:
+            - staging
+
+jobs:
+    quality-gate:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Lint
+              run: npm run lint
+
+            - name: Type check
+              run: npx tsc --noEmit
+
+            - name: Test
+              run: npm run test
+
+    deploy:
+        needs: quality-gate
+        runs-on: ubuntu-latest
+        environment: staging
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build with staging env vars
+              env:
+                  NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
+                  NEXT_PUBLIC_APPWRITE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }}
+                  NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+              run: npm run build
+
+            - name: Setup Appwrite CLI
+              uses: appwrite/setup-for-appwrite@v2
+
+            - name: Deploy to Appwrite Sites
+              run: |
+                  echo "🚀 Deploying to staging..."
+                  appwrite push sites \
+                    --project-id ${{ secrets.APPWRITE_PROJECT_ID }} \
+                    --api-key ${{ secrets.APPWRITE_API_KEY }}
