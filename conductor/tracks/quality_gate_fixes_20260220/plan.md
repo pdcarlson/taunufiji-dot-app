@@ -13,7 +13,7 @@
   - [ ] Rephrase `WORKFLOW.md` repeating action verbs for clarity
 - [x] Task: Conductor - User Manual Verification 'Documentation & Metadata Updates' (Protocol in workflow.md) 1654775
 
-## Phase 2: Architecture Refactoring & Test Isolation
+## Phase 2: Architecture Refactoring & Test Isolation [checkpoint: 0fef405]
 
 - [x] Task: Extract Client Environment Module 4bb18c9
   - [ ] Create `lib/infrastructure/config/client-env.ts` exporting only `NEXT_PUBLIC_*` variables
@@ -23,7 +23,7 @@
   - [ ] Explicitly mock `client-env.ts` in `vitest.setup.ts`
   - [ ] Add explicit default test variables (`NEXT_PUBLIC_APP_URL`, `NODE_ENV`) to `vitest.setup.ts`
   - [ ] Fix global state leaks in `lib/infrastructure/config/env.test.ts` (using `originalEnv`, `vi.resetModules`, `mockRestore`)
-- [ ] Task: Conductor - User Manual Verification 'Architecture Refactoring & Test Isolation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Architecture Refactoring & Test Isolation' (Protocol in workflow.md) 0fef405
 
 ## Phase 3: Code Quality & Typing Enforcement
 
