@@ -31,9 +31,9 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
 
 ## Phase 4: Metrics & Logging Improvements
-- [ ] Task: Update NotifyExpiredJob Metrics
-    - [ ] Introduce `skipped_unassigned` counter in `NotifyExpiredJob`.
-    - [ ] Update metrics logic to distinguish between sent notifications and skipped tasks.
-- [ ] Task: Improve Sync Logging
-    - [ ] Update `scripts/sync-staging.ts` to capture and log the full error object in `createIndex` catch block.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)
+- [x] Task: Update NotifyExpiredJob Metrics
+    - [x] Introduce `skipped_unassigned` counter in `NotifyExpiredJob`.
+    - [x] Update metrics logic to distinguish between sent notifications and skipped tasks.
+- [x] Task: Improve Sync Logging
+    - [x] Update `scripts/sync-staging.ts` to capture and log the full error object in `createIndex` catch block.
+- [x] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)

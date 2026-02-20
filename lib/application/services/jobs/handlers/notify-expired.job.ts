@@ -4,9 +4,14 @@ import { NotificationService } from "@/lib/application/services/shared/notificat
 export const NotifyExpiredJob = {
   async run(
     taskRepository: ITaskRepository,
-  ): Promise<{ expired_notified: number; errors: string[] }> {
+  ): Promise<{
+    expired_notified: number;
+    skipped_unassigned: number;
+    errors: string[];
+  }> {
     const errors: string[] = [];
     let expired_notified = 0;
+    let skipped_unassigned = 0;
 
     try {
       const expiredTasks = await taskRepository.findMany({
@@ -34,7 +39,7 @@ export const NotifyExpiredJob = {
             await taskRepository.update(task.id, {
               notification_level: "expired",
             });
-            expired_notified++;
+            skipped_unassigned++;
             continue;
           }
 
@@ -85,6 +90,6 @@ export const NotifyExpiredJob = {
       errors.push(errMsg);
     }
 
-    return { expired_notified, errors };
+    return { expired_notified, skipped_unassigned, errors };
   },
 };
