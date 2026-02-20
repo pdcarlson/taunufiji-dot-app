@@ -38,7 +38,7 @@ const schema = z.object({
   DISCORD_ROLE_ID_HOUSING_CHAIR: z.string().min(1),
 
   // Cron
-  CRON_SECRET: z.string().min(1),
+  CRON_SECRET: z.string().min(1).optional(),
 });
 
 const parsed = schema.safeParse({
@@ -62,21 +62,13 @@ const parsed = schema.safeParse({
   CRON_SECRET: process.env.CRON_SECRET,
 });
 
-const isBuildPhase = process.env.npm_lifecycle_event === "build" || process.env.SKIP_ENV_VALIDATION === "true" || process.env.CI === "true";
-
 if (!parsed.success) {
-  if (isBuildPhase) {
-    console.warn("⚠️ Skipping environment validation during build phase.");
-  } else {
-    console.error("Server environment validation failed:", parsed.error.format());
-    throw new Error("Invalid server environment variables");
-  }
+  console.error("Server environment validation failed:", parsed.error.format());
+  throw new Error("Invalid server environment variables");
 }
 
 /**
  * Validated Environment Object
  * (Server Only)
  */
-export const env = isBuildPhase 
-  ? (process.env as unknown as z.infer<typeof schema>) 
-  : parsed.data!;
+export const env = parsed.data;

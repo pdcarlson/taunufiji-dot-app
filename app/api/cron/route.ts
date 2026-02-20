@@ -14,7 +14,12 @@ export async function GET(req: Request) {
     const key = searchParams.get("key");
     const CRON_SECRET = env.CRON_SECRET;
 
-    if (!key || !CRON_SECRET || key !== CRON_SECRET) {
+    if (!CRON_SECRET) {
+      console.error("Cron Job Failed: CRON_SECRET is not configured on the server.");
+      return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+    }
+
+    if (!key || key !== CRON_SECRET) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
