@@ -1,9 +1,11 @@
 # Specification: quality_gate_fixes_20260220
 
 ## Overview
+
 This track addresses a comprehensive list of linter warnings, markdown formatting issues, TypeScript strictness violations, and global state leaks in tests. Additionally, it addresses a specific architectural violation where server-only code was transitively imported into client components. The scope encompasses the explicitly reported findings and extends to resolving similar issues project-wide via automated linters.
 
 ## Functional Requirements
+
 - **Markdown Formatting:** Resolve MD047 (missing trailing newline), MD022 (blank lines around headings), and MD009 (trailing spaces) in all identified `.md` files (`conductor/archive/...`, `conductor/tracks/...`, `WORKFLOW.md`, etc.).
 - **Spec Reconcilation:** Update `conductor/tracks/deploy_strategy_update_20260220/spec.md` to resolve the contradiction regarding `ci.yml` and `cron.yml` being out of scope, clarifying that CI linting/quality gating changes were part of the deployment infrastructure updates.
 - **Track Metadata:** Update the status of the archived track (`centralize_env_config_20260220`) in its `metadata.json` from `new` to `archived`.
@@ -18,6 +20,7 @@ This track addresses a comprehensive list of linter warnings, markdown formattin
 - **Documentation Refinement:** Rephrase the bullet points in `WORKFLOW.md` (e.g., "Runs `npm run lint`") to read more naturally.
 
 ## Acceptance Criteria
+
 - All explicitly reported markdown files end with a single newline and have appropriate spacing around headings.
 - The `deploy_strategy_update_20260220` spec accurately reflects the changes made to CI/CD files.
 - `env.test.ts` passes without leaking global state across tests.
@@ -29,4 +32,5 @@ This track addresses a comprehensive list of linter warnings, markdown formattin
 - The automated test suite (`npm run test`) passes successfully.
 
 ## Out of Scope
+
 - Adding new product features or structural changes beyond the environment variable refactor and logging parameter updates.

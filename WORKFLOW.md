@@ -31,10 +31,10 @@ graph TD
 
 - **What happens**:
   - Installs dependencies.
-  - Runs `npm run lint`.
-  - Runs `npx tsc` (Type Check).
-  - Runs `npm run test` (Unit Tests).
-  - Runs `npm run build` (Ensures compilation succeeds).
+  - Lint the code with `npm run lint`.
+  - Type-check the project with `npx tsc`.
+  - Execute unit tests via `npm run test`.
+  - Build the project using `npm run build`.
 - **Integration Note**: This workflow does **NOT** handle the actual deployment. It serves strictly as a quality gate (CI).
 
 ## 2. Staging Deployment (Appwrite Integration)
@@ -55,7 +55,7 @@ graph TD
 
 ---
 
-## 🧠 "Think It Through": F.A.Q.
+## 🧠 "Think It Through": F.A.Q
 
 ### Q: "Where did the GitHub Actions deployment scripts go?"
 
@@ -63,12 +63,12 @@ graph TD
 
 ### Q: "What do I wait for?"
 
-1.  **After PR Merge to Staging**: 
-    - Check the GitHub Actions tab for the `ci.yml` quality gate.
-    - Check the Appwrite Console (Staging Project) to monitor the deployment build.
-    - Once green, check the Staging URL.
-2.  **After Merge to Main**: 
-    - Check the Appwrite Console (Production Project) to monitor the deployment build.
+1. **After PR Merge to Staging**:
+   - Check the GitHub Actions tab for the `ci.yml` quality gate.
+   - Check the Appwrite Console (Staging Project) to monitor the deployment build.
+   - Once green, check the Staging URL.
+2. **After Merge to Main**:
+   - Check the Appwrite Console (Production Project) to monitor the deployment build.
 
 ### Q: "Single Source of Truth?"
 

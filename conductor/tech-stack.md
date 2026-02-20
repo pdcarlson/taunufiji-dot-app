@@ -23,10 +23,10 @@
 
 - **Pattern**: Clean Architecture (Onion)
 - **Layers**:
-    - **Domain**: Pure business logic and entities (Zero dependencies)
-    - **Application**: Use cases and services
-    - **Infrastructure**: Concrete adapters (Appwrite, Discord)
-    - **Presentation**: Next.js Pages and Server Actions
+  - **Domain**: Pure business logic and entities (Zero dependencies)
+  - **Application**: Use cases and services
+  - **Infrastructure**: Concrete adapters (Appwrite, Discord)
+  - **Presentation**: Next.js Pages and Server Actions
 - **Dependency Injection**: Custom IoC Container (`lib/infrastructure/container.ts`)
 - **Validation**: Zod (for DTOs and environment variables)
 
