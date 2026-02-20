@@ -11,11 +11,11 @@
 - [x] Task: Conductor - User Manual Verification 'Set Up Central Environment Configuration' (Protocol in workflow.md) [checkpoint: 5f38bfa]
 
 ## Phase 2: Refactor Codebase to use Central Configuration
-- [~] Task: Replace any direct `process.env` usages with the validated exports from `lib/infrastructure/config/env.ts` or `clientEnv`
-- [ ] Task: Update the codebase to handle removed or renamed variables (e.g., removing 'dev role' usages, ensuring 'DISCORD_ROLE_ID_' prefixes are respected)
-- [ ] Task: Conductor - User Manual Verification 'Refactor Codebase to use Central Configuration' (Protocol in workflow.md)
+- [x] Task: Replace any direct `process.env` usages with the validated exports from `lib/infrastructure/config/env.ts` or `clientEnv` 9cba895
+- [x] Task: Update the codebase to handle removed or renamed variables (e.g., removing 'dev role' usages, ensuring 'DISCORD_ROLE_ID_' prefixes are respected) 9cba895
+- [x] Task: Conductor - User Manual Verification 'Refactor Codebase to use Central Configuration' (Protocol in workflow.md) [checkpoint: 9cba895]
 
 ## Phase 3: Clean Up
-- [ ] Task: Remove the root `/env.ts`, `/client-env.ts` and `/env.test.ts` files created in the previous attempt
+- [~] Task: Remove the root `/env.ts`, `/client-env.ts` and `/env.test.ts` files created in the previous attempt
 - [ ] Task: Delete any other obsolete or duplicate environment configuration logic
 - [ ] Task: Conductor - User Manual Verification 'Clean Up' (Protocol in workflow.md)
