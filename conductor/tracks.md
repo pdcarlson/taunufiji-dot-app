@@ -7,5 +7,5 @@
 
 ---
 
-- [ ] **Track: Trace all variables from the .env files down and make sure every use of them is accurate. Centralize safe environment variable exports along with the config export in a single central file at the root of the repo.**
+- [~] **Track: Trace all variables from the .env files down and make sure every use of them is accurate. Centralize safe environment variable exports along with the config export in a single central file at the root of the repo.**
 *Link: [./tracks/centralize_env_config_20260220/](./tracks/centralize_env_config_20260220/)*

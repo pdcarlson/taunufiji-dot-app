@@ -1,0 +1,8 @@
+{
+  "track_id": "centralize_env_config_20260220",
+  "type": "chore",
+  "status": "new",
+  "created_at": "2026-02-20T00:00:00Z",
+  "updated_at": "2026-02-20T00:00:00Z",
+  "description": "Trace all variables from the .env files down and make sure every use of them is accurate. Centralize safe environment variable exports along with the config export in a single central file at the root of the repo."
+}
