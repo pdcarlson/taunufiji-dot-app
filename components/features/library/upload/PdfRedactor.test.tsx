@@ -37,8 +37,8 @@ describe("PdfRedactor Coordinate Mapping", () => {
     file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(8));
     
     render(<PdfRedactor file={file} />);
-    // Verify canvas exists instead of role img
-    expect(document.querySelector("canvas")).toBeDefined();
+    // Verify canvas exists
+    expect(document.querySelector("canvas")).not.toBeNull();
   });
 
   // Since actual canvas interaction is hard to test in JSDOM, 

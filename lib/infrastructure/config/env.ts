@@ -98,9 +98,7 @@ const fallback = schema.partial().safeParse({
  */
 export const env = parsed.success
   ? parsed.data
-  : ((fallback.success ? fallback.data : process.env) as unknown as z.infer<
-      typeof schema
-    >);
+  : ((fallback.success ? fallback.data : process.env) as any);
 
 /**
  * Client-Safe Environment Wrapper
