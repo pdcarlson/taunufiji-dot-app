@@ -68,12 +68,12 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
     useEffect(() => {
       if (!file) return;
        
-      setPdfJsDoc(null);
-      setCurrentPage(1);
-      setNumPages(0);
-      setRedactionBoxes({});
-
       const loadDocs = async () => {
+        setPdfJsDoc(null);
+        setCurrentPage(1);
+        setNumPages(0);
+        setRedactionBoxes({});
+
         try {
           // IMPORTANT: Update standard font path or worker src if needed for Next.js 15
           // Using standard CDN for worker in internal-os to ensure compatibility if local missing

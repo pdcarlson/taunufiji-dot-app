@@ -1,5 +1,6 @@
 "use server";
 
+import { env } from "@/lib/infrastructure/config/env";
 import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 import { logger } from "@/lib/utils/logger";
 import { HOUSING_ADMIN_ROLES } from "@/lib/infrastructure/config/roles";
@@ -27,8 +28,6 @@ export async function syncUserAction(authId: string) {
     logger.error(`SyncUser Failed: ${msg}`);
   }
 }
-
-import { env } from "@/lib/infrastructure/config/env";
 
 export async function getProfileAction(jwt: string) {
   const result = await actionWrapper(
