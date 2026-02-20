@@ -27,10 +27,10 @@
 
 ## Phase 3: Code Quality & Typing Enforcement
 
-- [ ] Task: Fix TypeScript and Import Groupings
+- [x] Task: Fix TypeScript and Import Groupings 0cfb0cc
   - [ ] Consolidate `env` import to the top of `lib/presentation/actions/auth.actions.ts`
   - [ ] Update `lib/utils/logger.ts` rest-parameters from `(...args: any[])` to `(...args: unknown[])`
-- [ ] Task: Verify Project-Wide Quality Gates (Expanded Scope)
+- [x] Task: Verify Project-Wide Quality Gates (Expanded Scope) 0cfb0cc
   - [ ] Run and fix any remaining errors from `npm run lint`
   - [ ] Run and fix any remaining errors from `npx tsc`
 - [ ] Task: Conductor - User Manual Verification 'Code Quality & Typing Enforcement' (Protocol in workflow.md)
