@@ -72,13 +72,3 @@ if (!parsed.success) {
  * (Server Only)
  */
 export const env = parsed.data;
-
-/**
- * Client-Safe Environment Wrapper
- * Only exposes variables intended for the browser.
- */
-export const clientEnv = {
-  NEXT_PUBLIC_APPWRITE_ENDPOINT: env.NEXT_PUBLIC_APPWRITE_ENDPOINT,
-  NEXT_PUBLIC_APPWRITE_PROJECT_ID: env.NEXT_PUBLIC_APPWRITE_PROJECT_ID,
-  NEXT_PUBLIC_APP_URL: env.NEXT_PUBLIC_APP_URL,
-};

@@ -5,6 +5,8 @@ import * as matchers from "@testing-library/jest-dom/matchers";
 expect.extend(matchers);
 
 // Set required mock environment variables for tests so strict validation doesn't fail
+(process.env as any).NODE_ENV = "test";
+process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
 process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT = "http://localhost/v1";
 process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID = "test-project";
 process.env.APPWRITE_API_KEY = "test-key";
@@ -26,3 +28,13 @@ process.env.CRON_SECRET = "test-secret";
 vi.mock("server-only", () => {
   return {};
 });
+
+
+vi.mock('@/lib/infrastructure/config/client-env', () => ({
+  clientEnv: {
+    NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+    NEXT_PUBLIC_APPWRITE_ENDPOINT: 'http://localhost/v1',
+    NEXT_PUBLIC_APPWRITE_PROJECT_ID: 'test-project',
+  }
+}));
+

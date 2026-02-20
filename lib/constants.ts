@@ -12,8 +12,8 @@ export const COOKIE_SESSION_NAME = `a_session_${APPWRITE_PROJECT_ID}`;
 
 // Housing Domain Constants
 export const HOUSING_CONSTANTS = {
-  FINE_MISSING_DUTY: env.FINE_AMOUNT_MISSING_DUTY,
-  DEFAULT_LEAD_TIME_HOURS: env.DEFAULT_TASK_LEAD_TIME,
+  FINE_MISSING_DUTY: 5, // Fallback since it's not in env
+  DEFAULT_LEAD_TIME_HOURS: 24, // Fallback since it's not in env
   URGENT_THRESHOLD_HOURS: 12,
   RECENT_TASK_THRESHOLD_DAYS: 7,
 } as const;

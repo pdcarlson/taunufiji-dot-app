@@ -1,5 +1,5 @@
 import { Client, Account, Databases, Storage } from "appwrite";
-import { clientEnv } from "@/lib/infrastructure/config/env";
+import { clientEnv } from "@/lib/infrastructure/config/client-env";
 
 const client = new Client();
 

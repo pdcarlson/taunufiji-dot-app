@@ -1,9 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 describe("Environment Configuration", () => {
+  let originalEnv: NodeJS.ProcessEnv;
+
   beforeEach(() => {
+    originalEnv = { ...process.env };
     vi.resetModules();
-    process.env = {}; // clear out the environment
+    process.env = {} as NodeJS.ProcessEnv; // clear out the environment
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+    vi.resetModules();
+    vi.restoreAllMocks();
   });
 
   it("should fail validation if required Appwrite variables are missing", async () => {
@@ -15,17 +24,18 @@ describe("Environment Configuration", () => {
     );
 
     expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
   });
 
   it("should throw an error in production if validation fails", async () => {
-    process.env.NODE_ENV = "production";
+    (process.env as any).NODE_ENV = "production";
 
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(import("@/lib/infrastructure/config/env")).rejects.toThrow(
       "Invalid server environment variables"
     );
+
+    expect(consoleSpy).toHaveBeenCalled();
   });
   
   it("should validate and export correctly when all variables are present", async () => {
