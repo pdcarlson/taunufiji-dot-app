@@ -90,7 +90,7 @@ jobs:
       - name: Setup Appwrite CLI
         run: |
           npm install -g appwrite-cli
-          appwrite client --endpoint ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }} --project ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }} --key ${{ secrets.APPWRITE_API_KEY }}
+          appwrite client --endpoint ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }} --project-id ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }} --key ${{ secrets.APPWRITE_API_KEY }}
 
       - name: Deploy to Appwrite Sites
         run: |
