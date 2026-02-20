@@ -72,7 +72,12 @@ jobs:
           DISCORD_APP_ID: ${{ secrets.DISCORD_APP_ID }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
-        run: npm run discord:register
+        run: |
+          if ! npm run discord:register; then
+            echo "### ⚠️ Discord Command Sync Failed" >> $GITHUB_STEP_SUMMARY
+            echo "The command synchronization failed, but the deployment is proceeding." >> $GITHUB_STEP_SUMMARY
+          fi
+        continue-on-error: true
 
       - name: Build with staging env vars
         env:

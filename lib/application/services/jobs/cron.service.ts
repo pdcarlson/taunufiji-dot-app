@@ -17,6 +17,7 @@ export interface CronResult {
   unlocked: number;
   urgent: number;
   expired_notified: number;
+  skipped_unassigned: number;
   errors: string[];
 }
 
@@ -33,6 +34,7 @@ export const CronService = {
     let unlocked = 0;
     let urgent = 0;
     let expired_notified = 0;
+    let skipped_unassigned = 0;
     const errors: string[] = [];
 
     // 1. Unlock Tasks
@@ -57,13 +59,20 @@ export const CronService = {
     // 5. Notify Expired
     const notifyExpiredResult = await NotifyExpiredJob.run(taskRepository);
     expired_notified += notifyExpiredResult.expired_notified;
+    skipped_unassigned += notifyExpiredResult.skipped_unassigned;
     errors.push(...notifyExpiredResult.errors);
 
     // 6. Ensure Future Tasks (Self-Healing)
     await ensureFutureTasksJob();
 
     // Summary
-    const stats = { unlocked, urgent, expired_notified, errors };
+    const stats = {
+      unlocked,
+      urgent,
+      expired_notified,
+      skipped_unassigned,
+      errors,
+    };
     console.log("📊 Cron Summary:", stats);
     if (errors.length > 0) {
       console.error("⚠️ Cron Errors:", errors);

@@ -171,7 +171,7 @@ async function cloneCollectionSchema(
     try {
       await targetDb.createIndex(CONFIG.DB.ID, collectionId, idx.key, idx.type, idx.attributes, idx.orders || []);
     } catch (e) {
-      console.error(`    ❌ Index "${idx.key}" failed.`);
+      console.error(`    ❌ Index "${idx.key}" failed:`, e instanceof Error ? e.message : e);
     }
   }
 

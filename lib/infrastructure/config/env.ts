@@ -75,7 +75,6 @@ const parsed = schema.safeParse({
 if (!parsed.success) {
   console.error("❌ Environment validation failed:", parsed.error.format());
   // Fail fast in production OR staging to prevent runtime magic number drift
-  // We allow 'development' and 'test' to proceed with console errors
   const currentEnv = process.env.NODE_ENV as string;
   if (currentEnv === "production" || currentEnv === "staging") {
     throw new Error(
@@ -84,11 +83,29 @@ if (!parsed.success) {
   }
 }
 
+// Tolerant Re-parse for Fallback (preserves coercions/defaults for partial matches)
+const fallback = schema.partial().safeParse({
+  NODE_ENV: process.env.NODE_ENV,
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  NEXT_PUBLIC_APPWRITE_ENDPOINT: process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT,
+  NEXT_PUBLIC_APPWRITE_PROJECT_ID: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID,
+  FINE_AMOUNT_MISSING_DUTY: process.env.FINE_AMOUNT_MISSING_DUTY,
+  DEFAULT_TASK_LEAD_TIME: process.env.DEFAULT_TASK_LEAD_TIME,
+});
+
 /**
  * Validated Environment Object
- * In development, we fallback to process.env if parsing fails to allow startup,
- * but in CI/Staging/Prod we require strict validation.
  */
 export const env = parsed.success
   ? parsed.data
-  : (process.env as unknown as z.infer<typeof schema>);
+  : ((fallback.success ? fallback.data : process.env) as any);
+
+/**
+ * Client-Safe Environment Wrapper
+ * Only exposes variables intended for the browser.
+ */
+export const clientEnv = {
+  NEXT_PUBLIC_APPWRITE_ENDPOINT: env.NEXT_PUBLIC_APPWRITE_ENDPOINT,
+  NEXT_PUBLIC_APPWRITE_PROJECT_ID: env.NEXT_PUBLIC_APPWRITE_PROJECT_ID,
+  NEXT_PUBLIC_APP_URL: env.NEXT_PUBLIC_APP_URL,
+};
