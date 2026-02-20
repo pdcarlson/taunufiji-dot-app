@@ -16,6 +16,6 @@
 - [x] Task: Conductor - User Manual Verification 'Refactor Codebase to use Central Configuration' (Protocol in workflow.md) [checkpoint: 9cba895]
 
 ## Phase 3: Clean Up
-- [~] Task: Remove the root `/env.ts`, `/client-env.ts` and `/env.test.ts` files created in the previous attempt
-- [ ] Task: Delete any other obsolete or duplicate environment configuration logic
-- [ ] Task: Conductor - User Manual Verification 'Clean Up' (Protocol in workflow.md)
+- [x] Task: Remove the root `/env.ts`, `/client-env.ts` and `/env.test.ts` files created in the previous attempt 883e613
+- [x] Task: Delete any other obsolete or duplicate environment configuration logic 883e613
+- [x] Task: Conductor - User Manual Verification 'Clean Up' (Protocol in workflow.md) [checkpoint: 883e613]
