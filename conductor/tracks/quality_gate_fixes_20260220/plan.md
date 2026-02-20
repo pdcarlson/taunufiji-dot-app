@@ -15,11 +15,11 @@
 
 ## Phase 2: Architecture Refactoring & Test Isolation
 
-- [ ] Task: Extract Client Environment Module
+- [x] Task: Extract Client Environment Module 4bb18c9
   - [ ] Create `lib/infrastructure/config/client-env.ts` exporting only `NEXT_PUBLIC_*` variables
   - [ ] Update `lib/infrastructure/config/env.ts` to stop exporting `clientEnv`
   - [ ] Refactor client code (`appwrite.web.ts`) to import from `client-env.ts`
-- [ ] Task: Update Tests and Setup for Environment Isolation
+- [x] Task: Update Tests and Setup for Environment Isolation 4bb18c9
   - [ ] Explicitly mock `client-env.ts` in `vitest.setup.ts`
   - [ ] Add explicit default test variables (`NEXT_PUBLIC_APP_URL`, `NODE_ENV`) to `vitest.setup.ts`
   - [ ] Fix global state leaks in `lib/infrastructure/config/env.test.ts` (using `originalEnv`, `vi.resetModules`, `mockRestore`)
