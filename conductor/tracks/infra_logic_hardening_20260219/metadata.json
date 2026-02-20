@@ -1,8 +1,0 @@
-{
-  "track_id": "infra_logic_hardening_20260219",
-  "type": "bug",
-  "status": "new",
-  "created_at": "2026-02-19T19:42:00Z",
-  "updated_at": "2026-02-19T19:42:00Z",
-  "description": "Establish a fully isolated, configuration-driven staging environment and harden the codebase against environment leaks and magic numbers."
-}
