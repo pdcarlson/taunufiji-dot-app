@@ -58,7 +58,7 @@ jobs:
 
       - name: Sync Database from Production
         env:
-          SOURCE_APPWRITE_ENDPOINT: ${{ secrets.PROD_APPWRITE_ENDPOINT }}
+          SOURCE_APPWRITE_ENDPOINT: ${{ secrets.PROD_APPWRITE_ENDPOINT || secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
           SOURCE_APPWRITE_PROJECT_ID: ${{ secrets.PROD_PROJECT_ID }}
           SOURCE_APPWRITE_API_KEY: ${{ secrets.PROD_API_KEY }}
           NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
@@ -83,6 +83,7 @@ jobs:
         env:
           NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
           NEXT_PUBLIC_APPWRITE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }}
+          APPWRITE_API_KEY: ${{ secrets.APPWRITE_API_KEY }}
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
         run: npm run build
 
