@@ -62,13 +62,21 @@ const parsed = schema.safeParse({
   CRON_SECRET: process.env.CRON_SECRET,
 });
 
+const skipValidation = process.env.SKIP_ENV_VALIDATION === "true";
+
 if (!parsed.success) {
-  console.error("Server environment validation failed:", parsed.error.format());
-  throw new Error("Invalid server environment variables");
+  if (skipValidation) {
+    console.warn("⚠️ Skipping strict server environment validation (SKIP_ENV_VALIDATION=true).");
+  } else {
+    console.error("Server environment validation failed:", parsed.error.format());
+    throw new Error("Invalid server environment variables");
+  }
 }
 
 /**
  * Validated Environment Object
  * (Server Only)
  */
-export const env = parsed.data;
+export const env = skipValidation 
+  ? (process.env as unknown as z.infer<typeof schema>) 
+  : parsed.data!;
