@@ -23,12 +23,12 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
 
 ## Phase 3: Environment Safety & Refactoring
-- [ ] Task: Harden Environment Configuration
-    - [ ] Refactor `lib/infrastructure/config/env.ts` to export `clientEnv`.
-    - [ ] Implement tolerant re-parse logic using `schema.partial().safeParse(process.env)`.
-- [ ] Task: Update Client Consumers
-    - [ ] Update `lib/infrastructure/persistence/appwrite.web.ts` to use `clientEnv`.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
+- [x] Task: Harden Environment Configuration
+    - [x] Refactor `lib/infrastructure/config/env.ts` to export `clientEnv`.
+    - [x] Implement tolerant re-parse logic using `schema.partial().safeParse(process.env)`.
+- [x] Task: Update Client Consumers
+    - [x] Update `lib/infrastructure/persistence/appwrite.web.ts` to use `clientEnv`.
+- [x] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
 
 ## Phase 4: Metrics & Logging Improvements
 - [ ] Task: Update NotifyExpiredJob Metrics
