@@ -7,5 +7,5 @@
 
 ---
 
-- [~] **Track: quality_gate_fixes_20260220**
+- [x] **Track: quality_gate_fixes_20260220**
   _Link: [./tracks/quality_gate_fixes_20260220/](./tracks/quality_gate_fixes_20260220/)_
