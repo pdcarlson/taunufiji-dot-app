@@ -1,14 +1,14 @@
 # Implementation Plan - CI/CD Hardening & Logic Security Audit
 
 ## Phase 1: CI/CD & Infrastructure Hardening
-- [ ] Task: Harden CI/CD Workflows
-    - [ ] Update `.github/workflows/ci.yml` to use `https://example.com` as fallback for `NEXT_PUBLIC_APPWRITE_ENDPOINT`.
-    - [ ] Update `deploy-prod.yml` to include `APPWRITE_API_KEY` in build step and unify project-id secret usage.
-    - [ ] Add `continue-on-error: true` to "Sync Discord Commands" in `deploy-staging.yml`.
-- [ ] Task: Dependency Management
-    - [ ] Add `tsx` to `devDependencies` in `package.json`.
-    - [ ] Run `npm install` to update lock file.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+- [x] Task: Harden CI/CD Workflows
+    - [x] Update `.github/workflows/ci.yml` to use `https://example.com` as fallback for `NEXT_PUBLIC_APPWRITE_ENDPOINT`.
+    - [x] Update `deploy-prod.yml` to include `APPWRITE_API_KEY` in build step and unify project-id secret usage.
+    - [x] Add `continue-on-error: true` to "Sync Discord Commands" in `deploy-staging.yml`.
+- [x] Task: Dependency Management
+    - [x] Add `tsx` to `devDependencies` in `package.json`.
+    - [x] Run `npm install` to update lock file.
+- [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: PDF Redactor Logic Fixes
 - [ ] Task: Write failing tests for PDF Coordinate Mapping
