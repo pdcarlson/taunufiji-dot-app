@@ -88,14 +88,13 @@ jobs:
         run: npm run build
 
       - name: Setup Appwrite CLI
-        uses: appwrite/setup-for-appwrite@v1
-        with:
-          method: key
-          key: ${{ secrets.APPWRITE_API_KEY }}
-          project: ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }}
-          endpoint: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
+        run: |
+          npm install -g appwrite-cli
+          appwrite client --endpoint ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }} --project ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }} --key ${{ secrets.APPWRITE_API_KEY }}
 
       - name: Deploy to Appwrite Sites
         run: |
           echo "🚀 Deploying to staging..."
+          # Note: appwrite push sites requires appwrite.json or explicit site-id. 
+          # If appwrite.json is missing, this might fail or require additional flags.
           appwrite push sites
