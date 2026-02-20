@@ -20,8 +20,8 @@
 ## Responsive Strategy
 
 - **Balanced Responsive**: Features must function seamlessly across all screen sizes.
-    - **Mobile**: Critical for Brothers performing chores and submitting proof in real-time.
-    - **Desktop**: Critical for Admin roles managing complex schedules and reviewing data-heavy ledger histories.
+  - **Mobile**: Critical for Brothers performing chores and submitting proof in real-time.
+  - **Desktop**: Critical for Admin roles managing complex schedules and reviewing data-heavy ledger histories.
 
 ## Engineering Principles for UI
 

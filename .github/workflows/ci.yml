@@ -2,8 +2,9 @@ name: Pull Request Checks
 
 on:
     push:
-        branches: [main]
+        branches: [main, staging]
     pull_request:
+        branches: [main, staging]
 
 jobs:
     quality-gate:
@@ -36,4 +37,17 @@ jobs:
                   NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ vars.NEXT_PUBLIC_APPWRITE_ENDPOINT || secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://example.com' }}
                   NEXT_PUBLIC_APPWRITE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_APPWRITE_PROJECT_ID || secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID || 'mock-id' }}
                   APPWRITE_API_KEY: ${{ secrets.APPWRITE_API_KEY || 'mock-key' }}
+                  AWS_REGION: 'mock-region'
+                  AWS_ACCESS_KEY_ID: 'mock-access-key'
+                  AWS_SECRET_ACCESS_KEY: 'mock-secret-key'
+                  AWS_BUCKET_NAME: 'mock-bucket'
+                  DISCORD_APP_ID: 'mock-app-id'
+                  DISCORD_PUBLIC_KEY: 'mock-public-key'
+                  DISCORD_BOT_TOKEN: 'mock-bot-token'
+                  DISCORD_GUILD_ID: 'mock-guild-id'
+                  DISCORD_HOUSING_CHANNEL_ID: 'mock-housing-channel-id'
+                  DISCORD_ROLE_ID_BROTHER: 'mock-role-brother'
+                  DISCORD_ROLE_ID_CABINET: 'mock-role-cabinet'
+                  DISCORD_ROLE_ID_HOUSING_CHAIR: 'mock-role-housing-chair'
+                  CRON_SECRET: 'mock-cron-secret'
               run: npm run build

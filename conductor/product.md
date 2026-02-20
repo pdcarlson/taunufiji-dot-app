@@ -10,9 +10,9 @@ Access is strictly managed via Discord Role verification.
 
 - **Brothers**: Base users who view duties, submit proof of completion, track their "Scholarship Points," and access the chapter library.
 - **Admins (Cabinet & Housing Chair)**:
-    - **Cabinet**: Chapter executive board with full administrative oversight.
-    - **Housing Chair**: Responsible for the assignment and verification of chapter chores (Housing Duties).
-    - **Dev**: Technical administrators (the user) with full system access.
+  - **Cabinet**: Chapter executive board with full administrative oversight.
+  - **Housing Chair**: Responsible for the assignment and verification of chapter chores (Housing Duties).
+  - **Dev**: Technical administrators (the user) with full system access.
 - **Scholarship Chair**: Specific access for managing academic resources in the Library.
 
 ## Core Value Proposition

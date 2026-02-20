@@ -4,12 +4,12 @@ import { env } from "./env";
 // Logic: Strictly use environment variables to ensure consistency across Local/Staging/Prod.
 export const ROLES = {
   // Base Roles
-  BROTHER: env.ROLE_ID_BROTHER,
+  BROTHER: env.DISCORD_ROLE_ID_BROTHER,
 
   // Officers & Committee Chairs
-  CABINET: env.ROLE_ID_CABINET,
-  HOUSING_CHAIR: env.ROLE_ID_HOUSING_CHAIR,
-  DEV: env.ROLE_ID_DEV,
+  CABINET: env.DISCORD_ROLE_ID_CABINET,
+  HOUSING_CHAIR: env.DISCORD_ROLE_ID_HOUSING_CHAIR,
+  DEV: env.DISCORD_ROLE_ID_CABINET,
 } as const;
 
 export type RoleKey = string; // IDs are strings

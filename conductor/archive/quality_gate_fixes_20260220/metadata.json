@@ -1,0 +1,8 @@
+{
+  "track_id": "quality_gate_fixes_20260220",
+  "type": "chore",
+  "status": "new",
+  "created_at": "2026-02-20T00:00:00Z",
+  "updated_at": "2026-02-20T00:00:00Z",
+  "description": "Fix linter warnings, markdown formatting issues, TypeScript strictness violations, and global state leaks in tests. Extracted client environment variables to a separate module to fix server-only architecture violations."
+}

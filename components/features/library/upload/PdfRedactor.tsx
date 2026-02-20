@@ -67,13 +67,13 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
     // --- EFFECT 1: Load Doc ---
     useEffect(() => {
       if (!file) return;
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- reset state on file change
-      setPdfJsDoc(null);
-      setCurrentPage(1);
-      setNumPages(0);
-      setRedactionBoxes({});
-
+       
       const loadDocs = async () => {
+        setPdfJsDoc(null);
+        setCurrentPage(1);
+        setNumPages(0);
+        setRedactionBoxes({});
+
         try {
           // IMPORTANT: Update standard font path or worker src if needed for Next.js 15
           // Using standard CDN for worker in internal-os to ensure compatibility if local missing

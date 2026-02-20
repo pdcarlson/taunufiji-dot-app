@@ -49,7 +49,7 @@ export default function MyDutiesWidget({
       // Only update if we don't have one? Or if the list fundamentally changed?
       // The safer way is to just let the user click. But if we MUST auto-select:
       if (priorityTask) {
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- we want to run this logic
+         
         setActiveTaskId((prev) => prev || priorityTask.id);
       }
     }

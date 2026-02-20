@@ -12,89 +12,68 @@ graph TD
     D -->|❌ Fail| E[Fix Code]
     E --> B
     D -->|✅ Pass| F[Merge to 'staging' branch]
-    F -->|Trigger| G{Staging Deploy}
-    G -->|Run deploy-staging.yml| H[1. Sync DB from Prod]
-    H -->|2. Build App| I[3. Deploy to Staging]
+    F -->|Trigger| G{Staging CI & Appwrite Deploy}
+    G -->|Run ci.yml| H[Quality Gates]
+    G -->|Direct Integration| I[Deploy to Staging Appwrite]
     I --> J[Manual QA on Staging]
-    J -->|✅ Approved| K[Create Release Tag v*]
-    K -->|Trigger| L{Production Deploy}
-    L -->|Run deploy-prod.yml| M[1. Build App]
-    M -->|2. Deploy to Production| N[🎉 LIVE]
+    J -->|✅ Approved| K[Merge to 'main' branch]
+    K -->|Trigger| L{Production CI & Appwrite Deploy}
+    L -->|Run ci.yml| M[Quality Gates]
+    L -->|Direct Integration| N[Deploy to Production Appwrite]
 ```
 
 ---
 
-## 1. Pull Request Checks (`ci.yml`)
+## 1. Quality Gates (`ci.yml`)
 
-**Trigger**: Opening a PR or pushing to a PR branch.
-**Goal**: Ensure code quality before merging.
+**Trigger**: Opening a PR, pushing to `main`, or pushing to `staging`.
+**Goal**: Ensure code quality before merging or during a deployment cycle.
 
 - **What happens**:
   - Installs dependencies.
-  - Runs `npm run lint`.
-  - Runs `npx tsc` (Type Check).
-  - Runs `npm run test` (Unit Tests).
-- **Integration Note**: We do **NOT** deploy to staging here. Staging is a shared environment; deploying on every PR would cause conflict and instability.
+  - Lint the code with `npm run lint`.
+  - Type-check the project with `npx tsc`.
+  - Execute unit tests via `npm run test`.
+  - Build the project using `npm run build`.
+- **Integration Note**: This workflow does **NOT** handle the actual deployment. It serves strictly as a quality gate (CI).
 
-## 2. Staging Deployment (`deploy-staging.yml`)
+## 2. Staging Deployment (Appwrite Integration)
 
-**Trigger**: Pushing to `staging` branch (usually via PR merge).
-**Goal**: Create a production-like environment with fresh data for verification.
+**Trigger**: Pushing to the `staging` branch (usually via PR merge).
+**Goal**: Create a production-like environment for verification.
 
-- **Environment**: GitHub Environment `staging`.
-- **Steps**:
-  1.  **Sync Database** (`sync-staging.ts`):
-      - **Input**: Reads `PROD_API_KEY` to fetch data from Production.
-      - **Action**: Clones schemas + Copies data (`users`, `professors`, `courses`, `ledger`, `library_resources`).
-      - **Safety**: Skips `housing_schedules` data (schema only) to prevent accidental notifications (DM spam).
-      - **Failure**: If sync fails (e.g. timeout), the deploy **continues** (marked `continue-on-error: true`).
-  2.  **Build**:
-      - Injects staging secrets (`NEXT_PUBLIC_*`) into the build.
-  3.  **Deploy**:
-      - Pushes the build to the **Staging Appwrite Site**.
+- **Mechanism**: Appwrite is connected directly to the GitHub repository. It listens for pushes to the `staging` branch and automatically triggers a build and deployment to the Staging Appwrite Site.
+- **Secrets**: Environment variables (`.env` equivalents) are managed directly within the Appwrite console for the Staging project.
 
-## 3. Production Deployment (`deploy-prod.yml`)
+## 3. Production Deployment (Appwrite Integration)
 
-**Trigger**: Pushing a tag starting with `v` (e.g., `v1.0.1`).
+**Trigger**: Pushing to the `main` branch.
 **Goal**: Release to the real world.
 
-- **Environment**: GitHub Environment `production`.
-- **Steps**:
-  1.  **Build**:
-      - Injects production secrets (`NEXT_PUBLIC_*`) into the build.
-  2.  **Deploy**:
-      - Pushes the build to the **Production Appwrite Site**.
+- **Mechanism**: Appwrite is connected directly to the GitHub repository. It listens for pushes to the `main` branch and automatically triggers a build and deployment to the Production Appwrite Site.
+- **Secrets**: Environment variables are managed directly within the Appwrite console for the Production project.
 
 ---
 
-## 🧠 "Think It Through": F.A.Q.
+## 🧠 "Think It Through": F.A.Q
 
-### Q: "Should we integrate deploy into PR checks?"
+### Q: "Where did the GitHub Actions deployment scripts go?"
 
-**A: No.** PR checks should be fast and stateless. Deploying a full Appwrite site and syncing a database on every PR commit is:
-
-1.  **Too Slow**: You'd wait 5+ mins for every typo fix.
-2.  **Destructive**: One PR's sync would overwrite another's.
-3.  **Complex**: Managing unique URLs for every PR is overkill for this project size.
+**A:** They were removed. Direct Appwrite/GitHub integration is simpler, faster, and keeps secret management centralized within the hosting platform itself rather than duplicating secrets in GitHub Environments.
 
 ### Q: "What do I wait for?"
 
-1.  **After PR Merge**: Wait ~2-3 minutes for `deploy-staging.yml` to finish.
-    - Go to **Actions** tab in GitHub to watch it.
-    - Once green, check the Staging URL.
-2.  **After Tagging**: Wait ~2 minutes for `deploy-prod.yml` to finish.
-
-### Q: "What if Sync fails?"
-
-The workflow is configured to **continue** (`continue-on-error: true`).
-
-- **Consequence**: Staging might have slightly stale data (from the last successful sync).
-- **Fix**: You can manually trigger the sync locally (`npx tsx scripts/sync-staging.ts`) or re-run the GitHub Action.
+1. **After PR Merge to Staging**:
+   - Check the GitHub Actions tab for the `ci.yml` quality gate.
+   - Check the Appwrite Console (Staging Project) to monitor the deployment build.
+   - Once green, check the Staging URL.
+2. **After Merge to Main**:
+   - Check the Appwrite Console (Production Project) to monitor the deployment build.
 
 ### Q: "Single Source of Truth?"
 
 **Yes.**
 
-- **Secrets**: All managed in GitHub Environments (`production` and `staging`).
-- **Code**: All managed in GitHub.
-- **Infra**: Deploys are automated. No one manually uploads files from their laptop anymore.
+- **Secrets**: Managed in the Appwrite Console for their respective environments (and locally in `.env.local` for development).
+- **Code**: Managed in GitHub.
+- **Infra**: Deploys are handled automatically by Appwrite on branch pushes.

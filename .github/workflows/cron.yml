@@ -24,6 +24,6 @@ jobs:
         steps:
             - name: Trigger cron endpoint
               run: |
-                  echo "🎯 Environment: ${{ github.event.inputs.environment || 'production' }}"
+                  echo "Environment: ${{ github.event.inputs.environment || 'production' }}"
                   curl -f -X GET \
                     "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/cron?key=${{ secrets.CRON_SECRET }}&job=HOURLY"
