@@ -35,4 +35,5 @@
 - **Language**: TypeScript (Strict Mode)
 - **Testing**: Vitest (Unit & Integration)
 - **Linting**: ESLint
-- **CI/CD**: GitHub Actions (CI gates, Staging, and Production deployments)
+- **CI**: GitHub Actions (Quality Gates)
+- **CD**: Direct Appwrite/GitHub Integration (Staging, and Production deployments)
