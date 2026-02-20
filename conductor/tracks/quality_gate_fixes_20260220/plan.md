@@ -2,12 +2,12 @@
 
 ## Phase 1: Documentation & Metadata Updates
 
-- [x] Task: Fix markdown formatting issues in tracked files
+- [x] Task: Fix markdown formatting issues in tracked files a5055b8
   - [ ] Resolve MD047, MD022, MD009 in `conductor/archive/centralize_env_config_20260220/index.md`, `metadata.json`, `plan.md`, `spec.md`
   - [ ] Add trailing newline to `conductor/tracks.md`
   - [ ] Fix markdown issues in `conductor/tracks/deploy_strategy_update_20260220/index.md`, `plan.md`, `spec.md`
   - [ ] Resolve trailing spaces and EOF newlines in `WORKFLOW.md`
-- [~] Task: Update Track Specs and Metadata
+- [x] Task: Update Track Specs and Metadata a5055b8
   - [ ] Reconcile Out of Scope contradiction in `deploy_strategy_update_20260220/spec.md`
   - [ ] Update `centralize_env_config_20260220` status to `archived` in `metadata.json`
   - [ ] Rephrase `WORKFLOW.md` repeating action verbs for clarity
