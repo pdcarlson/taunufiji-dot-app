@@ -62,13 +62,21 @@ const parsed = schema.safeParse({
   CRON_SECRET: process.env.CRON_SECRET,
 });
 
+const isBuildPhase = process.env.npm_lifecycle_event === "build" || process.env.SKIP_ENV_VALIDATION === "true" || process.env.CI === "true";
+
 if (!parsed.success) {
-  console.error("Server environment validation failed:", parsed.error.format());
-  throw new Error("Invalid server environment variables");
+  if (isBuildPhase) {
+    console.warn("⚠️ Skipping environment validation during build phase.");
+  } else {
+    console.error("Server environment validation failed:", parsed.error.format());
+    throw new Error("Invalid server environment variables");
+  }
 }
 
 /**
  * Validated Environment Object
  * (Server Only)
  */
-export const env = parsed.data;
+export const env = isBuildPhase 
+  ? (process.env as unknown as z.infer<typeof schema>) 
+  : parsed.data!;
