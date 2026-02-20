@@ -11,16 +11,16 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: PDF Redactor Logic Fixes
-- [ ] Task: Write failing tests for PDF Coordinate Mapping
-    - [ ] Create `components/features/library/upload/PdfRedactor.test.tsx`.
-    - [ ] Define test cases for coordinate scaling and redaction alignment.
-- [ ] Task: Fix PDF Rendering & Alignment
-    - [ ] Remove `canvas` parameter from `page.render` in `PdfRedactor.tsx`.
-    - [ ] Implement unscaled page coordinate storage for redaction boxes.
-    - [ ] Update render and burn-in logic to apply dynamic scaling.
-- [ ] Task: Verify PDF Fixes
-    - [ ] Run `npm test` and confirm alignment across simulated zoom levels.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
+- [x] Task: Write failing tests for PDF Coordinate Mapping
+    - [x] Create `components/features/library/upload/PdfRedactor.test.tsx`.
+    - [x] Define test cases for coordinate scaling and redaction alignment.
+- [x] Task: Fix PDF Rendering & Alignment
+    - [x] Remove `canvas` parameter from `page.render` in `PdfRedactor.tsx`.
+    - [x] Implement unscaled page coordinate storage for redaction boxes.
+    - [x] Update render and burn-in logic to apply dynamic scaling.
+- [x] Task: Verify PDF Fixes
+    - [x] Run `npm test` and confirm alignment across simulated zoom levels.
+- [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
 
 ## Phase 3: Environment Safety & Refactoring
 - [ ] Task: Harden Environment Configuration
