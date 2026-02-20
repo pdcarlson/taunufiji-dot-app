@@ -33,8 +33,8 @@ jobs:
 
       - name: Build
         env:
-          NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ vars.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://appwrite.taunufiji.app/v1' }}
-          NEXT_PUBLIC_APPWRITE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_APPWRITE_PROJECT_ID || 'mock-id' }}
+          NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ vars.NEXT_PUBLIC_APPWRITE_ENDPOINT || secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://appwrite.taunufiji.app/v1' }}
+          NEXT_PUBLIC_APPWRITE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_APPWRITE_PROJECT_ID || secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID || 'mock-id' }}
           APPWRITE_API_KEY: ${{ secrets.APPWRITE_API_KEY || 'mock-key' }}
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'https://taunufiji.app' }}
         run: npm run build
@@ -73,11 +73,14 @@ jobs:
         run: npm run build
 
       - name: Setup Appwrite CLI
-        uses: appwrite/setup-for-appwrite@v2
+        uses: appwrite/setup-for-appwrite@v1
+        with:
+          method: key
+          key: ${{ secrets.APPWRITE_API_KEY }}
+          project: ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }}
+          endpoint: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
 
       - name: Deploy to Appwrite Sites
         run: |
           echo "🚀 Deploying tag ${{ github.ref_name }} to production..."
-          appwrite push sites \
-            --project-id ${{ secrets.APPWRITE_PROJECT_ID }} \
-            --api-key ${{ secrets.APPWRITE_API_KEY }}
+          appwrite push sites
