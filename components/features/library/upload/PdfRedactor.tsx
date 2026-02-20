@@ -67,7 +67,7 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
     // --- EFFECT 1: Load Doc ---
     useEffect(() => {
       if (!file) return;
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- reset state on file change
+       
       setPdfJsDoc(null);
       setCurrentPage(1);
       setNumPages(0);

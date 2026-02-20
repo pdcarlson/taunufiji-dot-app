@@ -2,6 +2,7 @@ import {
   CronService,
   CronResult,
 } from "@/lib/application/services/jobs/cron.service";
+import { env } from "@/lib/infrastructure/config/env";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic"; // ensure no caching
@@ -11,7 +12,7 @@ export async function GET(req: Request) {
     // 1. Security check
     const { searchParams } = new URL(req.url);
     const key = searchParams.get("key");
-    const CRON_SECRET = process.env.CRON_SECRET;
+    const CRON_SECRET = env.CRON_SECRET;
 
     if (!key || !CRON_SECRET || key !== CRON_SECRET) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

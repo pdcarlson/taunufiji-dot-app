@@ -1,10 +1,12 @@
+import { env } from "@/lib/infrastructure/config/env";
+
 /**
  * Development-only logger to avoid cluttering production logs and leaking info.
  * Use this instead of console.log for debugging.
  */
 
 // Force true for now to debug production issues if needed, or stick to env
-const isDev = true; // process.env.NODE_ENV === "development";
+const isDev = env.NODE_ENV === "development";
 
 export const logger = {
   log: (message: string, ...args: any[]) => {

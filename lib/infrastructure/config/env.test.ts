@@ -45,6 +45,7 @@ describe("Environment Configuration", () => {
     process.env.DISCORD_ROLE_ID_BROTHER = "test-role-brother";
     process.env.DISCORD_ROLE_ID_CABINET = "test-role-cabinet";
     process.env.DISCORD_ROLE_ID_HOUSING_CHAIR = "test-role-housing";
+    process.env.CRON_SECRET = "test-secret";
     
     const { env } = await import("@/lib/infrastructure/config/env");
     

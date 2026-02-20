@@ -28,6 +28,8 @@ export async function syncUserAction(authId: string) {
   }
 }
 
+import { env } from "@/lib/infrastructure/config/env";
+
 export async function getProfileAction(jwt: string) {
   const result = await actionWrapper(
     async ({ container, userId }) => {
@@ -38,7 +40,7 @@ export async function getProfileAction(jwt: string) {
       // 2. Check Auth
       const isAuthorized = await container.authService.verifyBrother(userId);
 
-      if (process.env.NODE_ENV === "development") {
+      if (env.NODE_ENV === "development") {
         logger.log(
           `[getProfileAction] ${userId} -> Authorized: ${isAuthorized}`,
         );

@@ -1,14 +1,9 @@
 import { COMMANDS } from "../lib/infrastructure/messaging/discord-api/commands";
-import dotenv from "dotenv";
+import { env } from "../lib/infrastructure/config/env";
 
-// Only load .env.local if not in CI (GitHub Actions sets env vars directly)
-if (!process.env.GITHUB_ACTIONS) {
-  dotenv.config({ path: ".env.local" });
-}
-
-const APP_ID = process.env.DISCORD_APP_ID;
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const GUILD_ID = process.env.DISCORD_GUILD_ID;
+const APP_ID = env.DISCORD_APP_ID;
+const BOT_TOKEN = env.DISCORD_BOT_TOKEN;
+const GUILD_ID = env.DISCORD_GUILD_ID;
 
 async function registerCommands() {
   console.log("🛠️ Starting Discord Command Synchronization...");

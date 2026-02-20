@@ -22,23 +22,15 @@ export {
 } from "@/lib/infrastructure/persistence/client";
 
 // Legacy constants (kept for backwards compatibility)
-export const SSR_DATABASE_ID =
-  process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "main";
-export const SSR_APP_CONFIG_ID =
-  process.env.NEXT_PUBLIC_APPWRITE_COLLECTION_CONFIG_ID || "app_config";
-export const SSR_EVENT_REGISTRATION_ID =
-  process.env.NEXT_PUBLIC_APPWRITE_COLLECTION_EVENTS_ID ||
-  "event_registrations";
-export const SSR_COLLECTION_TASKS_ID =
-  process.env.NEXT_PUBLIC_APPWRITE_COLLECTION_TASKS_ID || "tasks";
-export const SSR_COLLECTION_MEMBERS_ID =
-  process.env.NEXT_PUBLIC_APPWRITE_COLLECTION_MEMBERS_ID || "members";
+export const SSR_DATABASE_ID = "main";
+export const SSR_APP_CONFIG_ID = "app_config";
+export const SSR_EVENT_REGISTRATION_ID = "event_registrations";
+export const SSR_COLLECTION_TASKS_ID = "tasks";
+export const SSR_COLLECTION_MEMBERS_ID = "members";
 export const SSR_CAMPAIGNS_ID = "campaigns";
 export const SSR_SUPPORTERS_ID = "supporters";
 export const SSR_TRANSACTIONS_ID = "transactions";
-export const SSR_EXAM_METADATA_ID =
-  process.env.NEXT_PUBLIC_APPWRITE_COLLECTION_EXAM_METADATA_ID ||
-  "exam_metadata";
+export const SSR_EXAM_METADATA_ID = "exam_metadata";
 
 // --- SESSION CLIENT (Cookie-based for Server Components) ---
 export async function createSessionClient() {

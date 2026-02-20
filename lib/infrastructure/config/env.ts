@@ -36,6 +36,9 @@ const schema = z.object({
   DISCORD_ROLE_ID_BROTHER: z.string().min(1),
   DISCORD_ROLE_ID_CABINET: z.string().min(1),
   DISCORD_ROLE_ID_HOUSING_CHAIR: z.string().min(1),
+
+  // Cron
+  CRON_SECRET: z.string().min(1),
 });
 
 const parsed = schema.safeParse({
@@ -56,6 +59,7 @@ const parsed = schema.safeParse({
   DISCORD_ROLE_ID_BROTHER: process.env.DISCORD_ROLE_ID_BROTHER,
   DISCORD_ROLE_ID_CABINET: process.env.DISCORD_ROLE_ID_CABINET,
   DISCORD_ROLE_ID_HOUSING_CHAIR: process.env.DISCORD_ROLE_ID_HOUSING_CHAIR,
+  CRON_SECRET: process.env.CRON_SECRET,
 });
 
 if (!parsed.success) {
