@@ -60,12 +60,27 @@ jobs:
           appwrite client --endpoint ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }} --project-id ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }} --key ${{ secrets.APPWRITE_API_KEY }}
 
       - name: Deploy to Appwrite Sites
+        env:
+          APPWRITE_SITE_ID: ${{ secrets.APPWRITE_SITE_ID || vars.APPWRITE_SITE_ID }}
         run: |
           echo "🚀 Deploying to staging..."
+          if [ -z "$APPWRITE_SITE_ID" ]; then
+            echo "Deployment failed: APPWRITE_SITE_ID is missing from secrets or vars."
+            exit 1
+          fi
+
+          # Create appwrite.json dynamically to link the site ID
+          echo "{\"projectId\": \"$NEXT_PUBLIC_APPWRITE_PROJECT_ID\", \"projectName\": \"staging\", \"sites\": [{\"siteId\": \"$APPWRITE_SITE_ID\", \"path\": \".\"}]}" > appwrite.json
+
           # Note: appwrite push sites requires appwrite.json or explicit site-id.
           # If appwrite.json is missing, this might fail or require additional flags.
-          OUTPUT=$(appwrite push sites 2>&1 | tee /dev/tty)
+          OUTPUT=$(appwrite push sites 2>&1 || true)
+          echo "$OUTPUT"
           if echo "$OUTPUT" | grep -q "No sites found"; then
             echo "Deployment failed: No sites found"
+            exit 1
+          fi
+          if echo "$OUTPUT" | grep -q "Error"; then
+            echo "Deployment encountered an error"
             exit 1
           fi
