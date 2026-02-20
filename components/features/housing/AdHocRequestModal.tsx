@@ -25,12 +25,9 @@ export default function AdHocRequestModal({ onClose, onSuccess }: Props) {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm();
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  const fileInput = watch("file");
 
   const onSubmit = async (data: FieldValues) => {
     if (!selectedFile) {

@@ -1,9 +1,6 @@
 import { Metadata } from "next";
 import DashboardShell from "@/components/layout/DashboardShell";
 
-import { getContainer } from "@/lib/infrastructure/container";
-import { redirect } from "next/navigation";
-
 export const metadata: Metadata = {
   title: {
     absolute: "Home | Tau Nu Fiji",
@@ -19,7 +16,7 @@ export default async function DashboardLayout({
   // We strictly avoid server-side cookie reading.
   // The DashboardShell will handle auth via Client SDK & JWTs.
   return (
-    <DashboardShell initialUser={null} initialProfile={null}>
+    <DashboardShell initialUser={null}>
       {children}
     </DashboardShell>
   );

@@ -2,6 +2,8 @@
  * Notification Handler
  *
  * Listens for business domain events and sends notifications via Discord.
+ * Notifications are fire-and-forget from the event handler's perspective;
+ * failures are logged but do not block business logic.
  */
 
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
@@ -18,6 +20,21 @@ import {
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
 import { logger } from "@/lib/utils/logger";
 
+/**
+ * Log a notification result for observability.
+ */
+function logResult(
+  event: string,
+  target: string,
+  result: { success: boolean; error?: string },
+) {
+  if (!result.success) {
+    logger.error(
+      `[NotificationHandler] ${event} notification to ${target} failed: ${result.error}`,
+    );
+  }
+}
+
 export const NotificationHandler = {
   init: () => {
     // Task Created → Notify assignee if pre-assigned
@@ -28,7 +45,7 @@ export const NotificationHandler = {
           logger.log(
             `[NotificationHandler] Notifying user ${payload.assignedTo} of new task: ${payload.title}`,
           );
-          await NotificationService.sendNotification(
+          const result = await NotificationService.sendNotification(
             payload.assignedTo,
             "assigned",
             {
@@ -36,6 +53,7 @@ export const NotificationHandler = {
               taskId: payload.taskId,
             },
           );
+          logResult("TASK_CREATED", payload.assignedTo, result);
         }
       },
     );
@@ -47,10 +65,11 @@ export const NotificationHandler = {
         logger.log(
           `[NotificationHandler] Task claimed: ${payload.title} by ${payload.userId}`,
         );
-        await NotificationService.notifyAdmins(
+        const result = await NotificationService.notifyAdmins(
           `📋 Task claimed: **${payload.title}** by <@${payload.userId}>`,
           { taskId: payload.taskId },
         );
+        logResult("TASK_CLAIMED", "admin_channel", result);
       },
     );
 
@@ -61,10 +80,11 @@ export const NotificationHandler = {
         logger.log(
           `[NotificationHandler] Task submitted: ${payload.title} by ${payload.userId}`,
         );
-        await NotificationService.notifyAdmins(
+        const result = await NotificationService.notifyAdmins(
           `📤 Proof submitted for **${payload.title}** by <@${payload.userId}>. Ready for review.`,
           { taskId: payload.taskId },
         );
+        logResult("TASK_SUBMITTED", "admin_channel", result);
       },
     );
 
@@ -76,7 +96,7 @@ export const NotificationHandler = {
           logger.log(
             `[NotificationHandler] Notifying user ${payload.userId} of approval: ${payload.title}`,
           );
-          await NotificationService.sendNotification(
+          const result = await NotificationService.sendNotification(
             payload.userId,
             "approved",
             {
@@ -85,6 +105,7 @@ export const NotificationHandler = {
               points: payload.points,
             },
           );
+          logResult("TASK_APPROVED", payload.userId, result);
         }
       },
     );
@@ -97,7 +118,7 @@ export const NotificationHandler = {
           logger.log(
             `[NotificationHandler] Notifying user ${payload.userId} of rejection: ${payload.title}`,
           );
-          await NotificationService.sendNotification(
+          const result = await NotificationService.sendNotification(
             payload.userId,
             "rejected",
             {
@@ -106,6 +127,7 @@ export const NotificationHandler = {
               reason: payload.reason,
             },
           );
+          logResult("TASK_REJECTED", payload.userId, result);
         }
       },
     );
@@ -117,7 +139,7 @@ export const NotificationHandler = {
         logger.log(
           `[NotificationHandler] Notifying user ${payload.newUserId} of reassignment: ${payload.title}`,
         );
-        await NotificationService.sendNotification(
+        const result = await NotificationService.sendNotification(
           payload.newUserId,
           "assigned",
           {
@@ -125,6 +147,7 @@ export const NotificationHandler = {
             taskId: payload.taskId,
           },
         );
+        logResult("TASK_REASSIGNED", payload.newUserId, result);
       },
     );
 
@@ -135,7 +158,7 @@ export const NotificationHandler = {
         logger.log(
           `[NotificationHandler] Notifying user ${payload.userId} of unassignment: ${payload.title}`,
         );
-        await NotificationService.sendNotification(
+        const result = await NotificationService.sendNotification(
           payload.userId,
           "unassigned",
           {
@@ -143,6 +166,7 @@ export const NotificationHandler = {
             taskId: payload.taskId,
           },
         );
+        logResult("TASK_UNASSIGNED", payload.userId, result);
       },
     );
 

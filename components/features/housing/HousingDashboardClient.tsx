@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { HousingTask, HousingSchedule, Member } from "@/lib/domain/entities";
-import TaskCard, { TaskCardSkeleton } from "./TaskCard";
+import { useState, useMemo } from "react";
+import { HousingTask, Member } from "@/lib/domain/entities";
+import TaskCard from "./TaskCard";
 
 import DutyRoster from "./DutyRoster";
 import ProofReviewModal from "./ProofReviewModal";
@@ -10,7 +10,7 @@ import CreateBountyModal from "./CreateBountyModal";
 import CreateScheduleModal from "./CreateScheduleModal";
 import CreateOneOffModal from "./CreateOneOffModal";
 import EditTaskModal from "./EditTaskModal";
-import { Users, CalendarClock, Zap, UserPlus } from "lucide-react";
+import { CalendarClock, Zap, UserPlus } from "lucide-react";
 import toast from "react-hot-toast";
 
 // Actions for Client-Side Refreshing
@@ -18,31 +18,24 @@ import {
   getAllActiveTasksAction,
   getAllMembersAction,
 } from "@/lib/presentation/actions/housing/query.actions";
-import { getSchedulesAction } from "@/lib/presentation/actions/housing/schedule.actions";
-import { getMyTasksAction } from "@/lib/presentation/actions/housing/tasks.actions";
 import MyDutiesWidget from "./MyDutiesWidget";
 // Note: We use useAuth for getToken and isHousingAdmin
 import { useAuth } from "@/components/providers/AuthProvider";
-import { Loader2 } from "lucide-react";
 
 interface HousingDashboardClientProps {
   initialTasks?: HousingTask[];
   initialMembers?: Member[];
-  initialSchedules?: HousingSchedule[];
 }
 
 export default function HousingDashboardClient({
   initialTasks = [],
   initialMembers = [],
-  initialSchedules = [],
 }: HousingDashboardClientProps) {
   const { user: currentUser, getToken, isHousingAdmin } = useAuth();
 
   // Initialize state with server-provided data
   const [tasks, setTasks] = useState<HousingTask[]>(initialTasks);
   const [members, setMembers] = useState<Member[]>(initialMembers);
-  const [schedules, setSchedules] =
-    useState<HousingSchedule[]>(initialSchedules);
 
   // Derived state for My Duties (avoids extra API call and sync issues)
   // We filter the main task list for tasks assigned to the current user
@@ -56,8 +49,17 @@ export default function HousingDashboardClient({
     return task.assigned_to === targetId;
   });
 
-  const [profile, setProfile] = useState<Member | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  // Derived Profile
+  const profile = useMemo(() => {
+    if (!currentUser || members.length === 0) return null;
+    return (
+      members.find(
+        (m) =>
+          m.discord_id === currentUser.$id || m.auth_id === currentUser.$id,
+      ) || null
+    );
+  }, [currentUser, members]);
+
   const isAdmin = isHousingAdmin;
 
   // Modals
@@ -67,39 +69,23 @@ export default function HousingDashboardClient({
   const [showBountyModal, setShowBountyModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
-  // Resolve Profile on mount if user exists
-  useEffect(() => {
-    if (currentUser && members.length > 0) {
-      const myProfile = members.find(
-        (m) =>
-          m.discord_id === currentUser.$id || m.auth_id === currentUser.$id,
-      );
-      if (myProfile) setProfile(myProfile);
-    }
-  }, [currentUser, members]);
-
   // Handle manual refresh
   const handleRefresh = async () => {
-    setRefreshing(true);
     try {
       const jwt = await getToken();
 
-      const [tasksRes, membersRes, schedulesRes] = await Promise.all([
+      const [tasksRes, membersRes] = await Promise.all([
         getAllActiveTasksAction(jwt),
         getAllMembersAction(jwt),
-        isAdmin ? getSchedulesAction(jwt) : Promise.resolve([]),
       ]);
 
       if (tasksRes) setTasks(tasksRes);
       if (membersRes) setMembers(membersRes);
-      if (schedulesRes.length > 0) setSchedules(schedulesRes);
 
       toast.success("Dashboard Updated");
     } catch (error) {
       console.error("Refresh failed", error);
       toast.error("Failed to refresh data");
-    } finally {
-      setRefreshing(false);
     }
   };
 
@@ -247,7 +233,6 @@ export default function HousingDashboardClient({
           tasks={tasks}
           members={members}
           isAdmin={isAdmin}
-          userId={currentUser?.$id || ""}
           onRefresh={handleRefresh}
           onEdit={(t) => setEditingTask(t)}
         />

@@ -2,10 +2,9 @@
 
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useEffect, useState } from "react";
-import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
+import { ASSESSMENT_TYPES, SEMESTERS } from "@/lib/utils/courseData";
 import { Search, Filter, Loader2 } from "lucide-react";
 
-import toast from "react-hot-toast";
 import { getMetadataAction } from "@/lib/presentation/actions/library/read.actions";
 
 interface FilterProps {
@@ -43,7 +42,7 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
       }
     };
     load();
-  }, []);
+  }, [getToken]);
 
   // Derived Options
   const deptOptions = Object.keys(courseData).sort();

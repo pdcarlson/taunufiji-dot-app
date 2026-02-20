@@ -10,6 +10,8 @@ vi.mock("@/lib/infrastructure/config/env", () => ({
     NEXT_PUBLIC_APPWRITE_ENDPOINT: "http://localhost/v1",
     NEXT_PUBLIC_APPWRITE_PROJECT_ID: "test-project",
     APPWRITE_API_KEY: "test-key",
+    DISCORD_GUILD_ID: "test_guild",
+    DISCORD_BOT_TOKEN: "test_token",
   },
 }));
 

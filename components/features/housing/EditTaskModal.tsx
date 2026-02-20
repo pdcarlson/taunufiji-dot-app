@@ -10,7 +10,7 @@ import {
 import { useJWT } from "@/hooks/useJWT";
 import { Member, HousingTask } from "@/lib/domain/entities";
 import { Loader } from "@/components/ui/Loader";
-import { X, Calendar, Edit2, Users, Clock, Trash2, Repeat } from "lucide-react";
+import { X, Calendar, Edit2, Users, Clock, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface EditTaskModalProps {
@@ -69,7 +69,7 @@ export default function EditTaskModal({
       }
     };
     fetchSchedule();
-  }, [isRecurring, task.schedule_id]);
+  }, [isRecurring, task.schedule_id, getJWT]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +86,7 @@ export default function EditTaskModal({
       }
 
       // Clean up data
-      const payload: any = {
+      const payload: Partial<HousingTask> & { lead_time_hours?: number } = {
         title: formData.title,
         description: formData.description,
         points_value: isBounty ? Number(formData.points_value) : 0, // Force 0 for Duty

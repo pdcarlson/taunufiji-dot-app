@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest"
+    "test": "vitest",
+    "discord:register": "tsx scripts/register-discord-commands.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.515.0",
@@ -42,6 +43,7 @@
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "latest",
+    "dotenv": "^17.3.1",
     "eslint": "latest",
     "eslint-config-next": "^16.1.6",
     "jsdom": "^27.4.0",

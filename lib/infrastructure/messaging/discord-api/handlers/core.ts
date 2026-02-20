@@ -1,8 +1,6 @@
-import { InteractionResponseType } from "../types";
 import { createResponse, createEphemeralResponse } from "../utils";
 import { Query } from "node-appwrite";
 import { getDatabase } from "@/lib/infrastructure/persistence";
-import { env } from "@/lib/infrastructure/config/env";
 import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 import { CommandHandler } from "../types";
 

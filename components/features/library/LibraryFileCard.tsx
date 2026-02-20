@@ -8,13 +8,13 @@ import {
   AlertCircle,
   ShieldCheck,
   GraduationCap,
-  Calendar,
   User,
 } from "lucide-react";
 
+import { LibraryResource } from "@/lib/domain/types/library";
 import { getDownloadLinkAction } from "@/lib/presentation/actions/library/read.actions";
 
-export default function LibraryFileCard({ file }: { file: any }) {
+export default function LibraryFileCard({ file }: { file: LibraryResource }) {
   const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -1,8 +1,5 @@
 import { HousingTask } from "@/lib/domain/entities";
 import {
-  CheckCircle,
-  Clock,
-  XCircle,
   ChevronRight,
   Zap,
   RefreshCw,
@@ -18,9 +15,8 @@ interface CollapsedDutyCardProps {
 
 export default function CollapsedDutyCard({
   task,
-  isActive,
   onClick,
-}: CollapsedDutyCardProps) {
+}: Omit<CollapsedDutyCardProps, 'isActive'>) {
   const isPending = task.status === "pending";
   const isRejected = task.status === "rejected";
   const isCompleted = task.status === "approved";

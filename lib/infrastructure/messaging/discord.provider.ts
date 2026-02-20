@@ -1,4 +1,7 @@
-import { INotificationProvider } from "@/lib/domain/ports/notification.provider";
+import {
+  INotificationProvider,
+  NotificationResult,
+} from "@/lib/domain/ports/notification.provider";
 import { env } from "@/lib/infrastructure/config/env";
 
 const DISCORD_API = "https://discord.com/api/v10";
@@ -7,8 +10,9 @@ export class DiscordProvider implements INotificationProvider {
   /**
    * Send a direct message to a user
    */
-  async sendDM(userId: string, content: string): Promise<boolean> {
-    if (!env.DISCORD_BOT_TOKEN) return false;
+  async sendDM(userId: string, content: string): Promise<NotificationResult> {
+    if (!env.DISCORD_BOT_TOKEN)
+      return { success: false, error: "DISCORD_BOT_TOKEN not configured" };
 
     try {
       // 1. Create DM Channel
@@ -22,10 +26,10 @@ export class DiscordProvider implements INotificationProvider {
       });
 
       if (!dmRes.ok) {
-        console.error(
-          `[DiscordAdapter] Failed to open DM with ${userId}: ${dmRes.status}`,
-        );
-        return false;
+        const errBody = await dmRes.text();
+        const error = `Failed to open DM with ${userId}: ${dmRes.status} ${errBody}`;
+        console.error(`[DiscordAdapter] ${error}`);
+        return { success: false, error };
       }
 
       const channel = await dmRes.json();
@@ -33,16 +37,21 @@ export class DiscordProvider implements INotificationProvider {
       // 2. Send Message
       return await this.sendToChannel(channel.id, content);
     } catch (e) {
-      console.error("[DiscordAdapter] sendDM failed", e);
-      return false;
+      const error = `sendDM exception: ${e instanceof Error ? e.message : String(e)}`;
+      console.error(`[DiscordAdapter] ${error}`);
+      return { success: false, error };
     }
   }
 
   /**
    * Send a message to a specific channel
    */
-  async sendToChannel(channelId: string, content: string): Promise<boolean> {
-    if (!env.DISCORD_BOT_TOKEN) return false;
+  async sendToChannel(
+    channelId: string,
+    content: string,
+  ): Promise<NotificationResult> {
+    if (!env.DISCORD_BOT_TOKEN)
+      return { success: false, error: "DISCORD_BOT_TOKEN not configured" };
 
     try {
       const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
@@ -55,16 +64,16 @@ export class DiscordProvider implements INotificationProvider {
       });
 
       if (!res.ok) {
-        const err = await res.text();
-        console.error(
-          `[DiscordAdapter] Failed to send to channel ${channelId}: ${res.status} ${err}`,
-        );
-        return false;
+        const errBody = await res.text();
+        const error = `Failed to send to channel ${channelId}: ${res.status} ${errBody}`;
+        console.error(`[DiscordAdapter] ${error}`);
+        return { success: false, error };
       }
-      return true;
+      return { success: true };
     } catch (e) {
-      console.error("[DiscordAdapter] sendToChannel failed", e);
-      return false;
+      const error = `sendToChannel exception: ${e instanceof Error ? e.message : String(e)}`;
+      console.error(`[DiscordAdapter] ${error}`);
+      return { success: false, error };
     }
   }
 }

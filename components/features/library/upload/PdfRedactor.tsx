@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import { PDFDocument } from "pdf-lib";
 import * as pdfjsLib from "pdfjs-dist";
+import { PDFDocumentProxy, RenderTask } from "pdfjs-dist/types/src/display/api";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // --- Loading Component ---
@@ -19,6 +20,13 @@ const PageLoading = () => (
     <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-fiji-purple border-r-transparent" />
   </div>
 );
+
+interface RedactionBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 interface PdfRedactorProps {
   file: File;
@@ -30,13 +38,13 @@ export interface PdfRedactorRef {
 
 const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
   ({ file }, ref) => {
-    const [pdfJsDoc, setPdfJsDoc] = useState<any>(null);
+    const [pdfJsDoc, setPdfJsDoc] = useState<PDFDocumentProxy | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [numPages, setNumPages] = useState(0);
     const [baseScale, setBaseScale] = useState(1.0); // Fit-to-screen scale
     const [zoomLevel, setZoomLevel] = useState(1.0); // User multiplier
     const [isPageRendering, setIsPageRendering] = useState(false);
-    const [redactionBoxes, setRedactionBoxes] = useState<Record<number, any[]>>(
+    const [redactionBoxes, setRedactionBoxes] = useState<Record<number, RedactionBox[]>>(
       {},
     );
     const [isDrawing, setIsDrawing] = useState(false);
@@ -45,15 +53,15 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
       width: number;
       height: number;
     } | null>(null);
-    const [currentDrawingBox, setCurrentDrawingBox] = useState<any>(null); // State for active drawing
+    const [currentDrawingBox, setCurrentDrawingBox] = useState<RedactionBox | null>(null); // State for active drawing
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     // Derived scale
     const scale = baseScale * zoomLevel;
-    const renderTaskRef = useRef<any>(null);
+    const renderTaskRef = useRef<RenderTask | null>(null);
     const drawingStartPos = useRef<{ x: number; y: number } | null>(null);
-    const currentBoxRef = useRef<any>(null);
+    const currentBoxRef = useRef<RedactionBox | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // --- EFFECT 1: Load Doc ---
@@ -126,6 +134,7 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
           renderTaskRef.current = page.render({
             canvasContext: context!,
             viewport: scaledViewport,
+            canvas: canvas,
           });
           await renderTaskRef.current.promise;
           setIsPageRendering(false);
@@ -168,9 +177,13 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
     // --- DRAWING HANDLERS ---
     const getCoords = (e: React.MouseEvent) => {
       const canvas = canvasRef.current;
-      if (!canvas) return { x: 0, y: 0 };
+      if (!canvas || !scale) return { x: 0, y: 0 };
       const rect = canvas.getBoundingClientRect();
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      // Convert screen pixels -> canvas pixels -> page coordinates
+      return {
+        x: (e.clientX - rect.left) / scale,
+        y: (e.clientY - rect.top) / scale,
+      };
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -235,15 +248,20 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
           const ctx = offscreenCanvas.getContext("2d");
           if (!ctx) continue;
 
-          await page.render({ canvasContext: ctx, viewport }).promise;
+          await page.render({
+            canvasContext: ctx,
+            viewport,
+            canvas: offscreenCanvas,
+          }).promise;
 
           const boxes = redactionBoxes[i] || [];
           ctx.fillStyle = "black";
           for (const box of boxes) {
-            const trueX = (box.x / scale) * renderScale;
-            const trueY = (box.y / scale) * renderScale;
-            const trueWidth = (box.width / scale) * renderScale;
-            const trueHeight = (box.height / scale) * renderScale;
+            // box is in page coords (1.0 scale)
+            const trueX = box.x * renderScale;
+            const trueY = box.y * renderScale;
+            const trueWidth = box.width * renderScale;
+            const trueHeight = box.height * renderScale;
             ctx.fillRect(trueX, trueY, trueWidth, trueHeight);
           }
 
@@ -306,10 +324,10 @@ const PdfRedactor = forwardRef<PdfRedactorRef, PdfRedactorProps>(
                 key={index}
                 className="absolute bg-black/80 border border-white/20"
                 style={{
-                  left: `${box.x}px`,
-                  top: `${box.y}px`,
-                  width: `${box.width}px`,
-                  height: `${box.height}px`,
+                  left: `${box.x * scale}px`,
+                  top: `${box.y * scale}px`,
+                  width: `${box.width * scale}px`,
+                  height: `${box.height * scale}px`,
                 }}
               />
             ))}

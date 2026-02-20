@@ -4,6 +4,9 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
+import { env } from "@/lib/infrastructure/config/env";
+import { APP_NAME, APP_DESCRIPTION, BASE_URL } from "@/lib/constants";
+
 // Font Setup
 const bebas = localFont({
   src: "../public/fonts/BebasNeue.otf",
@@ -15,27 +18,28 @@ const langdon = localFont({
   variable: "--font-langdon",
 });
 
+const ENV_PREFIX = env.NODE_ENV === "production" ? "" : `[${env.NODE_ENV.toUpperCase()}] `;
+
 export const metadata: Metadata = {
   title: {
-    template: "%s | Taunufiji",
-    default: "Taunufiji - Tau Nu Chapter of Phi Gamma Delta",
+    template: `%s | ${APP_NAME}`,
+    default: `${ENV_PREFIX}${APP_NAME}`,
   },
-  description:
-    "The official portal for the Tau Nu Chapter of Phi Gamma Delta at Rensselaer Polytechnic Institute. Manage duties, library resources, and chapter scheduling.",
+  description: APP_DESCRIPTION,
   keywords: ["Fiji", "Tau Nu", "RPI", "Fraternity", "Dashboard"],
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://taunufiji.app",
-    siteName: "Taunufiji",
-    title: "Taunufiji Dashboard",
-    description: "The digital headquarters for Tau Nu Brothers.",
+    url: BASE_URL,
+    siteName: APP_NAME,
+    title: `${ENV_PREFIX}${APP_NAME}`,
+    description: APP_DESCRIPTION,
     // images: [openGraphImage], // Uncomment if you add an opengraph-image.tsx or .png
   },
   twitter: {
     card: "summary_large_image",
-    title: "Taunufiji",
-    description: "Tau Nu Chapter Portal",
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
   },
 };
 

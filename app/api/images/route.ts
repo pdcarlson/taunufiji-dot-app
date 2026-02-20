@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "@/lib/infrastructure/config/env";
 
-import { cookies } from "next/headers";
 import { Readable } from "stream";
 
 // Helper to convert Node stream to Web stream

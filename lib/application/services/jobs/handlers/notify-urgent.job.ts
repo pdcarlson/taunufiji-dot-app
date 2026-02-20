@@ -1,5 +1,6 @@
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
+import { HOUSING_CONSTANTS } from "@/lib/constants";
 
 export const NotifyUrgentJob = {
   async run(
@@ -8,7 +9,8 @@ export const NotifyUrgentJob = {
     const errors: string[] = [];
     let urgent = 0;
     const now = new Date();
-    const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+    const thresholdMs = HOUSING_CONSTANTS.URGENT_THRESHOLD_HOURS * 60 * 60 * 1000;
+    const urgentThreshold = new Date(now.getTime() + thresholdMs);
 
     try {
       const allOpenTasks = await taskRepository.findMany({
@@ -20,7 +22,7 @@ export const NotifyUrgentJob = {
       const urgentCandidates = allOpenTasks.filter((task) => {
         if (!task.due_at || !task.assigned_to) return false;
         const dueTime = new Date(task.due_at).getTime();
-        return dueTime <= twelveHoursFromNow.getTime();
+        return dueTime <= urgentThreshold.getTime();
       });
 
       console.log(
@@ -37,11 +39,8 @@ export const NotifyUrgentJob = {
             continue;
           }
 
-          await taskRepository.update(task.id, {
-            notification_level: "urgent",
-          });
-
-          await NotificationService.sendNotification(
+          // Send notification FIRST, update DB only on success
+          const result = await NotificationService.sendNotification(
             task.assigned_to!,
             "urgent",
             {
@@ -49,6 +48,18 @@ export const NotifyUrgentJob = {
               taskId: task.id,
             },
           );
+
+          if (!result.success) {
+            const errMsg = `Urgent DM failed for task ${task.id}: ${result.error}`;
+            console.error(`[NotifyUrgentJob] ${errMsg}`);
+            errors.push(errMsg);
+            continue; // Don't update DB — retry next run
+          }
+
+          await taskRepository.update(task.id, {
+            notification_level: "urgent",
+          });
+
           urgent++;
         } catch (error: unknown) {
           const errMsg = `Failed to process urgent task ${task.id}: ${error instanceof Error ? error.message : String(error)}`;

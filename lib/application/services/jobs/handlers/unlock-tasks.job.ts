@@ -1,6 +1,5 @@
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
-import { logger } from "@/lib/utils/logger";
 
 export const UnlockTasksJob = {
   async run(

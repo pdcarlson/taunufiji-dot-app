@@ -554,3 +554,37 @@
   - `app/api/cron/housing/`: **Deleted** — insecure route with no auth guard. Main `/api/cron` route already handles all jobs.
 - **Verification**: Build passes, 29/29 tests pass.
 - **Impact**: Cron workflow should now succeed on next scheduled run (every 12 minutes).
+
+## 2026-02-19: CI/CD Consolidation & Staging Environment
+
+- **Infrastructure**:
+  - Implemented **CI-Only Deployments**: Removed reliance on Appwrite Sites auto-deploy.
+  - Created `.github/workflows/deploy-staging.yml`: Deploys `staging` branch to Staging environment.
+  - Updated `.github/workflows/deploy-prod.yml`: Deploys `v*` tags to Production environment.
+  - Secrets are now strictly managed via **GitHub Environments** (`production` vs `staging`).
+- **Data Sync**:
+  - Created `scripts/sync-staging.ts`: Automated script to clone Production schema and data to Staging during deploy.
+  - **Safety**: Sensitive data (Housing Schedules, Assignments) is synced as Schema-Only to prevent accidental test notifications.
+  - **Data**: Users, Professors, Courses, Ledger, and Library Resources are fully synced.
+- **Observability**:
+  - Enhanced `NotificationService` to return detailed `NotificationResult`.
+  - Fixed `NotifyUrgentJob` ordering bug (notification now sent before DB update).
+  - Added `WORKFLOW.md` documentation.
+
+## 2026-02-19: Architecture Isolation & Configuration Refactor
+
+- **Full Environment Isolation**:
+  - Eliminated hardcoded production URLs and IDs from the codebase.
+  - Refactored `scripts/sync-staging.ts` to be fully configuration-driven, using dedicated source/target environment variables.
+  - Removed hardcoded production domain fallbacks in `NotificationService`.
+- **Configuration-Driven Logic**:
+  - Expanded `lib/infrastructure/config/env.ts` to centralize all external dependencies and domain constants (fine amounts, lead times).
+  - Centralized magic numbers and **branding literals** (`APP_NAME`, `APP_DESCRIPTION`) into `lib/constants.ts` for easy single-point maintenance without infrastructure changes.
+  - Implemented runtime configuration validation via Zod, ensuring missing critical variables fail fast in production.
+- **Branding & UI**:
+  - Centralized branding strings (`APP_NAME`, `APP_DESCRIPTION`) to ensure consistency across Layout, Metadata, and Notifications.
+  - Implemented dynamic page titles that automatically prefix the environment name (e.g., `[STAGING]`) for better visual distinction.
+- **Verification**:
+  - Executed successful production build (`npm run build`).
+  - Verified 100% test pass rate across 31 units.
+  - Resolved type safety issues in `DashboardView` and `PointsService`.

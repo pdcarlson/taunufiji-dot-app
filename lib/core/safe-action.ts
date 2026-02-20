@@ -1,6 +1,5 @@
 import { getContainer, Container } from "@/lib/infrastructure/container";
 import {
-  createSessionClient,
   createJWTClient,
 } from "@/lib/presentation/server/appwrite";
 

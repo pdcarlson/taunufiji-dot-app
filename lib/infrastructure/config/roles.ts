@@ -1,32 +1,35 @@
+import { env } from "./env";
 
 // Discord Role IDs (Snowflakes)
+// Logic: Strictly use environment variables to ensure consistency across Local/Staging/Prod.
 export const ROLES = {
   // Base Roles
-  BROTHER: "750151182395244584", // @Brothers
+  BROTHER: env.ROLE_ID_BROTHER,
 
   // Officers & Committee Chairs
-  CABINET: "1148288953745686538",
-  HOUSING_CHAIR: "750354822452215880",
-  SCHOLARSHIP_CHAIR: "1070412676716564581",
-  DEV: "1452422469209161904",
-  
+  CABINET: env.ROLE_ID_CABINET,
+  HOUSING_CHAIR: env.ROLE_ID_HOUSING_CHAIR,
+  DEV: env.ROLE_ID_DEV,
 } as const;
 
-export type RoleKey = typeof ROLES[keyof typeof ROLES];
+export type RoleKey = string; // IDs are strings
+
+// Helper to filter out undefined roles (e.g. during local dev with incomplete .env)
+const filterDefined = (roles: (string | undefined)[]): string[] => 
+  roles.filter((r): r is string => !!r);
 
 // Roles allowed to access the Library (Search & Download)
 // Logic: Brother OR any officer role
-export const LIBRARY_ACCESS_ROLES: RoleKey[] = [
+export const LIBRARY_ACCESS_ROLES: string[] = filterDefined([
   ROLES.BROTHER,
   ROLES.CABINET,
   ROLES.HOUSING_CHAIR,
-  ROLES.SCHOLARSHIP_CHAIR,
   ROLES.DEV,
-];
+]);
 
 // Roles allowed to Manage Assignments (Housing)
-export const HOUSING_ADMIN_ROLES: RoleKey[] = [
+export const HOUSING_ADMIN_ROLES: string[] = filterDefined([
   ROLES.HOUSING_CHAIR,
   ROLES.CABINET,
   ROLES.DEV,
-];
+]);

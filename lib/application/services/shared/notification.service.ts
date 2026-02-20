@@ -1,7 +1,7 @@
 import { getContainer } from "@/lib/infrastructure/container";
 import { env } from "@/lib/infrastructure/config/env";
-
-const BASE_URL = "https://taunufiji.app"; // Or env.NEXT_PUBLIC_APP_URL
+import { NotificationResult } from "@/lib/domain/ports/notification.provider";
+import { BASE_URL, HOUSING_CONSTANTS } from "@/lib/constants";
 
 // Notification Types matching the Matrix
 export type NotificationType =
@@ -28,24 +28,32 @@ export const NotificationService = {
       points?: number;
       reason?: string;
     },
-  ) {
+  ): Promise<NotificationResult> {
     try {
       const { notificationProvider } = getContainer();
       const { message, link } = this.formatMessage(type, payload);
       const finalContent = link ? `${message} \n[View Task](${link})` : message;
       return await notificationProvider.sendDM(userId, finalContent);
     } catch (e) {
-      // Fail Safe: Don't block business logic if Discord is down
-      console.error("Notification Failed silently:", e);
-      return false;
+      const error = `Notification to ${userId} (${type}) failed: ${e instanceof Error ? e.message : String(e)}`;
+      console.error(`[NotificationService] ${error}`);
+      return { success: false, error };
     }
   },
 
   /**
    * Post to Admin Channel (e.g. for Proof Submission)
    */
-  async notifyAdmins(message: string, payload?: { taskId?: string }) {
-    if (!env.DISCORD_HOUSING_CHANNEL_ID) return false;
+  async notifyAdmins(
+    message: string,
+    payload?: { taskId?: string },
+  ): Promise<NotificationResult> {
+    if (!env.DISCORD_HOUSING_CHANNEL_ID) {
+      return {
+        success: false,
+        error: "DISCORD_HOUSING_CHANNEL_ID not configured",
+      };
+    }
 
     const { notificationProvider } = getContainer();
     let content = message;
@@ -102,7 +110,7 @@ export const NotificationService = {
         message = `Task rejected: ${title}${reason ? `. Reason: ${reason}` : ""}`;
         break;
       case "expired":
-        message = `Task expired: ${title}. A fine of -50 points has been applied.`;
+        message = `Task expired: ${title}. A fine of -${Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY)} points has been applied.`;
         break;
       default:
         message = `Notification: ${title}`;
