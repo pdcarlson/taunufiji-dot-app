@@ -6,6 +6,3 @@
       _Link: [./tracks/deploy_strategy_update_20260220/](./tracks/deploy_strategy_update_20260220/)_
 
 ---
-
-- [x] **Track: quality_gate_fixes_20260220**
-  _Link: [./tracks/quality_gate_fixes_20260220/](./tracks/quality_gate_fixes_20260220/)_
