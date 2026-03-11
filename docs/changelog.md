@@ -18,8 +18,13 @@
   - Added integration suites for `actionWrapper`, housing admin actions, and schedule actions.
   - Added Playwright smoke tests (`tests/e2e/smoke.spec.ts`) and CI execution steps for browser installation + e2e run.
   - Added Vitest coverage reporting script (`npm run test:coverage`) and excluded e2e specs from Vitest discovery.
+- **Repository Organization Realignment**:
+  - Archived completed specs to `docs/archive/specs/` and updated spec workflow references/indexes.
+  - Moved Playwright smoke coverage from root `e2e/` to `tests/e2e/` and updated related configs/docs.
+- **Lint Quality Drive**:
+  - Reduced lint output to zero warnings by replacing legacy `any` usage with stricter unknown/typed contracts and cleaning hook dependency/type-safety issues.
 - **Observed Staging Diagnostic Outcome**:
-  - Current diagnostics report a Discord housing channel check failure (`HTTP 404`) while Appwrite checks pass; this is now explicitly surfaced for staging remediation before production promotion.
+  - Staging diagnostics now pass end-to-end after correcting `DISCORD_HOUSING_CHANNEL_ID` to `1474106313209548904`.
 
 ## 2026-01-12: Housing V2 - Scheduels & Bounties
 
