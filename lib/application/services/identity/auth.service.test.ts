@@ -7,6 +7,7 @@ import { Member } from "@/lib/domain/entities";
 // Mock Env
 vi.mock("@/lib/infrastructure/config/env", () => ({
   env: {
+    NODE_ENV: "test",
     NEXT_PUBLIC_APPWRITE_ENDPOINT: "http://localhost/v1",
     NEXT_PUBLIC_APPWRITE_PROJECT_ID: "test-project",
     APPWRITE_API_KEY: "test-key",

@@ -1,8 +1,8 @@
 # Product Definition
 
-## Initial Concept
+## Overview
 
-**Tau Nu Fiji (The Digital Chapter)** is a purpose-built operational platform for the Phi Gamma Delta (Tau Nu Chapter) fraternity. It centralizes chapter logistics, gamifies accountability through a points-based ledger, and secures academic institutional memory. The project is currently in a "refinement" phase, focusing on architectural cleanup, developer experience (DX), and robust CI/CD workflows for a staging-to-production pipeline.
+**Tau Nu Fiji (The Digital Chapter)** is a purpose-built operational platform for the Phi Gamma Delta (Tau Nu Chapter) fraternity. It centralizes chapter logistics, gamifies accountability through a points-based ledger, and secures academic institutional memory.
 
 ## Target Audience & Roles
 
@@ -12,7 +12,7 @@ Access is strictly managed via Discord Role verification.
 - **Admins (Cabinet & Housing Chair)**:
   - **Cabinet**: Chapter executive board with full administrative oversight.
   - **Housing Chair**: Responsible for the assignment and verification of chapter chores (Housing Duties).
-  - **Dev**: Technical administrators (the user) with full system access.
+  - **Dev**: Technical administrators with full system access.
 - **Scholarship Chair**: Specific access for managing academic resources in the Library.
 
 ## Core Value Proposition
@@ -24,31 +24,31 @@ Access is strictly managed via Discord Role verification.
 
 ## Key Modules
 
-### 🏠 Housing (The Recurring Engine)
+### Housing (The Recurring Engine)
 
-- **Lifecycle**: `Scheduled` -> `Open` -> `Pending Review` -> `Approved/Rejected`.
+- **Lifecycle**: `Scheduled` → `Open` → `Pending Review` → `Approved/Rejected`.
 - **Assignment**: Automated round-robin scheduling for recurring chores.
-- **Ad-Hoc Requests**: Supports one-off tasks or bounties.
+- **Ad-Hoc Requests**: Supports one-off tasks and bounties.
 
-### 💰 Ledger (Scholarship Points)
+### Ledger (Scholarship Points)
 
 - **Purely Non-Monetary**: Tracks member engagement and performance.
 - **Categories**: Tasks, Fines (point deductions), Events, and Manual adjustments.
 - **Persistence**: Double-entry ledger records (`LedgerEntry`) linked to user profiles for auditability and leaderboard ranking.
 
-### 📚 Library (Secure Archives)
+### Library (Secure Archives)
 
 - **Indexing**: Resources are tagged by Course Number, Professor, and Semester.
 - **Security**: RBAC-protected downloads with short-lived signed URLs.
 
-### 🤖 Discord Integration
+### Discord Integration
 
 - **Identity**: Uses Discord Snowflakes for user identification and role-based access control.
 - **Messaging**: Automated DMs for duty reminders and channel messages for system-wide updates.
+- **Slash Commands**: `/duty`, `/schedule`, `/bounty`, `/leaderboard` for quick operations.
 
-## Technical Goals & DX
+## Technical Goals
 
-- **Infrastructure Cleanup**: Consolidate fragmented configuration and remove redundant dependencies.
-- **Staging Environment**: Establish a functional staging environment for testing changes before production.
-- **AI-Agent Alignment**: Structure the codebase to be easily navigable and understandable for AI pair-programmers (like Gemini).
-- **CI/CD Maturity**: Standardize build, lint, and test gates for a predictable deployment process.
+- **Staging Environment**: Functional staging environment for testing changes before production.
+- **AI-Agent Alignment**: Codebase structured to be navigable and understandable for AI pair-programmers.
+- **CI/CD Maturity**: Standardized build, lint, and test gates for a predictable deployment process.
