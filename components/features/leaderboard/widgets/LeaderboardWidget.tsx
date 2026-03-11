@@ -12,9 +12,10 @@ import clsx from "clsx";
 
 interface LeaderboardMember {
   id: string;
-  userId: string;
+  userId?: string;
   name: string;
   points: number;
+  rank?: number;
 }
 
 interface LeaderboardWidgetProps {
@@ -24,7 +25,7 @@ interface LeaderboardWidgetProps {
 export default function LeaderboardWidget({
   initialLeaderboard = [],
 }: LeaderboardWidgetProps) {
-  const { user, profile, getToken } = useAuth();
+  const { user, getToken } = useAuth();
   const [leaders, setLeaders] =
     useState<LeaderboardMember[]>(initialLeaderboard);
   const [myStats, setMyStats] = useState<{
@@ -41,17 +42,16 @@ export default function LeaderboardWidget({
 
       const token = await getToken();
 
-      // Use Server Action
-      // If we already have leaders, we only need my rank
-      const promises: Promise<any>[] = [getLeadersMyRank(token)];
-      if (!hasFetchedRef.current) {
-        promises.push(getLeaderboardAction(token));
-      }
+      const rankPromise = getLeadersMyRank(token);
+      const leadersPromise: Promise<LeaderboardMember[] | null> =
+        hasFetchedRef.current
+          ? Promise.resolve(null)
+          : (getLeaderboardAction(token) as Promise<LeaderboardMember[]>);
 
-      const [myData, data] = await Promise.all(promises);
+      const [myData, data] = await Promise.all([rankPromise, leadersPromise]);
 
       if (data && Array.isArray(data)) {
-        setLeaders(data as LeaderboardMember[]);
+        setLeaders(data);
         hasFetchedRef.current = true;
       }
       if (myData) {
@@ -60,14 +60,18 @@ export default function LeaderboardWidget({
     } catch (err) {
       console.error("Leaderboard error:", err);
       // Don't error out if we have initial data, just log
-      if (leaders.length === 0) setError("Failed to load");
+      if (!hasFetchedRef.current && initialLeaderboard.length === 0) {
+        setError("Failed to load");
+      }
     } finally {
       setLoading(false);
     }
-  }, [user, getToken]);
+  }, [user, getToken, initialLeaderboard.length]);
 
   // Helper to handle conditional my rank call
-  const getLeadersMyRank = async (token: string) => {
+  const getLeadersMyRank = async (
+    token: string,
+  ): Promise<{ rank: number; points: number } | null> => {
     // If we are authorized, we can get rank.
     // The action handles internal logic.
     return await getMyRankAction(token);
@@ -93,7 +97,9 @@ export default function LeaderboardWidget({
 
   // Find my stats
   // Prioritize fetched myStats, fallback to list search (for consistency/optimistic)
-  const listIndex = leaders.findIndex((m) => m.userId === user?.$id);
+  const listIndex = leaders.findIndex(
+    (member) => (member.userId ?? member.id) === user?.$id,
+  );
 
   const displayRank = myStats?.rank || (listIndex !== -1 ? listIndex + 1 : "-");
   const displayPoints =

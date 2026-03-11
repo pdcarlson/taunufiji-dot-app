@@ -47,7 +47,7 @@ export function calculateNextInstance(
         const options = RRule.parseString(recurrenceRule);
         options.dtstart = lastCompletedAt;
         rule = new RRule(options);
-      } catch (e) {
+      } catch {
         // Fallback or try rrulestr directly if manual parse fails (though parseString is the lower level)
         try {
           rule = rrulestr(recurrenceRule, { dtstart: lastCompletedAt });

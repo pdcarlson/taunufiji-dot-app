@@ -42,13 +42,24 @@ export const leaderboard: CommandHandler = async () => {
         },
       ],
     });
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const errorDetails =
+      typeof error === "object" && error !== null
+        ? (error as {
+            message?: string;
+            code?: number;
+            type?: string;
+            stack?: string;
+          })
+        : undefined;
     console.error("❌ Leaderboard Error Details:", {
-      message: e.message,
-      code: e.code,
-      type: e.type,
-      stack: e.stack,
+      message: errorDetails?.message || String(error),
+      code: errorDetails?.code,
+      type: errorDetails?.type,
+      stack: errorDetails?.stack,
     });
-    return createEphemeralResponse(`Failed to fetch leaderboard: ${e.message}`);
+    return createEphemeralResponse(
+      `Failed to fetch leaderboard: ${errorDetails?.message || "Unknown error"}`,
+    );
   }
 };

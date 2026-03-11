@@ -2,16 +2,50 @@ import { createEphemeralResponse } from "../utils";
 import { getContainer } from "@/lib/infrastructure/container";
 import { CommandHandler } from "../types";
 
+const DAY_SHIFT_MAP = {
+  MO: "TU",
+  TU: "WE",
+  WE: "TH",
+  TH: "FR",
+  FR: "SA",
+  SA: "SU",
+  SU: "MO",
+} as const;
+
+type DayKey = keyof typeof DAY_SHIFT_MAP;
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function asOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  return typeof value === "number" ? value : fallback;
+}
+
+function isDayKey(value: string): value is DayKey {
+  return value in DAY_SHIFT_MAP;
+}
+
 /**
  * /duty - Assign a one-off duty (mirrors CreateOneOffModal)
  * Fields: assigned_to (user), title, due_at (MM-DD), description
  * Logic: points_value = 0, type = "one_off", smart date parsing
  */
 export const duty: CommandHandler = async (interaction, options) => {
-  const userId = options.assigned_to;
-  const title = options.title;
-  const dueDateInput = options.due_at; // MM-DD format
-  const description = options.description; // required field
+  const userId = asOptionalString(options.assigned_to);
+  const title = asString(options.title);
+  const dueDateInput = asString(options.due_at); // MM-DD format
+  const description = asString(options.description); // required field
+
+  if (!userId || !title || !dueDateInput || !description) {
+    return createEphemeralResponse(
+      "❌ Missing required duty fields (assigned_to, title, due_at, description).",
+    );
+  }
 
   // Parse MM-DD and apply smart year logic
   let dueAt: Date;
@@ -86,25 +120,26 @@ export const duty: CommandHandler = async (interaction, options) => {
  * Logic: Builds RRULE (Noon), calls createSchedule
  */
 export const schedule: CommandHandler = async (interaction, options) => {
-  const title = options.title;
-  const day = options.day; // "MO", "TU", etc.
-  const description = options.description; // required field
-  const userId = options.assigned_to || undefined;
-  const leadTime = options.lead_time_hours || 24;
+  const title = asString(options.title);
+  const day = asString(options.day); // "MO", "TU", etc.
+  const description = asString(options.description); // required field
+  const userId = asOptionalString(options.assigned_to);
+  const leadTime = asNumber(options.lead_time_hours, 24);
+
+  if (!title || !description || !isDayKey(day)) {
+    return createEphemeralResponse(
+      "❌ Missing or invalid schedule fields (title, day, description).",
+    );
+  }
+
+  if (leadTime < 1) {
+    return createEphemeralResponse("❌ Lead time must be at least 1 hour.");
+  }
 
   // RRule runs in UTC timezone on server
   // For 11:59 PM EST: EST is UTC-5, so 11:59 PM EST = 04:59 AM UTC (next day)
   // Shift to next day of week since 04:59 crosses midnight
-  const dayShiftMap: Record<string, string> = {
-    MO: "TU", // Monday 11:59 PM EST = Tuesday 04:59 AM UTC
-    TU: "WE",
-    WE: "TH",
-    TH: "FR",
-    FR: "SA",
-    SA: "SU",
-    SU: "MO",
-  };
-  const nextDay = dayShiftMap[day];
+  const nextDay = DAY_SHIFT_MAP[day];
   const rrule = `FREQ=WEEKLY;BYDAY=${nextDay};BYHOUR=4;BYMINUTE=59`;
 
   try {
@@ -144,11 +179,11 @@ export const schedule: CommandHandler = async (interaction, options) => {
  * Logic: type = "bounty", no assignee
  */
 export const bounty: CommandHandler = async (interaction, options) => {
-  const title = options.title;
-  const points = options.points_value;
-  const description = options.description; // required field
+  const title = asString(options.title);
+  const points = asNumber(options.points_value);
+  const description = asString(options.description); // required field
 
-  if (!points || points <= 0) {
+  if (!title || !description || points <= 0) {
     return createEphemeralResponse("❌ Points must be a positive number.");
   }
 

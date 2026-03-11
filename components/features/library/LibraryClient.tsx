@@ -38,6 +38,11 @@ interface Filters {
   version: string;
 }
 
+interface LibrarySearchResult {
+  documents: LibraryResource[];
+  total: number;
+}
+
 const INITIAL_FILTERS: Filters = {
   department: "All",
   course_number: "All",
@@ -47,6 +52,16 @@ const INITIAL_FILTERS: Filters = {
   assessment_type: "All",
   version: "All",
 };
+
+const FILTER_KEYS: (keyof Filters)[] = [
+  "department",
+  "course_number",
+  "professor",
+  "semester",
+  "year",
+  "assessment_type",
+  "version",
+];
 
 export default function LibraryClient({
   initialTotal,
@@ -89,9 +104,8 @@ export default function LibraryClient({
   const isFirstLoad = useRef(true);
 
   useEffect(() => {
-    const isDefaultFilters = Object.keys(INITIAL_FILTERS).every(
-      (k) =>
-        (debouncedFilters as any)[k] === (INITIAL_FILTERS as any)[k],
+    const isDefaultFilters = FILTER_KEYS.every(
+      (key) => debouncedFilters[key] === INITIAL_FILTERS[key],
     );
 
     if (isFirstLoad.current && initialResources.length > 0 && isDefaultFilters) {
@@ -102,23 +116,29 @@ export default function LibraryClient({
     const runSearch = async () => {
       setLoading(true);
       try {
-        const apiFilters: Record<string, any> = {};
-        Object.keys(debouncedFilters).forEach((key) => {
-          const value = (debouncedFilters as any)[key];
+        const apiFilters: Record<string, string | number> = {};
+        FILTER_KEYS.forEach((key) => {
+          const value = debouncedFilters[key];
           if (value && value !== "All") {
             apiFilters[key] = value;
           }
         });
 
-        if (apiFilters.year && !isNaN(parseInt(apiFilters.year))) {
-          apiFilters.year = parseInt(apiFilters.year);
+        if (
+          typeof apiFilters.year === "string" &&
+          !isNaN(parseInt(apiFilters.year, 10))
+        ) {
+          apiFilters.year = parseInt(apiFilters.year, 10);
         }
 
         const jwt = await getToken();
         // Server Action Call
-        const data = await searchLibraryAction(apiFilters, jwt);
+        const data = (await searchLibraryAction(
+          apiFilters,
+          jwt,
+        )) as LibrarySearchResult;
 
-        setResults(data.documents as LibraryResource[]);
+        setResults(data.documents);
         setSearchTotal(data.total);
       } catch (err) {
         console.error("Search failed:", err);
@@ -130,7 +150,7 @@ export default function LibraryClient({
 
     runSearch();
     isFirstLoad.current = false;
-  }, [debouncedFilters, getToken]);
+  }, [debouncedFilters, getToken, initialResources.length]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -180,8 +200,8 @@ export default function LibraryClient({
 
         {!loading &&
           results &&
-          results.map((doc: any) => (
-            <LibraryFileCard key={doc.$id || doc.id} file={doc} />
+          results.map((doc: LibraryResource) => (
+            <LibraryFileCard key={doc.id} file={doc} />
           ))}
 
         {!loading && results && results.length < searchTotal && (

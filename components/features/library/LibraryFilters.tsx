@@ -7,9 +7,19 @@ import { Search, Filter, Loader2 } from "lucide-react";
 
 import { getMetadataAction } from "@/lib/presentation/actions/library/read.actions";
 
+interface LibraryFiltersState {
+  department: string;
+  course_number: string;
+  professor: string;
+  semester: string;
+  year: string;
+  assessment_type: string;
+  version: string;
+}
+
 interface FilterProps {
-  filters: any;
-  setFilters: (f: any) => void;
+  filters: LibraryFiltersState;
+  setFilters: (filters: LibraryFiltersState) => void;
 }
 
 export default function LibraryFilters({ filters, setFilters }: FilterProps) {
@@ -35,8 +45,8 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
           setCourseData(data.courses);
           setProfessors(data.professors);
         }
-      } catch (e) {
-        console.error("Failed to load filter data", e);
+      } catch (error: unknown) {
+        console.error("Failed to load filter data", error);
       } finally {
         setLoading(false);
       }

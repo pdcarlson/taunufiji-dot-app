@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Basic recursive schema for options
-const optionSchema: z.ZodType<any> = z.lazy(() =>
+const optionSchema: z.ZodType<unknown> = z.lazy(() =>
   z.object({
     name: z.string(),
     type: z.number(),

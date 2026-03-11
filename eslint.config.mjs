@@ -16,6 +16,9 @@ const eslintConfig = defineConfig([
     "**/*.test.ts",
     "**/__tests__/**",
     "public/**",
+    "coverage/**",
+    "test-results/**",
+    "playwright-report/**",
   ]),
   {
     rules: {

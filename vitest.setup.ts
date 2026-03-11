@@ -5,7 +5,10 @@ import * as matchers from "@testing-library/jest-dom/matchers";
 expect.extend(matchers);
 
 // Set required mock environment variables for tests so strict validation doesn't fail
-(process.env as any).NODE_ENV = "test";
+process.env = {
+  ...process.env,
+  NODE_ENV: "test",
+};
 process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
 process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT = "http://localhost/v1";
 process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID = "test-project";

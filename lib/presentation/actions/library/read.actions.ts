@@ -54,8 +54,9 @@ interface LibrarySearchFilters {
   course_number?: string;
   professor?: string;
   year?: string | number;
-  [key: string]: any; // Allow extensibility if needed, or keep strict?
-  // Let's keep it somewhat strict but pragmatic.
+  semester?: string;
+  assessment_type?: string;
+  version?: string;
 }
 
 export async function searchLibraryAction(

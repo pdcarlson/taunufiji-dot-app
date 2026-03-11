@@ -13,5 +13,9 @@ export interface IStorageService {
   /**
    * Uploads a file buffer directly to S3 (Server -> S3)
    */
-  uploadFile(buffer: Buffer, key: string, contentType: string): Promise<any>;
+  uploadFile(
+    buffer: Buffer,
+    key: string,
+    contentType: string,
+  ): Promise<unknown>;
 }

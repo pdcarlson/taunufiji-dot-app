@@ -46,7 +46,7 @@ export async function fetchInitialLibraryTotal() {
     const { libraryService } = getContainer();
     const result = await libraryService.search({});
     return result.total;
-  } catch (error) {
+  } catch {
     return 0;
   }
 }

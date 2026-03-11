@@ -70,22 +70,22 @@ export interface InteractionResponse {
   data?: {
     tts?: boolean;
     content?: string;
-    embeds?: any[];
-    allowed_mentions?: any;
+    embeds?: unknown[];
+    allowed_mentions?: Record<string, unknown>;
     flags?: number;
-    components?: any[];
+    components?: unknown[];
   };
 }
 
 export type CommandHandler = (
   interaction: DiscordInteraction,
-  options: Record<string, any>,
+  options: Record<string, unknown>,
 ) => Promise<InteractionResponse>;
 
 export interface SlashCommand {
   name: string;
   description: string;
-  options?: any[]; // Discord API Command Options
+  options?: unknown[]; // Discord API Command Options
   execute: CommandHandler;
   requiresAdmin?: boolean; // Internal flag for our middleware
 }

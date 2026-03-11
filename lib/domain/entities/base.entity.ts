@@ -12,5 +12,5 @@ export interface BaseEntity {
   $createdAt: string;
   $updatedAt: string;
   $permissions: string[];
-  [key: string]: any;
+  [key: string]: unknown;
 }

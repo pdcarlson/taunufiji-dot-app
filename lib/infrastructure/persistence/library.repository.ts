@@ -32,8 +32,15 @@ export class AppwriteLibraryRepository implements ILibraryRepository {
     try {
       const doc = await this.db.getDocument(DB_ID, COLLECTIONS.LIBRARY, id);
       return this.toDomain(doc);
-    } catch (error: any) {
-      if (error.code === 404) return null;
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: number }).code === 404
+      ) {
+        return null;
+      }
       throw error;
     }
   }

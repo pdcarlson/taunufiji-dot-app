@@ -33,9 +33,11 @@ export default function LibraryFileCard({ file }: { file: LibraryResource }) {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Download failed");
+      const errorMessage =
+        err instanceof Error ? err.message : "Download failed";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

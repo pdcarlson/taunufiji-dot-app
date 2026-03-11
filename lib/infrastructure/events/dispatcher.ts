@@ -9,10 +9,10 @@ import { initDomainEvents } from "./init";
 export { DomainEvents };
 export type { LibraryUploadedEvent, TaskApprovedEvent };
 
-type EventHandler<T = any> = (payload: T) => Promise<void>;
+type EventHandler<T = unknown> = (payload: T) => Promise<void>;
 
 class EventBus {
-  private handlers: Map<string, EventHandler[]> = new Map();
+  private handlers: Map<string, EventHandler<unknown>[]> = new Map();
 
   /**
    * Register a handler for an event.
@@ -21,7 +21,7 @@ class EventBus {
     if (!this.handlers.has(event)) {
       this.handlers.set(event, []);
     }
-    this.handlers.get(event)?.push(handler);
+    this.handlers.get(event)?.push(handler as EventHandler<unknown>);
   }
 
   /**
