@@ -37,7 +37,7 @@ async function getDiscordMember(discordUserId: string) {
     return null;
   }
 
-  if (process.env.NODE_ENV === "development") {
+  if (env.NODE_ENV === "development") {
     console.log(`[DiscordAPI] Fetching member ${discordUserId} from Guild ${GUILD_ID}`);
   }
 
@@ -90,7 +90,7 @@ export class AuthService {
    * Now exclusively uses Repositories and Providers (Pure Application Logic).
    */
   async syncUser(authId: string): Promise<User> {
-    if (process.env.NODE_ENV === "development") {
+    if (env.NODE_ENV === "development") {
       console.log(`[AuthService] Starting syncUser for ${authId}`);
     }
 
@@ -117,7 +117,7 @@ export class AuthService {
     );
 
     if (!existingUser) {
-      if (process.env.NODE_ENV === "development") {
+      if (env.NODE_ENV === "development") {
         console.log(
           `[AuthService] User not found (by Discord ID). Creating new profile...`,
         );
