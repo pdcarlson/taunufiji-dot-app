@@ -30,4 +30,4 @@ Multiple infrastructure-level issues: CI workflow security gaps, PDF redactor co
 
 ## References
 
-- Original track: `conductor/archive/infra_logic_hardening_20260219/` (removed)
+- Implementation commit: `1b81b4b` (`chore: implement unified environment configuration and infrastructure hardening`)

@@ -50,5 +50,5 @@ The project needs a fully functional staging environment to test changes before 
 ## References
 
 - Archived: `staging_setup_20260219` (conductor tree removed)
-- Superseded by: [Deploy Strategy Update](completed/deploy-strategy-update.md) spec
+- Deployment strategy superseded by: [Deploy Strategy Update](completed/deploy-strategy-update.md); remaining sections of this spec (environment verification, end-to-end walkthrough) are still in-progress
 - Deployment docs: [docs/deployment.md](../docs/deployment.md)

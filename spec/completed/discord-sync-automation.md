@@ -25,13 +25,13 @@ Discord Slash Commands needed to be registered/updated manually. Automating this
 
 - [x] Script can sync commands to any environment
 - [x] Errors in command definitions are surfaced clearly
-- [x] No manual `npm run discord:register` required for standard deploys
+- [x] ~~No manual `npm run discord:register` required for standard deploys~~ — **Revised**: the deploy strategy update removed the GitHub Actions deploy workflows that ran this script. Manual registration via `npm run discord:register` is now the primary method.
 
 ## Technical Approach
 
 Used Discord's "Bulk Overwrite Guild Commands" endpoint via PUT request. Script at `scripts/register-discord-commands.ts`.
 
-**Note**: With the deploy strategy update (moving to Appwrite/GitHub integration), the CI/CD integration point for this script is no longer the GitHub Actions deploy workflows. Manual registration is currently the primary method: `npm run discord:register`.
+The script was originally integrated into `deploy-staging.yml` and `deploy-prod.yml`. After the [Deploy Strategy Update](deploy-strategy-update.md) moved deployments to direct Appwrite/GitHub integration, those workflows were deleted. Command registration is now triggered manually: `npm run discord:register`.
 
 ## References
 
