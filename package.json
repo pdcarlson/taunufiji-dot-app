@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest",
+    "diagnose:staging": "tsx scripts/diagnose-staging.ts",
     "discord:register": "tsx scripts/register-discord-commands.ts"
   },
   "dependencies": {

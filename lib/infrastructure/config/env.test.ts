@@ -20,19 +20,19 @@ describe("Environment Configuration", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(import("@/lib/infrastructure/config/env")).rejects.toThrow(
-      "Invalid server environment variables"
+      /Invalid server environment variables/,
     );
 
     expect(consoleSpy).toHaveBeenCalled();
   });
 
   it("should throw an error in production if validation fails", async () => {
-    (process.env as any).NODE_ENV = "production";
+    process.env = { ...process.env, NODE_ENV: "production" };
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(import("@/lib/infrastructure/config/env")).rejects.toThrow(
-      "Invalid server environment variables"
+      /Invalid server environment variables/,
     );
 
     expect(consoleSpy).toHaveBeenCalled();
