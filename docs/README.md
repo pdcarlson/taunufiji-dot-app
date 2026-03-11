@@ -13,6 +13,19 @@ Project documentation for Tau Nu Fiji — The Digital Chapter.
 | [Deployment](deployment.md) | CI/CD pipeline, staging/production workflow, secret management |
 | [Changelog](changelog.md) | Historical log of all major changes |
 
+## Specs
+
+Spec-driven development workflow and all active/completed specifications live in [`spec/`](../spec/README.md).
+
+| Spec | Status |
+|---|---|
+| [Staging Environment Setup](../spec/staging-environment-setup.md) | In Progress |
+| [Deploy Strategy Update](../spec/completed/deploy-strategy-update.md) | Complete |
+| [Discord Sync Automation](../spec/completed/discord-sync-automation.md) | Complete |
+| [Centralize Env Config](../spec/completed/centralize-env-config.md) | Complete |
+| [Quality Gate Fixes](../spec/completed/quality-gate-fixes.md) | Complete |
+| [Infra Logic Hardening](../spec/completed/infra-logic-hardening.md) | Complete |
+
 ## Style Guides
 
 | Guide | Description |

@@ -10,11 +10,11 @@ Presentation → Application → Domain ← Infrastructure
 
 ### 1. Domain Layer (`lib/domain`)
 
-The heart of the software. Contains **zero external dependencies**.
+The heart of the software. Has **no imports from infrastructure, application, or presentation layers**.
 
 - **Entities**: Pure TypeScript classes defining core business objects (`HousingTask`, `LedgerEntry`).
 - **Ports**: Interface definitions for external systems (`ITaskRepository`, `INotificationProvider`).
-- **DTOs**: Strict Zod schemas defining data contracts for Server Actions.
+- **Types / DTOs**: Zod schemas (`lib/domain/types/`) define the canonical shape of domain objects (e.g., `BaseEntitySchema`, `TaskSchema`). Zod is the sole external dependency in this layer — it is used for schema _definition and type inference_ (`z.infer<…>`). Runtime validation of input payloads destined for Server Actions happens in the presentation layer; the domain schemas serve as the single source of truth for the data contracts shared across layers.
 
 ### 2. Application Layer (`lib/application`)
 
@@ -36,11 +36,12 @@ Concrete implementations of domain ports.
 
 ### 4. Presentation Layer (`app/`, `components/`)
 
-- **Server Actions**: Secured entry points using `actionWrapper` that safeguards every mutation with:
-  1. **Authentication**: JWT verification.
-  2. **Dependency Injection**: Context provisioning via the IoC container.
-  3. **Authorization**: RBAC checks against Discord roles.
-  4. **Error Handling**: Standardized error envelopes.
+- **Server Actions**: Secured entry points using `actionWrapper` (`lib/presentation/utils/action-handler.ts`) that enforces a strict pipeline:
+  1. **Authentication**: JWT verification (required unless `public: true`).
+  2. **Global Brother check**: Every non-public action verifies the caller holds a Brother role via `authService.verifyBrother`. Skipped only when `public` is set.
+  3. **Optional RBAC**: If `allowedRoles` is provided, an additional `authService.verifyRole` call checks the caller against those specific Discord role IDs. When `allowedRoles` is omitted, the Brother check alone gates access.
+  4. **Execution with DI**: Only after auth and authorization pass does `actionWrapper` call `getContainer()` to inject the IoC container and invoke the handler.
+  5. **Error Handling**: Failures at any step are caught and returned as standardized `{ success, error }` envelopes.
 - **Components**: Organized by feature domain (`components/features/housing`, `library`, `leaderboard`).
 - **Container/Presentational Pattern**: Components receive dependencies as props (e.g., `getJWT`) rather than importing infrastructure directly.
 
@@ -50,7 +51,7 @@ Concrete implementations of domain ports.
 2. **Separation of Concerns**: UI (React) is completely decoupled from Business Logic (Services).
 3. **Testability**: The Application layer can be tested in isolation by mocking the Infrastructure interfaces.
 4. **No static service calls**: All services use constructor injection via the IoC container.
-5. **Domain independence**: `lib/domain` must have zero imports from infrastructure, application, or presentation layers.
+5. **Domain independence**: `lib/domain` must have zero imports from infrastructure, application, or presentation layers. Zod is the only allowed external dependency (for schema definitions in `lib/domain/types/`).
 
 ## Authentication Flow
 

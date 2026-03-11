@@ -2,7 +2,7 @@
 
 ## Pipeline Overview
 
-```
+```text
 Feature Branch → PR (CI Quality Gates) → Merge to staging → Appwrite deploys Staging
                                                               ↓
                                               Manual QA → Merge to main → Appwrite deploys Production
@@ -43,5 +43,6 @@ This workflow does **not** handle deployment. It serves strictly as a quality ga
 
 ## Cron Jobs
 
-- GitHub Actions workflow (`cron.yml`) triggers `/api/cron?key=<CRON_SECRET>&job=HOURLY` every 12 minutes
-- Supports `workflow_dispatch` with environment selection (`production` or `staging`)
+- GitHub Actions workflow (`cron.yml`) runs on a `*/12 * * * *` schedule (every 12 minutes). The endpoint call uses `job=HOURLY` as a logical job name — it refers to the batch of hourly-cadence tasks (unlock, notify, expire) that are safe to run more frequently than once per hour.
+- **Scheduled runs** always target the `production` environment (the schedule trigger has no environment input).
+- **Manual runs** (`workflow_dispatch`) allow selecting `production` or `staging` via the `environment` input, which controls which GitHub Environment secrets (and therefore which `NEXT_PUBLIC_APP_URL` and `CRON_SECRET`) are used.
