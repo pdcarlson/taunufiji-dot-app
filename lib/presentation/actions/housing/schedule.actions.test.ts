@@ -19,7 +19,7 @@ const hoisted = vi.hoisted(() => {
         account: null;
       }) => Promise<unknown>,
       options: unknown,
-    ) => {
+    ): Promise<Record<string, unknown>> => {
       const data = await action({
         container: mockContainer,
         userId: "auth_admin",

@@ -21,9 +21,9 @@ The current gap is not deployment wiring — it is **runtime confidence**. Stagi
 - [x] Cron workflow supports targeting `staging` environment
 - [x] No hardcoded production URLs or Discord IDs in the codebase
 - [x] Dynamic page titles prefix environment name (e.g., `[STAGING]`)
-- [ ] Runtime environment diagnostics report Appwrite + Discord connectivity and fail clearly
-- [ ] Housing mutation actions enforce housing-admin RBAC on the server
-- [ ] Task-creation UI surfaces categorized failure causes (auth, role, validation, infra)
+- [x] Runtime environment diagnostics report Appwrite + Discord connectivity and fail clearly
+- [x] Housing mutation actions enforce housing-admin RBAC on the server
+- [x] Task-creation UI surfaces categorized failure causes (auth, role, validation, infra)
 - [ ] Staging environment manually verified end-to-end
 
 ### Non-Functional
@@ -31,16 +31,16 @@ The current gap is not deployment wiring — it is **runtime confidence**. Stagi
 - [x] No production secrets present in the repository
 - [x] Clear environment differentiation in the UI
 - [x] `SKIP_ENV_VALIDATION` bypass available for CI builds
-- [ ] Staging failures are diagnosable in under 10 minutes using a documented runbook
+- [x] Staging failures are diagnosable in under 10 minutes using a documented runbook
 
 ## Acceptance Criteria
 
 - [x] `npm run build` succeeds with staging environment variables
 - [x] CI quality gates pass on the `staging` branch
 - [x] `env.ts` correctly differentiates between required and optional keys
-- [ ] A single command verifies staging-critical environment health (Appwrite DB access + Discord role lookup path)
-- [ ] Housing task create/update/delete/schedule mutations are rejected for non-admin users
-- [ ] Task creation failures provide actionable user and server diagnostics
+- [x] A single command verifies staging-critical environment health (Appwrite DB access + Discord role lookup path)
+- [x] Housing task create/update/delete/schedule mutations are rejected for non-admin users
+- [x] Task creation failures provide actionable user and server diagnostics
 - [ ] A clean staging deployment is verified (manually or via logs)
 - [ ] End-to-end walkthrough on staging (login, view dashboard, complete a housing duty)
 
@@ -66,3 +66,4 @@ The current gap is not deployment wiring — it is **runtime confidence**. Stagi
 - Deployment strategy superseded by: [Deploy Strategy Update](completed/deploy-strategy-update.md); remaining sections of this spec (environment verification, end-to-end walkthrough) are still in-progress
 - Deployment docs: [docs/deployment.md](../docs/deployment.md)
 - Companion implementation spec: [QA Audit and Staging Hardening](qa-audit-and-staging-hardening.md)
+- Diagnostics note: `npm run diagnose:staging` currently reports a failing Discord housing channel check (HTTP 404), which must be resolved in staging configuration before production promotion.

@@ -1,5 +1,26 @@
 # Project Log
 
+## 2026-03-11: Staging QA Audit Hardening
+
+- **Specs & Documentation**:
+  - Added `spec/qa-audit-and-staging-hardening.md` and updated `spec/staging-environment-setup.md` with runtime-readiness acceptance criteria.
+  - Added `docs/housing-behavior-reference.md` as a durable behavior/edge-case reference.
+  - Expanded deployment docs with environment matrix, diagnostics command, and staging troubleshooting runbook.
+- **Environment Diagnostics**:
+  - Added `npm run diagnose:staging` (`scripts/diagnose-staging.ts`) to verify Appwrite and Discord staging dependencies.
+  - Refactored server environment schema into reusable `server-env-schema.ts` for safer validation in both app runtime and diagnostics tooling.
+- **Housing Security & UX**:
+  - Enforced `HOUSING_ADMIN_ROLES` on housing mutation actions (`create/update/delete/review/schedule`).
+  - Improved task-creation UX with categorized failure messaging (auth, role, validation, database, external service).
+  - Added action-level error classification and contextual logging in `actionWrapper`.
+- **Testing System Upgrade**:
+  - Added coverage tooling (`@vitest/coverage-v8`) and critical-module coverage gate (`npm run test:coverage:critical`) with 90%+ thresholds.
+  - Added integration suites for `actionWrapper`, housing admin actions, and schedule actions.
+  - Added Playwright smoke tests (`e2e/smoke.spec.ts`) and CI execution steps for browser installation + e2e run.
+  - Added Vitest coverage reporting script (`npm run test:coverage`) and excluded e2e specs from Vitest discovery.
+- **Observed Staging Diagnostic Outcome**:
+  - Current diagnostics report a Discord housing channel check failure (`HTTP 404`) while Appwrite checks pass; this is now explicitly surfaced for staging remediation before production promotion.
+
 ## 2026-01-12: Housing V2 - Scheduels & Bounties
 
 - **Feature Completion**: Implemented full UI for Creating Recurring Schedules and Posting Bounties.

@@ -2,7 +2,7 @@
 
 ## Status
 
-in-progress
+complete
 
 ## Problem
 
@@ -19,30 +19,30 @@ Before promoting staging to production, we need a stronger quality system and cl
 
 ### Functional
 
-- [ ] Add a runtime diagnostics mechanism that verifies staging-critical dependencies (Appwrite + Discord role verification path)
-- [ ] Enforce housing-admin authorization on housing mutation server actions
-- [ ] Improve task-creation UX error handling so failures are categorized and actionable
-- [ ] Add coverage tooling to Vitest and emit coverage reports in CI
-- [ ] Add integration tests for auth wrapper + housing mutation actions
-- [ ] Add e2e smoke tests for deployment-critical routes and auth redirects
-- [ ] Create a durable behavior reference for housing lifecycle and edge cases in `docs/`
+- [x] Add a runtime diagnostics mechanism that verifies staging-critical dependencies (Appwrite + Discord role verification path)
+- [x] Enforce housing-admin authorization on housing mutation server actions
+- [x] Improve task-creation UX error handling so failures are categorized and actionable
+- [x] Add coverage tooling to Vitest and emit coverage reports in CI
+- [x] Add integration tests for auth wrapper + housing mutation actions
+- [x] Add e2e smoke tests for deployment-critical routes and auth redirects
+- [x] Create a durable behavior reference for housing lifecycle and edge cases in `docs/`
 
 ### Non-Functional
 
-- [ ] Diagnostics must not leak secret values
-- [ ] New tests should be deterministic and runnable in CI
-- [ ] Keep architecture boundaries intact (presentation → application → domain)
-- [ ] Coverage thresholds should start strict on touched critical modules and ratchet toward global 90%
+- [x] Diagnostics must not leak secret values
+- [x] New tests should be deterministic and runnable in CI
+- [x] Keep architecture boundaries intact (presentation → application → domain)
+- [x] Coverage thresholds should start strict on touched critical modules and ratchet toward global 90%
 
 ## Acceptance Criteria
 
-- [ ] Running the diagnostics command clearly reports pass/fail for Appwrite DB connectivity and Discord verification dependencies
-- [ ] Non-admin users cannot execute housing mutation actions (create/update/delete/schedule/review)
-- [ ] Create-task modals show specific user-facing failure classes (auth, permission, validation, infrastructure)
-- [ ] `npm run test -- --run --coverage` succeeds and generates a report
-- [ ] Integration tests validate RBAC and action wrapper behavior in mutation paths
-- [ ] E2E smoke tests run in CI for critical route/auth checks
-- [ ] Documentation clearly separates living implementation specs (`spec/`) from durable behavior/runbooks (`docs/`)
+- [x] Running the diagnostics command clearly reports pass/fail for Appwrite DB connectivity and Discord verification dependencies
+- [x] Non-admin users cannot execute housing mutation actions (create/update/delete/schedule/review)
+- [x] Create-task modals show specific user-facing failure classes (auth, permission, validation, infrastructure)
+- [x] `npm run test -- --run --coverage` succeeds and generates a report
+- [x] Integration tests validate RBAC and action wrapper behavior in mutation paths
+- [x] E2E smoke tests run in CI for critical route/auth checks
+- [x] Documentation clearly separates living implementation specs (`spec/`) from durable behavior/runbooks (`docs/`)
 
 ## Technical Approach
 
@@ -84,3 +84,4 @@ Before promoting staging to production, we need a stronger quality system and cl
   - [Centralize Env Config](completed/centralize-env-config.md)
   - [Quality Gate Fixes](completed/quality-gate-fixes.md)
   - [Infra Logic Hardening](completed/infra-logic-hardening.md)
+  - This spec shipped in commits `5c4bfbb`, `ba8abeb`, `c7c6a2f`, and `7d62558`.
