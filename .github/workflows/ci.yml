@@ -33,7 +33,16 @@ jobs:
               run: npx tsc --noEmit
 
             - name: Test
-              run: npm run test
+              run: npm run test -- --run
+
+            - name: Coverage (Critical Modules)
+              run: npm run test:coverage:critical
+
+            - name: Install Playwright Browsers
+              run: npx playwright install --with-deps chromium
+
+            - name: E2E Smoke Tests
+              run: npm run test:e2e
 
             - name: Validate GitHub Secrets
               env:
