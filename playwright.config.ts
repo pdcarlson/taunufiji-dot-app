@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 3100;
+const PORT = 3000;
 const baseURL = `http://127.0.0.1:${PORT}`;
 
 const E2E_ENV = [
@@ -24,7 +24,7 @@ const E2E_ENV = [
 ].join(" ");
 
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: "./tests/e2e",
   timeout: 30_000,
   expect: {
     timeout: 10_000,

@@ -16,19 +16,22 @@ Project documentation for Tau Nu Fiji — The Digital Chapter.
 
 ## Specs
 
-Spec-driven development workflow and all active/completed specifications live in [`spec/`](../spec/README.md).
+Spec-driven development workflow and active specifications live in [`spec/`](../spec/README.md). Completed specs are archived in [`docs/archive/specs/`](archive/specs/README.md).
 
-| Spec | Status |
+| Active Spec | Status |
 |---|---|
 | [Staging Environment Setup](../spec/staging-environment-setup.md) | In Progress |
-| [QA Audit and Staging Hardening](../spec/qa-audit-and-staging-hardening.md) | In Progress |
-| [Deploy Strategy Update](../spec/completed/deploy-strategy-update.md) | Complete |
-| [Discord Sync Automation](../spec/completed/discord-sync-automation.md) | Complete |
-| [Centralize Env Config](../spec/completed/centralize-env-config.md) | Complete |
-| [Quality Gate Fixes](../spec/completed/quality-gate-fixes.md) | Complete |
-| [Infra Logic Hardening](../spec/completed/infra-logic-hardening.md) | Complete |
+| [QA Audit and Staging Hardening](../spec/qa-audit-and-staging-hardening.md) | Complete |
 
-> Rule of thumb: `spec/` tracks planned or in-flight implementation work; `docs/` captures durable system behavior and operational references.
+| Archived Completed Spec | Location |
+|---|---|
+| Deploy Strategy Update | [docs/archive/specs/deploy-strategy-update.md](archive/specs/deploy-strategy-update.md) |
+| Discord Sync Automation | [docs/archive/specs/discord-sync-automation.md](archive/specs/discord-sync-automation.md) |
+| Centralize Env Config | [docs/archive/specs/centralize-env-config.md](archive/specs/centralize-env-config.md) |
+| Quality Gate Fixes | [docs/archive/specs/quality-gate-fixes.md](archive/specs/quality-gate-fixes.md) |
+| Infrastructure Logic Hardening | [docs/archive/specs/infra-logic-hardening.md](archive/specs/infra-logic-hardening.md) |
+
+> Rule of thumb: `spec/` tracks planned/in-flight implementation work; `docs/` captures durable references and archived completed tracks.
 
 ## Style Guides
 

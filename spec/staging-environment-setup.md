@@ -63,7 +63,7 @@ The current gap is not deployment wiring — it is **runtime confidence**. Stagi
 ## References
 
 - Archived: `staging_setup_20260219` (conductor tree removed)
-- Deployment strategy superseded by: [Deploy Strategy Update](completed/deploy-strategy-update.md); remaining sections of this spec (environment verification, end-to-end walkthrough) are still in-progress
+- Deployment strategy superseded by: [Deploy Strategy Update](../docs/archive/specs/deploy-strategy-update.md); remaining sections of this spec (environment verification, end-to-end walkthrough) are still in-progress
 - Deployment docs: [docs/deployment.md](../docs/deployment.md)
 - Companion implementation spec: [QA Audit and Staging Hardening](qa-audit-and-staging-hardening.md)
-- Diagnostics note: `npm run diagnose:staging` currently reports a failing Discord housing channel check (HTTP 404), which must be resolved in staging configuration before production promotion.
+- Diagnostics note: `npm run diagnose:staging` now passes in cloud after correcting `DISCORD_HOUSING_CHANNEL_ID` to the active channel snowflake.

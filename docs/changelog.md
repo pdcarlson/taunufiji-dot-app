@@ -16,7 +16,7 @@
 - **Testing System Upgrade**:
   - Added coverage tooling (`@vitest/coverage-v8`) and critical-module coverage gate (`npm run test:coverage:critical`) with 90%+ thresholds.
   - Added integration suites for `actionWrapper`, housing admin actions, and schedule actions.
-  - Added Playwright smoke tests (`e2e/smoke.spec.ts`) and CI execution steps for browser installation + e2e run.
+  - Added Playwright smoke tests (`tests/e2e/smoke.spec.ts`) and CI execution steps for browser installation + e2e run.
   - Added Vitest coverage reporting script (`npm run test:coverage`) and excluded e2e specs from Vitest discovery.
 - **Observed Staging Diagnostic Outcome**:
   - Current diagnostics report a Discord housing channel check failure (`HTTP 404`) while Appwrite checks pass; this is now explicitly surfaced for staging remediation before production promotion.

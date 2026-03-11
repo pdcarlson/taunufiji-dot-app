@@ -81,7 +81,7 @@ Before promoting staging to production, we need a stronger quality system and cl
 ## References
 
 - Related completed specs:
-  - [Centralize Env Config](completed/centralize-env-config.md)
-  - [Quality Gate Fixes](completed/quality-gate-fixes.md)
-  - [Infra Logic Hardening](completed/infra-logic-hardening.md)
+  - [Centralize Env Config](../docs/archive/specs/centralize-env-config.md)
+  - [Quality Gate Fixes](../docs/archive/specs/quality-gate-fixes.md)
+  - [Infra Logic Hardening](../docs/archive/specs/infra-logic-hardening.md)
   - This spec shipped in commits `5c4bfbb`, `ba8abeb`, `c7c6a2f`, and `7d62558`.
