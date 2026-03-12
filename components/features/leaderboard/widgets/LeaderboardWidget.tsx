@@ -20,13 +20,16 @@ interface LeaderboardMember {
 
 interface LeaderboardWidgetProps {
   initialLeaderboard?: LeaderboardMember[];
+  initialLeaderboardPrefetched?: boolean;
 }
 
 export default function LeaderboardWidget({
   initialLeaderboard,
+  initialLeaderboardPrefetched = false,
 }: LeaderboardWidgetProps) {
   const { user, getToken } = useAuth();
-  const hasInitialLeaderboard = initialLeaderboard !== undefined;
+  const propProvided = initialLeaderboard !== undefined;
+  const prefetched = initialLeaderboardPrefetched === true;
   const [leaders, setLeaders] = useState<LeaderboardMember[]>(
     initialLeaderboard ?? [],
   );
@@ -34,14 +37,21 @@ export default function LeaderboardWidget({
     rank: number;
     points: number;
   } | null>(null);
-  const [loading, setLoading] = useState((initialLeaderboard ?? []).length === 0);
+  const [loading, setLoading] = useState(
+    !prefetched && (initialLeaderboard ?? []).length === 0,
+  );
   const [error, setError] = useState<string | null>(null);
-  const hasFetchedRef = useRef(hasInitialLeaderboard);
+  const hasFetchedRef = useRef(prefetched);
 
   useEffect(() => {
     setLeaders(initialLeaderboard ?? []);
-    hasFetchedRef.current = hasInitialLeaderboard;
-  }, [initialLeaderboard, hasInitialLeaderboard]);
+    hasFetchedRef.current = prefetched;
+
+    if (prefetched || (initialLeaderboard?.length ?? 0) > 0) {
+      setError(null);
+      setLoading(false);
+    }
+  }, [initialLeaderboard, prefetched]);
 
   const fetchLeaders = useCallback(async () => {
     try {
@@ -50,7 +60,7 @@ export default function LeaderboardWidget({
       const token = await getToken();
 
       const leadersPromise: Promise<LeaderboardMember[] | null> =
-        hasFetchedRef.current || hasInitialLeaderboard
+        hasFetchedRef.current || prefetched
           ? Promise.resolve(null)
           : (getLeaderboardAction(token) as Promise<LeaderboardMember[]>);
       const [rankResult, leadersResult] = await Promise.allSettled([
@@ -60,24 +70,40 @@ export default function LeaderboardWidget({
 
       if (leadersResult.status === "fulfilled" && leadersResult.value) {
         setLeaders(leadersResult.value);
+        setError(null);
         hasFetchedRef.current = true;
+      } else if (leadersResult.status === "rejected") {
+        const reason =
+          leadersResult.reason instanceof Error
+            ? leadersResult.reason.message
+            : String(leadersResult.reason);
+        setError(reason);
       }
+
       if (rankResult.status === "fulfilled") {
         setMyStats(rankResult.value);
+        if (leadersResult.status !== "rejected") {
+          setError(null);
+        }
       } else {
         console.error("Leaderboard rank fetch failed", rankResult.reason);
         setMyStats(null);
+        const reason =
+          rankResult.reason instanceof Error
+            ? rankResult.reason.message
+            : String(rankResult.reason);
+        setError(reason);
       }
     } catch (err) {
       console.error("Leaderboard error:", err);
       // Don't error out if we have initial data, just log
-      if (!hasFetchedRef.current && !hasInitialLeaderboard) {
+      if (!hasFetchedRef.current && !prefetched) {
         setError("Failed to load");
       }
     } finally {
       setLoading(false);
     }
-  }, [user, getToken, hasInitialLeaderboard]);
+  }, [user, getToken, prefetched]);
 
   // Helper to handle conditional my rank call
   const getLeadersMyRank = async (
@@ -92,10 +118,14 @@ export default function LeaderboardWidget({
     // If we have initial data, we only need to fetch user rank if user is present
     if (user) {
       fetchLeaders();
-    } else if (hasInitialLeaderboard && (initialLeaderboard?.length ?? 0) > 0) {
+    } else if (prefetched && (initialLeaderboard?.length ?? 0) === 0) {
       setLoading(false);
+      setError(null);
+    } else if (propProvided && (initialLeaderboard?.length ?? 0) > 0) {
+      setLoading(false);
+      setError(null);
     }
-  }, [user, fetchLeaders, hasInitialLeaderboard, initialLeaderboard?.length]);
+  }, [user, fetchLeaders, propProvided, prefetched, initialLeaderboard?.length]);
 
   // Standardized Name Formatter
   const formatName = (fullName: string) => {

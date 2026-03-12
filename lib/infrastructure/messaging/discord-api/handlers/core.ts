@@ -34,7 +34,7 @@ export const leaderboard: CommandHandler = async () => {
       return `${medal} **${u.full_name}** — ${u.details_points_current || 0} pts`;
     });
 
-    logger.debug("Formatted leaderboard payload", { lines });
+    logger.debug("Formatted leaderboard payload", { lineCount: lines.length });
 
     return createResponse({
       embeds: [

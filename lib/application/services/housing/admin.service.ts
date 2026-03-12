@@ -127,8 +127,6 @@ export class AdminService {
 
     // For ad-hoc tasks: delete entirely on rejection
     if (task.type === "ad_hoc") {
-      await this.taskRepository.delete(taskId);
-
       if (task.assigned_to) {
         await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
           taskId: task.id,
@@ -137,6 +135,8 @@ export class AdminService {
           reason,
         });
       }
+
+      await this.taskRepository.delete(taskId);
       return true;
     }
 
@@ -149,14 +149,22 @@ export class AdminService {
       proof_s3_key: null,
       assigned_to: shouldUnassign ? null : task.assigned_to,
     });
-
-    if (task.assigned_to) {
-      await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
-        taskId: task.id,
-        title: task.title,
-        userId: task.assigned_to,
-        reason,
+    try {
+      if (task.assigned_to) {
+        await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
+          taskId: task.id,
+          title: task.title,
+          userId: task.assigned_to,
+          reason,
+        });
+      }
+    } catch (error) {
+      await this.taskRepository.update(taskId, {
+        status: task.status,
+        proof_s3_key: task.proof_s3_key,
+        assigned_to: task.assigned_to,
       });
+      throw error;
     }
 
     return true;

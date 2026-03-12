@@ -25,19 +25,15 @@ if (!parsed.success && !skipValidation) {
 const validatedEnv = parsed.success ? parsed.data : undefined;
 
 function resolveSkipValidationEnv(): ServerEnv {
-  const relaxedParsed = serverEnvSchema.partial().safeParse(readServerEnv());
+  const parsedWithValidation = serverEnvSchema.safeParse(readServerEnv());
 
-  if (relaxedParsed.success) {
-    return {
-      ...(process.env as unknown as ServerEnv),
-      NODE_ENV: serverEnvSchema.shape.NODE_ENV.parse(undefined),
-      ...relaxedParsed.data,
-    } as ServerEnv;
+  if (parsedWithValidation.success) {
+    return parsedWithValidation.data;
   }
 
-  if (relaxedParsed.error instanceof Error) {
+  if (parsedWithValidation.error instanceof Error) {
     console.warn(
-      `⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback. Reason: ${relaxedParsed.error.message}`,
+      `⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback. Reason: ${parsedWithValidation.error.message}`,
     );
   } else {
     console.warn(

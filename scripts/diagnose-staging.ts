@@ -1,5 +1,5 @@
 import { config as loadDotEnv } from "dotenv";
-import { Client, Databases, Query } from "node-appwrite";
+import { Databases, Query } from "node-appwrite";
 import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 import {
   readServerEnv,
@@ -159,7 +159,39 @@ async function runDiscordChecks(
         detail: `HTTP ${rolesRes.status} while reading guild roles`,
       });
     } else {
-      const roles = (await rolesRes.json()) as { id: string; name: string }[];
+      const rolesPayload: unknown = await rolesRes.json();
+      if (!Array.isArray(rolesPayload)) {
+        console.error("Unexpected Discord roles response shape:", rolesPayload);
+        checks.push({
+          check: "Discord role mapping",
+          passed: false,
+          detail: "Invalid Discord roles response: expected an array",
+        });
+        return checks;
+      }
+
+      const roles = rolesPayload.filter(
+        (item): item is { id: string; name?: string } =>
+          typeof item === "object" &&
+          item !== null &&
+          typeof (item as { id?: unknown }).id === "string" &&
+          (typeof (item as { name?: unknown }).name === "string" ||
+            typeof (item as { name?: unknown }).name === "undefined"),
+      );
+
+      if (roles.length !== rolesPayload.length) {
+        console.error(
+          "Invalid entries in Discord roles response:",
+          rolesPayload,
+        );
+        checks.push({
+          check: "Discord role mapping",
+          passed: false,
+          detail: "Invalid Discord roles response entries",
+        });
+        return checks;
+      }
+
       const roleIds = new Set(roles.map((role) => role.id));
       const requiredRoles = [
         { key: "DISCORD_ROLE_ID_BROTHER", id: env.DISCORD_ROLE_ID_BROTHER },
@@ -209,12 +241,10 @@ async function main(): Promise<void> {
   console.log(`   Appwrite endpoint host: ${endpointHost}`);
   console.log(`   Appwrite project id: ${env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`);
 
-  const appwriteClient = new Client()
-    .setEndpoint(env.NEXT_PUBLIC_APPWRITE_ENDPOINT)
-    .setProject(env.NEXT_PUBLIC_APPWRITE_PROJECT_ID)
-    .setKey(env.APPWRITE_API_KEY);
-
-  const databases = new Databases(appwriteClient);
+  const { getAdminClient } = await import(
+    "@/lib/infrastructure/persistence/client"
+  );
+  const databases = new Databases(getAdminClient());
 
   const results: DiagnosticResult[] = [
     ...(await runAppwriteChecks(databases)),
@@ -238,6 +268,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error("Diagnostic failed:", error);
+  console.error("Diagnostic failed:", safeErrorMessage(error));
   process.exit(1);
 });

@@ -48,7 +48,11 @@ export const NotificationHandler = {
           logResult("TASK_CREATED", payload.assignedTo, result);
         }
       } catch (error) {
-        logger.error("[NotificationHandler] TASK_CREATED handler failed", error);
+        logger.error("[NotificationHandler] TASK_CREATED handler failed", {
+          taskId: payload.taskId,
+          assignedTo: payload.assignedTo,
+          error,
+        });
       }
     });
 
@@ -64,7 +68,11 @@ export const NotificationHandler = {
         );
         logResult("TASK_CLAIMED", "admin_channel", result);
       } catch (error) {
-        logger.error("[NotificationHandler] TASK_CLAIMED handler failed", error);
+        logger.error("[NotificationHandler] TASK_CLAIMED handler failed", {
+          taskId: payload.taskId,
+          userId: payload.userId,
+          error,
+        });
       }
     });
 
@@ -82,7 +90,11 @@ export const NotificationHandler = {
       } catch (error) {
         logger.error(
           "[NotificationHandler] TASK_SUBMITTED handler failed",
-          error,
+          {
+            taskId: payload.taskId,
+            userId: payload.userId,
+            error,
+          },
         );
       }
     });
@@ -90,23 +102,25 @@ export const NotificationHandler = {
     // Task Approved → Notify user
     DomainEventBus.subscribe(TaskEvents.TASK_APPROVED, async (payload) => {
       try {
-        if (payload.userId) {
-          logger.log(
-            `[NotificationHandler] Notifying user ${payload.userId} of approval: ${payload.title}`,
-          );
-          const result = await NotificationService.sendNotification(
-            payload.userId,
-            "approved",
-            {
-              title: payload.title,
-              taskId: payload.taskId,
-              points: payload.points,
-            },
-          );
-          logResult("TASK_APPROVED", payload.userId, result);
-        }
+        logger.log(
+          `[NotificationHandler] Notifying user ${payload.userId} of approval: ${payload.title}`,
+        );
+        const result = await NotificationService.sendNotification(
+          payload.userId,
+          "approved",
+          {
+            title: payload.title,
+            taskId: payload.taskId,
+            points: payload.points,
+          },
+        );
+        logResult("TASK_APPROVED", payload.userId, result);
       } catch (error) {
-        logger.error("[NotificationHandler] TASK_APPROVED handler failed", error);
+        logger.error("[NotificationHandler] TASK_APPROVED handler failed", {
+          taskId: payload.taskId,
+          userId: payload.userId,
+          error,
+        });
       }
     });
 
@@ -129,7 +143,11 @@ export const NotificationHandler = {
           logResult("TASK_REJECTED", payload.userId, result);
         }
       } catch (error) {
-        logger.error("[NotificationHandler] TASK_REJECTED handler failed", error);
+        logger.error("[NotificationHandler] TASK_REJECTED handler failed", {
+          taskId: payload.taskId,
+          userId: payload.userId,
+          error,
+        });
       }
     });
 
@@ -151,7 +169,11 @@ export const NotificationHandler = {
       } catch (error) {
         logger.error(
           "[NotificationHandler] TASK_REASSIGNED handler failed",
-          error,
+          {
+            taskId: payload.taskId,
+            newUserId: payload.newUserId,
+            error,
+          },
         );
       }
     });
@@ -174,7 +196,11 @@ export const NotificationHandler = {
       } catch (error) {
         logger.error(
           "[NotificationHandler] TASK_UNASSIGNED handler failed",
-          error,
+          {
+            taskId: payload.taskId,
+            userId: payload.userId,
+            error,
+          },
         );
       }
     });

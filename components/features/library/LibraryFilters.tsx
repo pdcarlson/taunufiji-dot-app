@@ -3,7 +3,7 @@
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Dispatch, SetStateAction } from "react";
 import { useEffect, useState } from "react";
-import { ASSESSMENT_TYPES, SEMESTERS } from "@/lib/utils/courseData";
+import { ASSESSMENT_TYPES, SEMESTERS, VERSIONS } from "@/lib/utils/courseData";
 import { Search, Filter, Loader2 } from "lucide-react";
 
 import { getMetadataAction } from "@/lib/presentation/actions/library/read.actions";
@@ -68,7 +68,7 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
         return {
           ...previousFilters,
           department: value,
-          course_number: "",
+          course_number: "All",
         };
       }
 
@@ -204,6 +204,25 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
             {ASSESSMENT_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* VERSION */}
+        <div className="col-span-1">
+          <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">
+            Version
+          </label>
+          <select
+            className="w-full p-2 border border-stone-200 rounded text-sm bg-stone-50 h-10"
+            value={filters.version}
+            onChange={(e) => handleChange("version", e.target.value)}
+          >
+            <option value="All">All Versions</option>
+            {VERSIONS.map((version) => (
+              <option key={version} value={version}>
+                {version}
               </option>
             ))}
           </select>
