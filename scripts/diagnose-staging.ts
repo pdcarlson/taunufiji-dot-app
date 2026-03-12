@@ -25,9 +25,28 @@ function safeErrorMessage(error: unknown): string {
 
 async function runAppwriteChecks(client: Databases): Promise<DiagnosticResult[]> {
   const checks: DiagnosticResult[] = [];
+  const appwriteTimeoutMessage = `Request timed out after ${DISCORD_REQUEST_TIMEOUT_MS}ms`;
+
+  async function withTimeout<T>(operation: Promise<T>): Promise<T> {
+    let timeoutId: NodeJS.Timeout | undefined;
+    return await Promise.race([
+      operation,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(appwriteTimeoutMessage));
+        }, DISCORD_REQUEST_TIMEOUT_MS);
+      }),
+    ]).finally(() => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    });
+  }
 
   try {
-    await client.listDocuments(DB_ID, COLLECTIONS.USERS, [Query.limit(1)]);
+    await withTimeout(
+      client.listDocuments(DB_ID, COLLECTIONS.USERS, [Query.limit(1)]),
+    );
     checks.push({
       check: "Appwrite users collection read",
       passed: true,
@@ -42,7 +61,9 @@ async function runAppwriteChecks(client: Databases): Promise<DiagnosticResult[]>
   }
 
   try {
-    await client.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [Query.limit(1)]);
+    await withTimeout(
+      client.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [Query.limit(1)]),
+    );
     checks.push({
       check: "Appwrite assignments collection read",
       passed: true,

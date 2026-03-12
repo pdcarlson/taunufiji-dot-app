@@ -12,15 +12,10 @@
  */
 
 import { Client, Databases, Users, Account, Storage } from "node-appwrite";
-import {
-  readServerEnv,
-  ServerEnv,
-  serverEnvSchema,
-} from "@/lib/infrastructure/config/server-env-schema";
+import { env } from "@/lib/infrastructure/config/env";
 
 // Singleton admin client instance
 let adminClient: Client | null = null;
-let cachedServerEnv: ServerEnv | null = null;
 
 // Cache for session clients (JWT-based)
 const sessionClientCache = new Map<
@@ -31,33 +26,12 @@ const sessionClientCache = new Map<
 // Session cache TTL (5 minutes)
 const SESSION_CACHE_TTL = 5 * 60 * 1000;
 
-function getValidatedServerEnv(): ServerEnv {
-  if (cachedServerEnv) {
-    return cachedServerEnv;
-  }
-
-  const parsed = serverEnvSchema.safeParse(readServerEnv());
-  if (!parsed.success) {
-    const invalidKeys = Object.keys(parsed.error.flatten().fieldErrors);
-    throw new Error(
-      `Invalid environment for Appwrite client: ${
-        invalidKeys.length > 0 ? invalidKeys.join(", ") : "unknown"
-      }`,
-    );
-  }
-
-  cachedServerEnv = parsed.data;
-  return cachedServerEnv;
-}
-
 /**
  * Get the admin client (API Key authentication)
  * Used for server-side operations without user context.
  */
 export function getAdminClient(): Client {
   if (!adminClient) {
-    const env = getValidatedServerEnv();
-
     if (!env.APPWRITE_API_KEY) {
       throw new Error("APPWRITE_API_KEY is required for admin client");
     }
@@ -76,7 +50,6 @@ export function getAdminClient(): Client {
  * Caches clients to avoid recreating for same JWT.
  */
 export function getSessionClient(jwt: string): Client {
-  const env = getValidatedServerEnv();
   const now = Date.now();
 
   // Check cache and TTL
@@ -163,7 +136,6 @@ export function getSessionDatabase(jwt: string): Databases {
  */
 export function resetClients(): void {
   adminClient = null;
-  cachedServerEnv = null;
   sessionClientCache.clear();
 }
 

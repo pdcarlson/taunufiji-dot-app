@@ -1,4 +1,3 @@
-import "server-only";
 import { readServerEnv, ServerEnv, serverEnvSchema } from "./server-env-schema";
 
 /**

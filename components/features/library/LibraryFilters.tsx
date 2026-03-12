@@ -211,10 +211,14 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
 
         {/* VERSION */}
         <div className="col-span-1">
-          <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">
+          <label
+            htmlFor="version-select"
+            className="text-[10px] font-bold text-stone-400 uppercase mb-1 block"
+          >
             Version
           </label>
           <select
+            id="version-select"
             className="w-full p-2 border border-stone-200 rounded text-sm bg-stone-50 h-10"
             value={filters.version}
             onChange={(e) => handleChange("version", e.target.value)}

@@ -68,12 +68,14 @@ export const duty: CommandHandler = async (interaction, options) => {
     const month = match[1];
     const day = match[2];
     const currentYear = new Date().getFullYear();
+    const monthIndex = Number(month) - 1;
+    const dayOfMonth = Number(day);
 
     // Create ISO string representing 11:59 PM EST
     // EST is UTC-5, so 11:59 PM EST = 04:59 AM UTC (next day)
     // This matches what the frontend browser creates when in EST timezone
-    const date = new Date(`${currentYear}-${month}-${day}`);
-    date.setDate(date.getDate() + 1); // Next day
+    const date = new Date(Date.UTC(currentYear, monthIndex, dayOfMonth));
+    date.setUTCDate(date.getUTCDate() + 1); // Next day
     date.setUTCHours(4, 59, 0, 0); // 04:59 UTC = 11:59 PM EST
     dueAt = date;
 
@@ -87,8 +89,10 @@ export const duty: CommandHandler = async (interaction, options) => {
     // if date is in the past, assume next year
     const now = new Date();
     if (dueAt < now) {
-      const nextYearDate = new Date(`${currentYear + 1}-${month}-${day}`);
-      nextYearDate.setDate(nextYearDate.getDate() + 1);
+      const nextYearDate = new Date(
+        Date.UTC(currentYear + 1, monthIndex, dayOfMonth),
+      );
+      nextYearDate.setUTCDate(nextYearDate.getUTCDate() + 1);
       nextYearDate.setUTCHours(4, 59, 0, 0);
       dueAt = nextYearDate;
     }

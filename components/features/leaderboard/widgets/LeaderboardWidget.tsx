@@ -53,6 +53,15 @@ export default function LeaderboardWidget({
     }
   }, [initialLeaderboard, prefetched]);
 
+  // Helper to handle conditional my-rank call
+  const getLeadersMyRank = async (
+    token: string,
+  ): Promise<{ rank: number; points: number } | null> => {
+    // If we are authorized, we can get rank.
+    // The action handles internal logic.
+    return await getMyRankAction(token);
+  };
+
   const fetchLeaders = useCallback(async () => {
     try {
       if (!user) return;
@@ -82,17 +91,9 @@ export default function LeaderboardWidget({
 
       if (rankResult.status === "fulfilled") {
         setMyStats(rankResult.value);
-        if (leadersResult.status !== "rejected") {
-          setError(null);
-        }
       } else {
         console.error("Leaderboard rank fetch failed", rankResult.reason);
         setMyStats(null);
-        const reason =
-          rankResult.reason instanceof Error
-            ? rankResult.reason.message
-            : String(rankResult.reason);
-        setError(reason);
       }
     } catch (err) {
       console.error("Leaderboard error:", err);
@@ -104,15 +105,6 @@ export default function LeaderboardWidget({
       setLoading(false);
     }
   }, [user, getToken, prefetched]);
-
-  // Helper to handle conditional my rank call
-  const getLeadersMyRank = async (
-    token: string,
-  ): Promise<{ rank: number; points: number } | null> => {
-    // If we are authorized, we can get rank.
-    // The action handles internal logic.
-    return await getMyRankAction(token);
-  };
 
   useEffect(() => {
     // If we have initial data, we only need to fetch user rank if user is present
