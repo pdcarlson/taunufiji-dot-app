@@ -11,3 +11,4 @@ Use `spec/` for in-progress specs and this archive for shipped work history.
 - [Centralize Env Config](centralize-env-config.md)
 - [Quality Gate Fixes](quality-gate-fixes.md)
 - [Infrastructure Logic Hardening](infra-logic-hardening.md)
+- [QA Audit and Staging Hardening](qa-audit-and-staging-hardening.md)

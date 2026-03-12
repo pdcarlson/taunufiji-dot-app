@@ -19,9 +19,9 @@ This document is the durable behavioral reference for the Housing module.
 
 - `locked`: not yet visible/actionable; unlocks at `unlock_at`
 - `open`: available to claim or complete
-- `pending`: waiting for admin review
+- `pending`: claimed/assigned work in progress; if `proof_s3_key` is present, it is explicitly awaiting admin review
 - `approved`: accepted and closed
-- `rejected`: denied and potentially resubmittable (type-dependent)
+- `rejected`: denied after review and potentially resubmittable (type-dependent)
 - `expired`: missed deadline / no longer completable
 
 ### Notification Levels
@@ -73,8 +73,8 @@ This document is the durable behavioral reference for the Housing module.
 ## 3.3 Bounty Flow
 
 1. Admin creates bounty in `open`.
-2. User claims bounty -> `pending` with assignee set and due date derived from execution limit.
-3. User submits proof -> `pending` (review-ready).
+2. User claims bounty -> remains in `pending` but is interpreted as "claimed/in progress" while `proof_s3_key` is empty; assignee and due date are set.
+3. User submits proof -> still `pending`, now explicitly review-ready because `proof_s3_key` is present.
 4. Admin:
    - approves -> `approved`,
    - rejects -> returns to `open` and clears assignment/proof.
@@ -115,8 +115,8 @@ This document is the durable behavioral reference for the Housing module.
 
 - Claim:
   - requires task in `open`,
-  - sets assignee,
-  - sets `pending` if workflow requires review state.
+  - sets assignee and execution due date when applicable,
+  - transitions to `pending` as "claimed/in progress" state.
 - Unclaim:
   - requires caller owns current assignment,
   - restores task to `open` and clears assignment-specific due date where appropriate.

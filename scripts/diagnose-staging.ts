@@ -14,6 +14,7 @@ type DiagnosticResult = {
 };
 
 const DISCORD_API = "https://discord.com/api/v10";
+const DISCORD_REQUEST_TIMEOUT_MS = 8_000;
 
 function safeErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -76,10 +77,31 @@ async function runDiscordChecks(
 
   const checks: DiagnosticResult[] = [];
 
+  async function fetchWithTimeout(url: string): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), DISCORD_REQUEST_TIMEOUT_MS);
+
+    try {
+      return await fetch(url, {
+        headers,
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  function toDiscordErrorDetail(error: unknown): string {
+    if (error instanceof Error && error.name === "AbortError") {
+      return `Request timed out after ${DISCORD_REQUEST_TIMEOUT_MS}ms`;
+    }
+    return safeErrorMessage(error);
+  }
+
   try {
-    const guildRes = await fetch(`${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}`, {
-      headers,
-    });
+    const guildRes = await fetchWithTimeout(
+      `${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}`,
+    );
     if (!guildRes.ok) {
       checks.push({
         check: "Discord guild access",
@@ -97,14 +119,13 @@ async function runDiscordChecks(
     checks.push({
       check: "Discord guild access",
       passed: false,
-      detail: safeErrorMessage(error),
+      detail: toDiscordErrorDetail(error),
     });
   }
 
   try {
-    const channelRes = await fetch(
+    const channelRes = await fetchWithTimeout(
       `${DISCORD_API}/channels/${env.DISCORD_HOUSING_CHANNEL_ID}`,
-      { headers },
     );
     if (!channelRes.ok) {
       checks.push({
@@ -123,14 +144,13 @@ async function runDiscordChecks(
     checks.push({
       check: "Discord housing channel access",
       passed: false,
-      detail: safeErrorMessage(error),
+      detail: toDiscordErrorDetail(error),
     });
   }
 
   try {
-    const rolesRes = await fetch(
+    const rolesRes = await fetchWithTimeout(
       `${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}/roles`,
-      { headers },
     );
     if (!rolesRes.ok) {
       checks.push({
@@ -164,7 +184,7 @@ async function runDiscordChecks(
     checks.push({
       check: "Discord role mapping",
       passed: false,
-      detail: safeErrorMessage(error),
+      detail: toDiscordErrorDetail(error),
     });
   }
 

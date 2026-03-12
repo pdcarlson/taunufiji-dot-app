@@ -21,7 +21,6 @@ Spec-driven development workflow and active specifications live in [`spec/`](../
 | Active Spec | Status |
 |---|---|
 | [Staging Environment Setup](../spec/staging-environment-setup.md) | In Progress |
-| [QA Audit and Staging Hardening](../spec/qa-audit-and-staging-hardening.md) | Complete |
 
 | Archived Completed Spec | Location |
 |---|---|
@@ -30,6 +29,7 @@ Spec-driven development workflow and active specifications live in [`spec/`](../
 | Centralize Env Config | [docs/archive/specs/centralize-env-config.md](archive/specs/centralize-env-config.md) |
 | Quality Gate Fixes | [docs/archive/specs/quality-gate-fixes.md](archive/specs/quality-gate-fixes.md) |
 | Infrastructure Logic Hardening | [docs/archive/specs/infra-logic-hardening.md](archive/specs/infra-logic-hardening.md) |
+| QA Audit and Staging Hardening | [docs/archive/specs/qa-audit-and-staging-hardening.md](archive/specs/qa-audit-and-staging-hardening.md) |
 
 > Rule of thumb: `spec/` tracks planned/in-flight implementation work; `docs/` captures durable references and archived completed tracks.
 

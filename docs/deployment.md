@@ -45,6 +45,7 @@ This workflow does **not** handle deployment. It serves strictly as a quality ga
 
 | Concern | Variables |
 |---|---|
+| App URL | `NEXT_PUBLIC_APP_URL` |
 | Appwrite | `NEXT_PUBLIC_APPWRITE_ENDPOINT`, `NEXT_PUBLIC_APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY` |
 | Discord Core | `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_HOUSING_CHANNEL_ID` |
 | Discord Roles | `DISCORD_ROLE_ID_BROTHER`, `DISCORD_ROLE_ID_CABINET`, `DISCORD_ROLE_ID_HOUSING_CHAIR` |

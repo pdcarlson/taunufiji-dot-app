@@ -65,5 +65,5 @@ The current gap is not deployment wiring — it is **runtime confidence**. Stagi
 - Archived: `staging_setup_20260219` (conductor tree removed)
 - Deployment strategy superseded by: [Deploy Strategy Update](../docs/archive/specs/deploy-strategy-update.md); remaining sections of this spec (environment verification, end-to-end walkthrough) are still in-progress
 - Deployment docs: [docs/deployment.md](../docs/deployment.md)
-- Companion implementation spec: [QA Audit and Staging Hardening](qa-audit-and-staging-hardening.md)
+- Companion implementation spec: [QA Audit and Staging Hardening](../docs/archive/specs/qa-audit-and-staging-hardening.md)
 - Diagnostics note: `npm run diagnose:staging` now passes in cloud after correcting `DISCORD_HOUSING_CHANNEL_ID` to the active channel snowflake.

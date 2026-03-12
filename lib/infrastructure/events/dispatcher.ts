@@ -1,27 +1,37 @@
 import { logger } from "@/lib/utils/logger";
 import {
-  DomainEvents,
+  LibraryEvents,
   LibraryUploadedEvent,
+  TaskEventMap,
+  TaskEvents,
   TaskApprovedEvent,
-} from "./events";
+} from "@/lib/domain/events";
 import { initDomainEvents } from "./init";
 
-export { DomainEvents };
+export { LibraryEvents, TaskEvents };
 export type { LibraryUploadedEvent, TaskApprovedEvent };
 
-type EventHandler<T = unknown> = (payload: T) => Promise<void>;
+type EventPayloads = TaskEventMap & {
+  [LibraryEvents.LIBRARY_UPLOADED]: LibraryUploadedEvent;
+};
+
+type EventKey = keyof EventPayloads;
+type EventHandler<K extends EventKey> = (payload: EventPayloads[K]) => Promise<void>;
+type GenericEventHandler = (payload: EventPayloads[EventKey]) => Promise<void>;
 
 class EventBus {
-  private handlers: Map<string, EventHandler<unknown>[]> = new Map();
+  private handlers = new Map<EventKey, GenericEventHandler[]>();
 
   /**
    * Register a handler for an event.
    */
-  public subscribe<T>(event: string, handler: EventHandler<T>) {
-    if (!this.handlers.has(event)) {
-      this.handlers.set(event, []);
-    }
-    this.handlers.get(event)?.push(handler as EventHandler<unknown>);
+  public subscribe<TEvent extends EventKey>(
+    event: TEvent,
+    handler: EventHandler<TEvent>,
+  ) {
+    const eventHandlers = this.handlers.get(event) ?? [];
+    eventHandlers.push(handler as GenericEventHandler);
+    this.handlers.set(event, eventHandlers);
   }
 
   /**
@@ -30,11 +40,15 @@ class EventBus {
    * before the Server Action returns to the UI.
    */
 
-  public async publish<T>(event: string, payload: T) {
+  public async publish<TEvent extends EventKey>(
+    event: TEvent,
+    payload: EventPayloads[TEvent],
+  ) {
     // Lazy init to ensure handlers are subscribed before we dispatch
     initDomainEvents();
 
-    const subscribers = this.handlers.get(event) || [];
+    const subscribers = (this.handlers.get(event) ??
+      []) as EventHandler<TEvent>[];
 
     if (subscribers.length > 0) {
       logger.log(

@@ -78,6 +78,15 @@ export async function searchLibraryAction(
           typeof filters.year === "string"
             ? parseInt(filters.year)
             : filters.year;
+      if (filters.semester && filters.semester !== "All") {
+        searchFilters.semester = filters.semester;
+      }
+      if (filters.assessment_type && filters.assessment_type !== "All") {
+        searchFilters.assessment_type = filters.assessment_type;
+      }
+      if (filters.version && filters.version !== "All") {
+        searchFilters.version = filters.version;
+      }
 
       return await container.libraryService.search(searchFilters);
     },

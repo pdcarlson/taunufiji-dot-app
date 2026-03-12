@@ -2,10 +2,14 @@ import { getContainer, Container } from "@/lib/infrastructure/container";
 import { createJWTClient } from "@/lib/presentation/server/appwrite";
 import { Models } from "node-appwrite";
 
+interface AppwriteAccountClient {
+  get: () => Promise<Models.User<Models.Preferences>>;
+}
+
 type ActionContext = {
   container: Container;
   userId: string; // The authenticated Appwrite Auth ID (not necessarily Profile ID)
-  account: unknown;
+  account: AppwriteAccountClient | null; // Appwrite account client, not the user model
 };
 
 type ActionOptions = {
@@ -103,8 +107,7 @@ export async function actionWrapper<T>(
 ): Promise<ActionResult<T>> {
   try {
     // 1. Authentication
-    let account: { get: () => Promise<Models.User<Models.Preferences>> } | null =
-      null;
+    let account: AppwriteAccountClient | null = null;
     if (options.jwt) {
       const client = createJWTClient(options.jwt);
       account = client.account;
@@ -148,6 +151,7 @@ export async function actionWrapper<T>(
     const container = getContainer();
     // Pass userId if available, else empty string or throw if strict
     const userId = user ? user.$id : "";
+    // account here is the Appwrite account client used for account.get()
     const data = await action({ container, userId, account });
 
     return { success: true, data };

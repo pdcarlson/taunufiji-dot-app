@@ -1,13 +1,14 @@
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
+import { Dispatch, SetStateAction } from "react";
 import { useEffect, useState } from "react";
 import { ASSESSMENT_TYPES, SEMESTERS } from "@/lib/utils/courseData";
 import { Search, Filter, Loader2 } from "lucide-react";
 
 import { getMetadataAction } from "@/lib/presentation/actions/library/read.actions";
 
-interface LibraryFiltersState {
+export interface LibraryFiltersState {
   department: string;
   course_number: string;
   professor: string;
@@ -19,7 +20,7 @@ interface LibraryFiltersState {
 
 interface FilterProps {
   filters: LibraryFiltersState;
-  setFilters: (filters: LibraryFiltersState) => void;
+  setFilters: Dispatch<SetStateAction<LibraryFiltersState>>;
 }
 
 export default function LibraryFilters({ filters, setFilters }: FilterProps) {
@@ -61,8 +62,11 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
       ? courseData[filters.department] || []
       : [];
 
-  const handleChange = (key: string, val: string) => {
-    setFilters({ ...filters, [key]: val });
+  const handleChange = (key: keyof LibraryFiltersState, value: string) => {
+    setFilters((previousFilters) => ({
+      ...previousFilters,
+      [key]: value,
+    }));
   };
 
   if (loading) {

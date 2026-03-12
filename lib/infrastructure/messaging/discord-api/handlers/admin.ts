@@ -183,7 +183,11 @@ export const bounty: CommandHandler = async (interaction, options) => {
   const points = asNumber(options.points_value);
   const description = asString(options.description); // required field
 
-  if (!title || !description || points <= 0) {
+  if (!title || !description) {
+    return createEphemeralResponse("❌ Title and description are required.");
+  }
+
+  if (points <= 0) {
     return createEphemeralResponse("❌ Points must be a positive number.");
   }
 

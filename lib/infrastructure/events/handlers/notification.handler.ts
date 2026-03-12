@@ -9,13 +9,6 @@
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import {
   TaskEvents,
-  TaskCreatedEvent,
-  TaskClaimedEvent,
-  TaskSubmittedEvent,
-  TaskApprovedEvent,
-  TaskRejectedEvent,
-  TaskReassignedEvent,
-  TaskUnassignedEvent,
 } from "@/lib/domain/events";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
 import { logger } from "@/lib/utils/logger";
@@ -38,9 +31,7 @@ function logResult(
 export const NotificationHandler = {
   init: () => {
     // Task Created → Notify assignee if pre-assigned
-    DomainEventBus.subscribe<TaskCreatedEvent>(
-      TaskEvents.TASK_CREATED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_CREATED, async (payload) => {
         if (payload.assignedTo) {
           logger.log(
             `[NotificationHandler] Notifying user ${payload.assignedTo} of new task: ${payload.title}`,
@@ -55,13 +46,10 @@ export const NotificationHandler = {
           );
           logResult("TASK_CREATED", payload.assignedTo, result);
         }
-      },
-    );
+      });
 
     // Task Claimed → Notify admin channel
-    DomainEventBus.subscribe<TaskClaimedEvent>(
-      TaskEvents.TASK_CLAIMED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_CLAIMED, async (payload) => {
         logger.log(
           `[NotificationHandler] Task claimed: ${payload.title} by ${payload.userId}`,
         );
@@ -70,13 +58,10 @@ export const NotificationHandler = {
           { taskId: payload.taskId },
         );
         logResult("TASK_CLAIMED", "admin_channel", result);
-      },
-    );
+      });
 
     // Task Submitted → Notify admins for review
-    DomainEventBus.subscribe<TaskSubmittedEvent>(
-      TaskEvents.TASK_SUBMITTED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_SUBMITTED, async (payload) => {
         logger.log(
           `[NotificationHandler] Task submitted: ${payload.title} by ${payload.userId}`,
         );
@@ -85,13 +70,10 @@ export const NotificationHandler = {
           { taskId: payload.taskId },
         );
         logResult("TASK_SUBMITTED", "admin_channel", result);
-      },
-    );
+      });
 
     // Task Approved → Notify user
-    DomainEventBus.subscribe<TaskApprovedEvent>(
-      TaskEvents.TASK_APPROVED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_APPROVED, async (payload) => {
         if (payload.userId) {
           logger.log(
             `[NotificationHandler] Notifying user ${payload.userId} of approval: ${payload.title}`,
@@ -107,13 +89,10 @@ export const NotificationHandler = {
           );
           logResult("TASK_APPROVED", payload.userId, result);
         }
-      },
-    );
+      });
 
     // Task Rejected → Notify user
-    DomainEventBus.subscribe<TaskRejectedEvent>(
-      TaskEvents.TASK_REJECTED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_REJECTED, async (payload) => {
         if (payload.userId) {
           logger.log(
             `[NotificationHandler] Notifying user ${payload.userId} of rejection: ${payload.title}`,
@@ -129,13 +108,10 @@ export const NotificationHandler = {
           );
           logResult("TASK_REJECTED", payload.userId, result);
         }
-      },
-    );
+      });
 
     // Task Reassigned → Notify new user
-    DomainEventBus.subscribe<TaskReassignedEvent>(
-      TaskEvents.TASK_REASSIGNED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_REASSIGNED, async (payload) => {
         logger.log(
           `[NotificationHandler] Notifying user ${payload.newUserId} of reassignment: ${payload.title}`,
         );
@@ -148,13 +124,10 @@ export const NotificationHandler = {
           },
         );
         logResult("TASK_REASSIGNED", payload.newUserId, result);
-      },
-    );
+      });
 
     // Task Unassigned → Notify user
-    DomainEventBus.subscribe<TaskUnassignedEvent>(
-      TaskEvents.TASK_UNASSIGNED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_UNASSIGNED, async (payload) => {
         logger.log(
           `[NotificationHandler] Notifying user ${payload.userId} of unassignment: ${payload.title}`,
         );
@@ -167,8 +140,7 @@ export const NotificationHandler = {
           },
         );
         logResult("TASK_UNASSIGNED", payload.userId, result);
-      },
-    );
+      });
 
     logger.log("[NotificationHandler] Subscribed to events.");
   },

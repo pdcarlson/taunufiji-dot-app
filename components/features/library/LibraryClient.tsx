@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import useDebounce from "@/hooks/useDebounce";
 import LibraryFilters from "./LibraryFilters";
+import type { LibraryFiltersState } from "./LibraryFilters";
 import LibraryFileCard from "./LibraryFileCard";
 import LibrarySkeleton from "./LibrarySkeleton";
 import ScholarshipStats from "./ScholarshipStats";
@@ -28,22 +29,12 @@ interface LibraryClientProps {
   initialResources?: LibraryResource[];
 }
 
-interface Filters {
-  department: string;
-  course_number: string;
-  professor: string;
-  semester: string;
-  year: string;
-  assessment_type: string;
-  version: string;
-}
-
 interface LibrarySearchResult {
   documents: LibraryResource[];
   total: number;
 }
 
-const INITIAL_FILTERS: Filters = {
+const INITIAL_FILTERS: LibraryFiltersState = {
   department: "All",
   course_number: "All",
   professor: "",
@@ -53,7 +44,7 @@ const INITIAL_FILTERS: Filters = {
   version: "All",
 };
 
-const FILTER_KEYS: (keyof Filters)[] = [
+const FILTER_KEYS: (keyof LibraryFiltersState)[] = [
   "department",
   "course_number",
   "professor",
@@ -69,8 +60,8 @@ export default function LibraryClient({
   initialResources = [],
 }: LibraryClientProps) {
   const { getToken, user } = useAuth();
-  const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
-  const debouncedFilters = useDebounce<Filters>(filters, 500);
+  const [filters, setFilters] = useState<LibraryFiltersState>(INITIAL_FILTERS);
+  const debouncedFilters = useDebounce<LibraryFiltersState>(filters, 500);
 
   // Stats State
   const [stats, setStats] = useState({
@@ -102,6 +93,7 @@ export default function LibraryClient({
   // If we have initial resources, we aren't loading initially
   const [loading, setLoading] = useState(initialResources.length === 0);
   const isFirstLoad = useRef(true);
+  const currentRequestId = useRef(0);
 
   useEffect(() => {
     const isDefaultFilters = FILTER_KEYS.every(
@@ -114,6 +106,7 @@ export default function LibraryClient({
     }
 
     const runSearch = async () => {
+      const requestId = ++currentRequestId.current;
       setLoading(true);
       try {
         const apiFilters: Record<string, string | number> = {};
@@ -138,13 +131,19 @@ export default function LibraryClient({
           jwt,
         )) as LibrarySearchResult;
 
-        setResults(data.documents);
-        setSearchTotal(data.total);
+        if (requestId === currentRequestId.current) {
+          setResults(data.documents);
+          setSearchTotal(data.total);
+        }
       } catch (err) {
         console.error("Search failed:", err);
-        toast.error("Failed to load library");
+        if (requestId === currentRequestId.current) {
+          toast.error("Failed to load library");
+        }
       } finally {
-        setLoading(false);
+        if (requestId === currentRequestId.current) {
+          setLoading(false);
+        }
       }
     };
 

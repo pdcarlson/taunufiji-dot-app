@@ -74,14 +74,14 @@ Before promoting staging to production, we need a stronger quality system and cl
 
 ## Dependencies
 
-- Existing staging setup work: [staging-environment-setup.md](staging-environment-setup.md)
-- Deployment pipeline reference: [docs/deployment.md](../docs/deployment.md)
-- Architecture constraints: [docs/architecture.md](../docs/architecture.md)
+- Existing staging setup work: [staging-environment-setup.md](../../../spec/staging-environment-setup.md)
+- Deployment pipeline reference: [docs/deployment.md](../../deployment.md)
+- Architecture constraints: [docs/architecture.md](../../architecture.md)
 
 ## References
 
 - Related completed specs:
-  - [Centralize Env Config](../docs/archive/specs/centralize-env-config.md)
-  - [Quality Gate Fixes](../docs/archive/specs/quality-gate-fixes.md)
-  - [Infra Logic Hardening](../docs/archive/specs/infra-logic-hardening.md)
+  - [Centralize Env Config](centralize-env-config.md)
+  - [Quality Gate Fixes](quality-gate-fixes.md)
+  - [Infra Logic Hardening](infra-logic-hardening.md)
   - This spec shipped in commits `5c4bfbb`, `ba8abeb`, `c7c6a2f`, and `7d62558`.

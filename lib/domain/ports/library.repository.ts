@@ -5,6 +5,9 @@ export interface LibrarySearchFilters {
   course_number?: string;
   professor?: string;
   year?: number;
+  semester?: string;
+  assessment_type?: string;
+  version?: string;
 }
 
 export interface CreateResourceParams {

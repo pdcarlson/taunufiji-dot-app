@@ -37,7 +37,7 @@ export class AdminService {
         taskId: task.id,
         title: task.title,
         type: task.type as "duty" | "bounty" | "project" | "one_off",
-        assignedTo: task.assigned_to,
+        assignedTo: task.assigned_to ?? undefined,
       });
     }
 
@@ -83,7 +83,7 @@ export class AdminService {
       await DomainEventBus.publish(TaskEvents.TASK_APPROVED, {
         taskId: task.id,
         title: task.title,
-        userId: task.assigned_to,
+        userId: task.assigned_to ?? "",
         points: awardAmount,
       });
     } catch (error) {
@@ -128,7 +128,7 @@ export class AdminService {
       await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
         taskId: task.id,
         title: task.title,
-        userId: task.assigned_to,
+        userId: task.assigned_to ?? "",
         reason,
       });
       return true;
@@ -147,7 +147,7 @@ export class AdminService {
     await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
       taskId: task.id,
       title: task.title,
-      userId: task.assigned_to,
+      userId: task.assigned_to ?? "",
       reason,
     });
 

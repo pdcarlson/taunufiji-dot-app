@@ -8,27 +8,36 @@ import { readServerEnv, ServerEnv, serverEnvSchema } from "./server-env-schema";
  * Server-only variables are protected by 'server-only' and only available in Node.js environments.
  */
 
-const parsed = serverEnvSchema.safeParse(readServerEnv());
 const skipValidation = process.env.SKIP_ENV_VALIDATION === "true";
-const validatedEnv = parsed.success ? parsed.data : undefined;
+const parsed = serverEnvSchema.safeParse(readServerEnv());
 
-if (!parsed.success) {
+if (!parsed.success && !skipValidation) {
   const formattedErrors = parsed.error.flatten().fieldErrors;
   const invalidKeys = Object.keys(formattedErrors);
+  console.error("Server environment validation failed:", parsed.error.format());
+  throw new Error(
+    `Invalid server environment variables: ${
+      invalidKeys.length > 0 ? invalidKeys.join(", ") : "unknown"
+    }`,
+  );
+}
 
-  if (skipValidation) {
-    console.warn(
-      `⚠️ Skipping strict server environment validation (SKIP_ENV_VALIDATION=true). Invalid keys: ${
-        invalidKeys.length > 0 ? invalidKeys.join(", ") : "unknown"
-      }.`,
-    );
-  } else {
-    console.error("Server environment validation failed:", parsed.error.format());
-    throw new Error(
-      `Invalid server environment variables: ${
-        invalidKeys.length > 0 ? invalidKeys.join(", ") : "unknown"
-      }`,
-    );
+const validatedEnv = parsed.success ? parsed.data : undefined;
+
+function resolveSkipValidationEnv(): ServerEnv {
+  try {
+    return serverEnvSchema.parse(readServerEnv());
+  } catch (error) {
+    if (error instanceof Error) {
+      console.warn(
+        `⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback. Reason: ${error.message}`,
+      );
+    } else {
+      console.warn(
+        "⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback.",
+      );
+    }
+    return process.env as unknown as ServerEnv;
   }
 }
 
@@ -37,5 +46,5 @@ if (!parsed.success) {
  * (Server Only)
  */
 export const env = skipValidation
-  ? (process.env as unknown as ServerEnv)
+  ? resolveSkipValidationEnv()
   : (validatedEnv as ServerEnv);

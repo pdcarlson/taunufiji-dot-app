@@ -37,9 +37,15 @@ export class AppwriteLibraryRepository implements ILibraryRepository {
         typeof error === "object" &&
         error !== null &&
         "code" in error &&
-        (error as { code?: number }).code === 404
+        "type" in error
       ) {
-        return null;
+        const typedError = error as { code?: number; type?: string };
+        if (
+          typedError.code === 404 &&
+          typedError.type === "document_not_found"
+        ) {
+          return null;
+        }
       }
       throw error;
     }
@@ -59,6 +65,15 @@ export class AppwriteLibraryRepository implements ILibraryRepository {
     }
     if (filters.year) {
       queries.push(Query.equal("year", filters.year));
+    }
+    if (filters.semester && filters.semester !== "All") {
+      queries.push(Query.equal("semester", filters.semester));
+    }
+    if (filters.assessment_type && filters.assessment_type !== "All") {
+      queries.push(Query.equal("type", filters.assessment_type));
+    }
+    if (filters.version && filters.version !== "All") {
+      queries.push(Query.equal("version", filters.version));
     }
 
     const res = await this.db.listDocuments(

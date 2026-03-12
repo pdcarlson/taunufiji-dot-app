@@ -17,5 +17,5 @@ export interface IStorageService {
     buffer: Buffer,
     key: string,
     contentType: string,
-  ): Promise<unknown>;
+  ): Promise<void>;
 }

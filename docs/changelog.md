@@ -3,7 +3,7 @@
 ## 2026-03-11: Staging QA Audit Hardening
 
 - **Specs & Documentation**:
-  - Added `spec/qa-audit-and-staging-hardening.md` and updated `spec/staging-environment-setup.md` with runtime-readiness acceptance criteria.
+  - Added `docs/archive/specs/qa-audit-and-staging-hardening.md` and updated `spec/staging-environment-setup.md` with runtime-readiness acceptance criteria.
   - Added `docs/housing-behavior-reference.md` as a durable behavior/edge-case reference.
   - Expanded deployment docs with environment matrix, diagnostics command, and staging troubleshooting runbook.
 - **Environment Diagnostics**:
@@ -24,7 +24,8 @@
 - **Lint Quality Drive**:
   - Reduced lint output to zero warnings by replacing legacy `any` usage with stricter unknown/typed contracts and cleaning hook dependency/type-safety issues.
 - **Observed Staging Diagnostic Outcome**:
-  - Staging diagnostics now pass end-to-end after correcting `DISCORD_HOUSING_CHANNEL_ID` to `1474106313209548904`.
+  - Staging diagnostics now pass end-to-end after correcting `DISCORD_HOUSING_CHANNEL_ID`.
+  - The exact channel ID is tracked in environment configuration and the staging runbook, not in changelog history.
 
 ## 2026-01-12: Housing V2 - Scheduels & Bounties
 

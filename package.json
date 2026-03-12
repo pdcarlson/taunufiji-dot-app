@@ -10,7 +10,7 @@
     "test": "vitest",
     "test:coverage": "vitest --run --coverage",
     "test:coverage:critical": "vitest --run --config vitest.critical.config.ts",
-    "test:integration": "vitest --run lib/presentation/utils/action-handler.test.ts lib/presentation/actions/housing/admin.actions.test.ts lib/presentation/actions/housing/schedule.actions.test.ts",
+    "test:integration": "vitest --run --config vitest.integration.config.ts",
     "test:e2e": "playwright test",
     "diagnose:staging": "tsx scripts/diagnose-staging.ts",
     "discord:register": "tsx scripts/register-discord-commands.ts"

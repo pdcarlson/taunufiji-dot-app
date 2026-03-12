@@ -3,6 +3,7 @@ import { Query } from "node-appwrite";
 import { getDatabase } from "@/lib/infrastructure/persistence";
 import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
 import { CommandHandler } from "../types";
+import { logger } from "@/lib/utils/logger";
 
 // helper for Appwrite (read-only for profile lookup)
 const db = getDatabase();
@@ -52,14 +53,14 @@ export const leaderboard: CommandHandler = async () => {
             stack?: string;
           })
         : undefined;
-    console.error("❌ Leaderboard Error Details:", {
+    logger.error("Leaderboard command failed", {
       message: errorDetails?.message || String(error),
       code: errorDetails?.code,
       type: errorDetails?.type,
       stack: errorDetails?.stack,
     });
     return createEphemeralResponse(
-      `Failed to fetch leaderboard: ${errorDetails?.message || "Unknown error"}`,
+      "Unable to load leaderboard right now. Please try again later.",
     );
   }
 };

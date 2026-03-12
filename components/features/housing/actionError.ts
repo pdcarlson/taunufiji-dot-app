@@ -11,7 +11,7 @@ const ERROR_MESSAGE_BY_CODE: Record<string, string> = {
   VALIDATION_ERROR:
     "Some task details are invalid. Please review the form and retry.",
   DATABASE_ERROR:
-    "Unable to save task data to Appwrite. Run `npm run diagnose:staging` and verify environment settings.",
+    "Unable to save your changes. Please try again.",
   EXTERNAL_SERVICE_ERROR:
     "An external service dependency failed. Please retry shortly.",
   UNKNOWN_ERROR: "Something unexpected failed. Please retry.",
@@ -23,8 +23,11 @@ export function getHousingActionErrorMessage(failure: ActionFailure): string {
   }
 
   if (failure.error) {
-    return failure.error;
+    console.error("Unhandled housing action error", {
+      errorCode: failure.errorCode,
+      error: failure.error,
+    });
   }
 
-  return "Action failed. Please retry.";
+  return ERROR_MESSAGE_BY_CODE.UNKNOWN_ERROR;
 }

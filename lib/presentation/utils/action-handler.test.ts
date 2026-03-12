@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const hoisted = vi.hoisted(() => {
   const mockAccountGet = vi.fn();
@@ -38,6 +38,10 @@ describe("actionWrapper", () => {
     hoisted.mockAccountGet.mockResolvedValue({ $id: "auth_user_1" });
     hoisted.mockAuthService.verifyBrother.mockResolvedValue(true);
     hoisted.mockAuthService.verifyRole.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("returns authentication error when JWT is missing", async () => {

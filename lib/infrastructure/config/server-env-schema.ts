@@ -4,7 +4,7 @@ export const serverEnvSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "staging", "production"])
     .default("development"),
-  NEXT_PUBLIC_APP_URL: z.string().url().default("[REDACTED]"),
+  NEXT_PUBLIC_APP_URL: z.string().url(),
 
   // Appwrite
   NEXT_PUBLIC_APPWRITE_ENDPOINT: z.string().url(),

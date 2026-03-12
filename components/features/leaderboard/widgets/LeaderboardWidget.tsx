@@ -23,18 +23,20 @@ interface LeaderboardWidgetProps {
 }
 
 export default function LeaderboardWidget({
-  initialLeaderboard = [],
+  initialLeaderboard,
 }: LeaderboardWidgetProps) {
   const { user, getToken } = useAuth();
-  const [leaders, setLeaders] =
-    useState<LeaderboardMember[]>(initialLeaderboard);
+  const hasInitialLeaderboard = initialLeaderboard !== undefined;
+  const [leaders, setLeaders] = useState<LeaderboardMember[]>(
+    initialLeaderboard ?? [],
+  );
   const [myStats, setMyStats] = useState<{
     rank: number;
     points: number;
   } | null>(null);
-  const [loading, setLoading] = useState(initialLeaderboard.length === 0);
+  const [loading, setLoading] = useState((initialLeaderboard ?? []).length === 0);
   const [error, setError] = useState<string | null>(null);
-  const hasFetchedRef = useRef(false);
+  const hasFetchedRef = useRef(hasInitialLeaderboard);
 
   const fetchLeaders = useCallback(async () => {
     try {
@@ -42,31 +44,35 @@ export default function LeaderboardWidget({
 
       const token = await getToken();
 
-      const rankPromise = getLeadersMyRank(token);
       const leadersPromise: Promise<LeaderboardMember[] | null> =
-        hasFetchedRef.current
+        hasFetchedRef.current || hasInitialLeaderboard
           ? Promise.resolve(null)
           : (getLeaderboardAction(token) as Promise<LeaderboardMember[]>);
+      const [rankResult, leadersResult] = await Promise.allSettled([
+        getLeadersMyRank(token),
+        leadersPromise,
+      ]);
 
-      const [myData, data] = await Promise.all([rankPromise, leadersPromise]);
-
-      if (data && Array.isArray(data)) {
-        setLeaders(data);
+      if (leadersResult.status === "fulfilled" && leadersResult.value) {
+        setLeaders(leadersResult.value);
         hasFetchedRef.current = true;
       }
-      if (myData) {
-        setMyStats(myData);
+      if (rankResult.status === "fulfilled") {
+        setMyStats(rankResult.value);
+      } else {
+        console.error("Leaderboard rank fetch failed", rankResult.reason);
+        setMyStats(null);
       }
     } catch (err) {
       console.error("Leaderboard error:", err);
       // Don't error out if we have initial data, just log
-      if (!hasFetchedRef.current && initialLeaderboard.length === 0) {
+      if (!hasFetchedRef.current && !hasInitialLeaderboard) {
         setError("Failed to load");
       }
     } finally {
       setLoading(false);
     }
-  }, [user, getToken, initialLeaderboard.length]);
+  }, [user, getToken, hasInitialLeaderboard]);
 
   // Helper to handle conditional my rank call
   const getLeadersMyRank = async (
@@ -81,10 +87,10 @@ export default function LeaderboardWidget({
     // If we have initial data, we only need to fetch user rank if user is present
     if (user) {
       fetchLeaders();
-    } else if (initialLeaderboard.length > 0) {
+    } else if (hasInitialLeaderboard && (initialLeaderboard?.length ?? 0) > 0) {
       setLoading(false);
     }
-  }, [user, fetchLeaders, initialLeaderboard.length]);
+  }, [user, fetchLeaders, hasInitialLeaderboard, initialLeaderboard?.length]);
 
   // Standardized Name Formatter
   const formatName = (fullName: string) => {

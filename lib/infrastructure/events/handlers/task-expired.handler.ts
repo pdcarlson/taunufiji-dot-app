@@ -1,14 +1,12 @@
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
-import { TaskEvents, TaskExpiredEvent } from "@/lib/domain/events";
+import { TaskEvents } from "@/lib/domain/events";
 import { getContainer } from "@/lib/infrastructure/container";
 import { logger } from "@/lib/utils/logger";
 
 export const TaskExpiredHandler = {
   init: () => {
     // Task Expired -> Trigger Next Instance
-    DomainEventBus.subscribe<TaskExpiredEvent>(
-      TaskEvents.TASK_EXPIRED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_EXPIRED, async (payload) => {
         logger.log(
           `[TaskExpiredHandler] Task expired: ${payload.title} (${payload.taskId})`,
         );
@@ -30,7 +28,6 @@ export const TaskExpiredHandler = {
         } catch (e) {
           logger.error("[TaskExpiredHandler] Failed to handle expiry", e);
         }
-      },
-    );
+      });
   },
 };
