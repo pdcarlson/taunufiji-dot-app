@@ -1,18 +1,22 @@
 import { createEphemeralResponse } from "../utils";
 import { getContainer } from "@/lib/infrastructure/container";
 import { CommandHandler } from "../types";
+import { rrulestr } from "rrule";
 
-const DAY_SHIFT_MAP = {
-  MO: "TU",
-  TU: "WE",
-  WE: "TH",
-  TH: "FR",
-  FR: "SA",
-  SA: "SU",
-  SU: "MO",
+const DAY_NAME_MAP = {
+  MO: "Monday",
+  TU: "Tuesday",
+  WE: "Wednesday",
+  TH: "Thursday",
+  FR: "Friday",
+  SA: "Saturday",
+  SU: "Sunday",
 } as const;
 
-type DayKey = keyof typeof DAY_SHIFT_MAP;
+const EASTERN_TIME_ZONE = "America/New_York";
+const SCHEDULE_REFERENCE_START = "20240101T235900";
+
+type DayKey = keyof typeof DAY_NAME_MAP;
 
 function asString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -28,11 +32,60 @@ function asOptionalString(value: unknown): string | undefined {
 }
 
 function asNumber(value: unknown, fallback = 0): number {
-  return typeof value === "number" ? value : fallback;
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function isDayKey(value: string): value is DayKey {
-  return Object.prototype.hasOwnProperty.call(DAY_SHIFT_MAP, value);
+  return Object.prototype.hasOwnProperty.call(DAY_NAME_MAP, value);
+}
+
+function isValidMonthDay(
+  year: number,
+  monthIndex: number,
+  dayOfMonth: number,
+): boolean {
+  const date = new Date(Date.UTC(year, monthIndex, dayOfMonth));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === monthIndex &&
+    date.getUTCDate() === dayOfMonth
+  );
+}
+
+function formatDatePart(value: number): string {
+  return value.toString().padStart(2, "0");
+}
+
+function buildEasternDueDate(
+  year: number,
+  month: number,
+  dayOfMonth: number,
+): Date {
+  const dtStart = `${year}${formatDatePart(month)}${formatDatePart(dayOfMonth)}T235900`;
+  const rule = rrulestr(
+    `DTSTART;TZID=${EASTERN_TIME_ZONE}:${dtStart}\nRRULE:FREQ=DAILY;COUNT=1`,
+  );
+  const [occurrence] = rule.all();
+
+  if (!occurrence) {
+    throw new Error("Failed to resolve Eastern due date");
+  }
+
+  return occurrence;
+}
+
+function resolveDutyDueAt(monthIndex: number, dayOfMonth: number): Date {
+  const now = new Date();
+  const month = monthIndex + 1;
+  let year = now.getFullYear();
+  let dueAt = buildEasternDueDate(year, month, dayOfMonth);
+
+  if (dueAt < now) {
+    year += 1;
+    dueAt = buildEasternDueDate(year, month, dayOfMonth);
+  }
+
+  return dueAt;
 }
 
 /**
@@ -65,37 +118,17 @@ export const duty: CommandHandler = async (interaction, options) => {
       );
     }
 
-    const month = match[1];
-    const day = match[2];
+    const monthIndex = Number(match[1]) - 1;
+    const dayOfMonth = Number(match[2]);
     const currentYear = new Date().getFullYear();
-    const monthIndex = Number(month) - 1;
-    const dayOfMonth = Number(day);
 
-    // Create ISO string representing 11:59 PM EST
-    // EST is UTC-5, so 11:59 PM EST = 04:59 AM UTC (next day)
-    // This matches what the frontend browser creates when in EST timezone
-    const date = new Date(Date.UTC(currentYear, monthIndex, dayOfMonth));
-    date.setUTCDate(date.getUTCDate() + 1); // Next day
-    date.setUTCHours(4, 59, 0, 0); // 04:59 UTC = 11:59 PM EST
-    dueAt = date;
-
-    // validate date is real
-    if (isNaN(dueAt.getTime())) {
+    if (!isValidMonthDay(currentYear, monthIndex, dayOfMonth)) {
       return createEphemeralResponse(
         `❌ Invalid date: "${dueDateInput}". Check month/day values.`,
       );
     }
 
-    // if date is in the past, assume next year
-    const now = new Date();
-    if (dueAt < now) {
-      const nextYearDate = new Date(
-        Date.UTC(currentYear + 1, monthIndex, dayOfMonth),
-      );
-      nextYearDate.setUTCDate(nextYearDate.getUTCDate() + 1);
-      nextYearDate.setUTCHours(4, 59, 0, 0);
-      dueAt = nextYearDate;
-    }
+    dueAt = resolveDutyDueAt(monthIndex, dayOfMonth);
   } catch {
     return createEphemeralResponse(
       `❌ Failed to parse date: "${dueDateInput}". Use MM-DD format.`,
@@ -115,7 +148,7 @@ export const duty: CommandHandler = async (interaction, options) => {
     });
 
     return createEphemeralResponse(
-      `✅ Duty assigned: **${title}** to <@${userId}>.\nDue: ${dueAt.toLocaleDateString()} at 11:59 PM EST`,
+      `✅ Duty assigned: **${title}** to <@${userId}>.\nDue: ${dueAt.toLocaleDateString("en-US", { timeZone: EASTERN_TIME_ZONE })} at 11:59 PM ET`,
     );
   } catch (e) {
     console.error("Duty Error", e);
@@ -126,7 +159,7 @@ export const duty: CommandHandler = async (interaction, options) => {
 /**
  * /schedule - Create a recurring task (mirrors CreateScheduleModal)
  * Fields: title, day, description, assigned_to (optional), lead_time_hours
- * Logic: Builds RRULE (Noon), calls createSchedule
+ * Logic: Builds Eastern-time RRULE at 11:59 PM, calls createSchedule
  */
 export const schedule: CommandHandler = async (interaction, options) => {
   const title = asString(options.title);
@@ -145,11 +178,7 @@ export const schedule: CommandHandler = async (interaction, options) => {
     return createEphemeralResponse("❌ Lead time must be at least 1 hour.");
   }
 
-  // RRule runs in UTC timezone on server
-  // For 11:59 PM EST: EST is UTC-5, so 11:59 PM EST = 04:59 AM UTC (next day)
-  // Shift to next day of week since 04:59 crosses midnight
-  const nextDay = DAY_SHIFT_MAP[day];
-  const rrule = `FREQ=WEEKLY;BYDAY=${nextDay};BYHOUR=4;BYMINUTE=59`;
+  const rrule = `DTSTART;TZID=${EASTERN_TIME_ZONE}:${SCHEDULE_REFERENCE_START}\nRRULE:FREQ=WEEKLY;BYDAY=${day};BYHOUR=23;BYMINUTE=59;BYSECOND=0`;
 
   try {
     const { scheduleService } = getContainer();
@@ -163,18 +192,9 @@ export const schedule: CommandHandler = async (interaction, options) => {
       active: true,
     });
 
-    const dayMap: Record<string, string> = {
-      MO: "Monday",
-      TU: "Tuesday",
-      WE: "Wednesday",
-      TH: "Thursday",
-      FR: "Friday",
-      SA: "Saturday",
-      SU: "Sunday",
-    };
-    const dayName = dayMap[day] || day;
+    const dayName = DAY_NAME_MAP[day];
     return createEphemeralResponse(
-      `✅ Schedule created: **${title}**\nEvery ${dayName} at 11:59 PM EST. Lead time: ${leadTime}h.`,
+      `✅ Schedule created: **${title}**\nEvery ${dayName} at 11:59 PM ET. Lead time: ${leadTime}h.`,
     );
   } catch (e) {
     console.error("Schedule Error", e);

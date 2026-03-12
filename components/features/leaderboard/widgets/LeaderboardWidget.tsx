@@ -116,6 +116,9 @@ export default function LeaderboardWidget({
     } else if (propProvided && (initialLeaderboard?.length ?? 0) > 0) {
       setLoading(false);
       setError(null);
+    } else if (!user && !prefetched && (initialLeaderboard?.length ?? 0) === 0) {
+      setLoading(false);
+      setError(null);
     }
   }, [user, fetchLeaders, propProvided, prefetched, initialLeaderboard?.length]);
 

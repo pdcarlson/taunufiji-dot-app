@@ -23,6 +23,11 @@ if (!parsed.success && !skipValidation) {
 
 const validatedEnv = parsed.success ? parsed.data : undefined;
 
+function resolveDefaultNodeEnv(): ServerEnv["NODE_ENV"] {
+  const parsedNodeEnv = serverEnvSchema.shape.NODE_ENV.safeParse(undefined);
+  return parsedNodeEnv.success ? parsedNodeEnv.data : "development";
+}
+
 function resolveSkipValidationEnv(): ServerEnv {
   const parsedWithValidation = serverEnvSchema.safeParse(readServerEnv());
 
@@ -40,7 +45,11 @@ function resolveSkipValidationEnv(): ServerEnv {
     );
   }
 
-  return process.env as unknown as ServerEnv;
+  const rawEnv = readServerEnv();
+  return {
+    ...rawEnv,
+    NODE_ENV: rawEnv.NODE_ENV ?? resolveDefaultNodeEnv(),
+  } as ServerEnv;
 }
 
 /**
