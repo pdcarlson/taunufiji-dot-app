@@ -69,8 +69,8 @@ export class AppwriteLibraryRepository implements ILibraryRepository {
     if (filters.semester && filters.semester !== "All") {
       queries.push(Query.equal("semester", filters.semester));
     }
-    if (filters.assessment_type && filters.assessment_type !== "All") {
-      queries.push(Query.equal("type", filters.assessment_type));
+    if (filters.type && filters.type !== "All") {
+      queries.push(Query.equal("type", filters.type));
     }
     if (filters.version && filters.version !== "All") {
       queries.push(Query.equal("version", filters.version));

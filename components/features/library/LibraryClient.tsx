@@ -109,20 +109,13 @@ export default function LibraryClient({
       const requestId = ++currentRequestId.current;
       setLoading(true);
       try {
-        const apiFilters: Record<string, string | number> = {};
+        const apiFilters: Partial<LibraryFiltersState> = {};
         FILTER_KEYS.forEach((key) => {
           const value = debouncedFilters[key];
           if (value && value !== "All") {
             apiFilters[key] = value;
           }
         });
-
-        if (
-          typeof apiFilters.year === "string" &&
-          !isNaN(parseInt(apiFilters.year, 10))
-        ) {
-          apiFilters.year = parseInt(apiFilters.year, 10);
-        }
 
         const jwt = await getToken();
         // Server Action Call

@@ -61,6 +61,7 @@ export class AdminService {
     if (task.status !== "pending") {
       throw new Error("Task is not pending approval.");
     }
+    const originalPointsValue = task.points_value;
 
     // Update Task Status & potentially Points
     const updates: Partial<CreateAssignmentDTO> = {
@@ -78,21 +79,24 @@ export class AdminService {
     // Use override if provided, otherwise original
     const awardAmount =
       overridePoints !== undefined ? overridePoints : task.points_value;
+    const assignedUserId = task.assigned_to;
 
     try {
+      if (!assignedUserId) {
+        throw new Error("Cannot approve task without an assignee.");
+      }
+
       await DomainEventBus.publish(TaskEvents.TASK_APPROVED, {
         taskId: task.id,
         title: task.title,
-        userId: task.assigned_to ?? "",
+        userId: assignedUserId,
         points: awardAmount,
       });
     } catch (error) {
-      // Rollback status if points fail?
-      // For now, we propagate the error so the UI shows failure.
-      // Ideally we would revert the transaction here.
       await this.taskRepository.update(taskId, {
         status: "pending",
         completed_at: null,
+        points_value: originalPointsValue,
       });
       throw new Error(
         `Failed to complete approval process: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -125,12 +129,14 @@ export class AdminService {
     if (task.type === "ad_hoc") {
       await this.taskRepository.delete(taskId);
 
-      await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
-        taskId: task.id,
-        title: task.title,
-        userId: task.assigned_to ?? "",
-        reason,
-      });
+      if (task.assigned_to) {
+        await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
+          taskId: task.id,
+          title: task.title,
+          userId: task.assigned_to,
+          reason,
+        });
+      }
       return true;
     }
 
@@ -144,12 +150,14 @@ export class AdminService {
       assigned_to: shouldUnassign ? null : task.assigned_to,
     });
 
-    await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
-      taskId: task.id,
-      title: task.title,
-      userId: task.assigned_to ?? "",
-      reason,
-    });
+    if (task.assigned_to) {
+      await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
+        taskId: task.id,
+        title: task.title,
+        userId: task.assigned_to,
+        reason,
+      });
+    }
 
     return true;
   }

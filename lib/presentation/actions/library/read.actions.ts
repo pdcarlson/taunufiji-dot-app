@@ -1,6 +1,7 @@
 "use server";
 
 import { actionWrapper } from "@/lib/presentation/utils/action-handler";
+import type { LibrarySearchFilters } from "@/lib/domain/ports/library.repository";
 
 export async function getMetadataAction(jwt?: string) {
   const result = await actionWrapper(
@@ -49,24 +50,25 @@ export async function checkDuplicateResourceAction(
 /**
  * Searches the library primarily for client-side filtering interactions
  */
-interface LibrarySearchFilters {
+interface LibrarySearchRequestFilters {
   department?: string;
   course_number?: string;
   professor?: string;
   year?: string | number;
   semester?: string;
   assessment_type?: string;
+  type?: string;
   version?: string;
 }
 
 export async function searchLibraryAction(
-  filters: LibrarySearchFilters,
+  filters: LibrarySearchRequestFilters,
   jwt?: string,
 ) {
   const result = await actionWrapper(
     async ({ container }) => {
       // Sanitize filters
-      const searchFilters: Record<string, string | number> = {};
+      const searchFilters: LibrarySearchFilters = {};
 
       if (filters.department && filters.department !== "All")
         searchFilters.department = filters.department;
@@ -76,13 +78,16 @@ export async function searchLibraryAction(
       if (filters.year)
         searchFilters.year =
           typeof filters.year === "string"
-            ? parseInt(filters.year)
+            ? parseInt(filters.year, 10)
             : filters.year;
       if (filters.semester && filters.semester !== "All") {
         searchFilters.semester = filters.semester;
       }
+      if (filters.type && filters.type !== "All") {
+        searchFilters.type = filters.type;
+      }
       if (filters.assessment_type && filters.assessment_type !== "All") {
-        searchFilters.assessment_type = filters.assessment_type;
+        searchFilters.type = filters.assessment_type;
       }
       if (filters.version && filters.version !== "All") {
         searchFilters.version = filters.version;

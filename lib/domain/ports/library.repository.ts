@@ -6,7 +6,7 @@ export interface LibrarySearchFilters {
   professor?: string;
   year?: number;
   semester?: string;
-  assessment_type?: string;
+  type?: string;
   version?: string;
 }
 

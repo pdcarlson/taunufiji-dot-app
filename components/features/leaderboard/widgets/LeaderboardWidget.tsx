@@ -38,6 +38,11 @@ export default function LeaderboardWidget({
   const [error, setError] = useState<string | null>(null);
   const hasFetchedRef = useRef(hasInitialLeaderboard);
 
+  useEffect(() => {
+    setLeaders(initialLeaderboard ?? []);
+    hasFetchedRef.current = hasInitialLeaderboard;
+  }, [initialLeaderboard, hasInitialLeaderboard]);
+
   const fetchLeaders = useCallback(async () => {
     try {
       if (!user) return;
@@ -106,8 +111,10 @@ export default function LeaderboardWidget({
   const listIndex = leaders.findIndex(
     (member) => (member.userId ?? member.id) === user?.$id,
   );
+  const fallbackRank =
+    listIndex !== -1 ? (leaders[listIndex]?.rank ?? listIndex + 1) : "-";
 
-  const displayRank = myStats?.rank || (listIndex !== -1 ? listIndex + 1 : "-");
+  const displayRank = myStats?.rank ?? fallbackRank;
   const displayPoints =
     myStats?.points ?? (listIndex !== -1 ? leaders[listIndex].points : 0);
 

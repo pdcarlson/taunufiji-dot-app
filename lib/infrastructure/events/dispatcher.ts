@@ -56,13 +56,24 @@ class EventBus {
       );
     }
 
-    // Execute all handlers in parallel, but await completion
-    await Promise.all(
-      subscribers.map(async (handler) => {
-        // We propagate errors so the caller (Action) knows something failed.
-        await handler(payload);
-      }),
+    const settledResults = await Promise.allSettled(
+      subscribers.map((handler) => handler(payload)),
     );
+
+    const rejectedResults = settledResults.filter(
+      (result): result is PromiseRejectedResult => result.status === "rejected",
+    );
+
+    if (rejectedResults.length === 1) {
+      throw rejectedResults[0].reason;
+    }
+
+    if (rejectedResults.length > 1) {
+      throw new AggregateError(
+        rejectedResults.map((result) => result.reason),
+        `Event "${event}" had ${rejectedResults.length} handler failures.`,
+      );
+    }
   }
 }
 

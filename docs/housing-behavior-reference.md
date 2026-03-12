@@ -2,7 +2,8 @@
 
 This document is the durable behavioral reference for the Housing module.
 
-- **Specs** in `spec/` define planned implementation work and rollout status.
+- **Active specs** in `spec/` define in-progress rollout work.
+- **Completed specs** are archived in `docs/archive/specs/`.
 - **This document** defines expected runtime behavior, state transitions, and edge-case handling that should remain true across implementations.
 
 ## 1) Core Entities
@@ -19,7 +20,7 @@ This document is the durable behavioral reference for the Housing module.
 
 - `locked`: not yet visible/actionable; unlocks at `unlock_at`
 - `open`: available to claim or complete
-- `pending`: claimed/assigned work in progress; if `proof_s3_key` is present, it is explicitly awaiting admin review
+- `pending`: claimed/assigned work in progress (including proof-submitted items). There is no separate persisted `awaiting_review` status.
 - `approved`: accepted and closed
 - `rejected`: denied after review and potentially resubmittable (type-dependent)
 - `expired`: missed deadline / no longer completable
@@ -56,7 +57,7 @@ This document is the durable behavioral reference for the Housing module.
    - `locked` if `unlock_at` is in the future,
    - `open` if immediately visible.
 3. At/after `unlock_at`, task becomes `open`.
-4. Assigned user submits proof -> `pending`.
+4. Assigned user submits proof -> `pending` (review-ready via `proof_s3_key`).
 5. Admin approves -> `approved`.
 6. Next recurring instance is generated.
 7. If missed deadline, task transitions to `expired` and fine behavior is triggered.
@@ -65,7 +66,7 @@ This document is the durable behavioral reference for the Housing module.
 
 1. Admin creates one-off task, usually assigned to a user.
 2. Task is immediately `open` unless otherwise specified.
-3. Assigned user submits proof -> `pending`.
+3. Assigned user submits proof -> `pending` (review-ready via `proof_s3_key`).
 4. Admin:
    - approves -> `approved`,
    - rejects -> `rejected` (resubmit semantics depend on implementation policy).
@@ -125,7 +126,7 @@ This document is the durable behavioral reference for the Housing module.
 
 - Requires caller owns assigned task.
 - Must reject submissions after expiry.
-- On success stores proof key and enters `pending`.
+- On success stores proof key and remains `pending` (review-ready is inferred from `proof_s3_key`).
 
 ### Review (Approve / Reject)
 
@@ -215,3 +216,4 @@ Minimum walkthrough before production merge:
 - [Architecture](architecture.md)
 - [Deployment Workflow](deployment.md)
 - [Staging Environment Setup Spec](../spec/staging-environment-setup.md)
+- [QA Audit and Staging Hardening Spec (Archived)](archive/specs/qa-audit-and-staging-hardening.md)

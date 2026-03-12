@@ -10,19 +10,21 @@ const db = getDatabase();
 
 export const leaderboard: CommandHandler = async () => {
   try {
-    console.log("🏆 Leaderboard command triggered");
-    console.log("DB_ID:", DB_ID);
-    console.log("COLLECTION:", COLLECTIONS.USERS);
+    logger.debug("🏆 Leaderboard command triggered");
+    logger.debug("Leaderboard DB context", {
+      dbId: DB_ID,
+      collection: COLLECTIONS.USERS,
+    });
 
     const list = await db.listDocuments(DB_ID, COLLECTIONS.USERS, [
       Query.orderDesc("details_points_current"),
       Query.limit(10),
     ]);
 
-    console.log(`✅ Query successful. Found ${list.total} users`);
+    logger.debug("Leaderboard query successful", { totalUsers: list.total });
 
     if (list.total === 0) {
-      console.log("⚠️ No users in database");
+      logger.warn("Leaderboard query returned no users");
       return createResponse({ content: "No users found." });
     }
 
@@ -32,7 +34,7 @@ export const leaderboard: CommandHandler = async () => {
       return `${medal} **${u.full_name}** — ${u.details_points_current || 0} pts`;
     });
 
-    console.log("✅ Formatted leaderboard:", lines);
+    logger.debug("Formatted leaderboard payload", { lines });
 
     return createResponse({
       embeds: [
@@ -44,20 +46,26 @@ export const leaderboard: CommandHandler = async () => {
       ],
     });
   } catch (error: unknown) {
-    const errorDetails =
-      typeof error === "object" && error !== null
-        ? (error as {
-            message?: string;
-            code?: number;
-            type?: string;
-            stack?: string;
-          })
-        : undefined;
+    const errorDetails: {
+      message: string;
+      stack?: string;
+      code?: number | string;
+      type?: string;
+    } = error instanceof Error
+      ? { message: error.message, stack: error.stack }
+      : { message: String(error) };
+
+    if (typeof error === "object" && error !== null) {
+      const metadata = error as { code?: number | string; type?: string };
+      errorDetails.code = metadata.code;
+      errorDetails.type = metadata.type;
+    }
+
     logger.error("Leaderboard command failed", {
-      message: errorDetails?.message || String(error),
-      code: errorDetails?.code,
-      type: errorDetails?.type,
-      stack: errorDetails?.stack,
+      message: errorDetails.message,
+      code: errorDetails.code,
+      type: errorDetails.type,
+      stack: errorDetails.stack,
     });
     return createEphemeralResponse(
       "Unable to load leaderboard right now. Please try again later.",

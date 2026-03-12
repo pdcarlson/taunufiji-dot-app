@@ -27,7 +27,7 @@ function asNumber(value: unknown, fallback = 0): number {
 }
 
 function isDayKey(value: string): value is DayKey {
-  return value in DAY_SHIFT_MAP;
+  return Object.prototype.hasOwnProperty.call(DAY_SHIFT_MAP, value);
 }
 
 /**

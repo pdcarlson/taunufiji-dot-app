@@ -32,6 +32,7 @@ export const NotificationHandler = {
   init: () => {
     // Task Created → Notify assignee if pre-assigned
     DomainEventBus.subscribe(TaskEvents.TASK_CREATED, async (payload) => {
+      try {
         if (payload.assignedTo) {
           logger.log(
             `[NotificationHandler] Notifying user ${payload.assignedTo} of new task: ${payload.title}`,
@@ -46,10 +47,14 @@ export const NotificationHandler = {
           );
           logResult("TASK_CREATED", payload.assignedTo, result);
         }
-      });
+      } catch (error) {
+        logger.error("[NotificationHandler] TASK_CREATED handler failed", error);
+      }
+    });
 
     // Task Claimed → Notify admin channel
     DomainEventBus.subscribe(TaskEvents.TASK_CLAIMED, async (payload) => {
+      try {
         logger.log(
           `[NotificationHandler] Task claimed: ${payload.title} by ${payload.userId}`,
         );
@@ -58,10 +63,14 @@ export const NotificationHandler = {
           { taskId: payload.taskId },
         );
         logResult("TASK_CLAIMED", "admin_channel", result);
-      });
+      } catch (error) {
+        logger.error("[NotificationHandler] TASK_CLAIMED handler failed", error);
+      }
+    });
 
     // Task Submitted → Notify admins for review
     DomainEventBus.subscribe(TaskEvents.TASK_SUBMITTED, async (payload) => {
+      try {
         logger.log(
           `[NotificationHandler] Task submitted: ${payload.title} by ${payload.userId}`,
         );
@@ -70,10 +79,17 @@ export const NotificationHandler = {
           { taskId: payload.taskId },
         );
         logResult("TASK_SUBMITTED", "admin_channel", result);
-      });
+      } catch (error) {
+        logger.error(
+          "[NotificationHandler] TASK_SUBMITTED handler failed",
+          error,
+        );
+      }
+    });
 
     // Task Approved → Notify user
     DomainEventBus.subscribe(TaskEvents.TASK_APPROVED, async (payload) => {
+      try {
         if (payload.userId) {
           logger.log(
             `[NotificationHandler] Notifying user ${payload.userId} of approval: ${payload.title}`,
@@ -89,10 +105,14 @@ export const NotificationHandler = {
           );
           logResult("TASK_APPROVED", payload.userId, result);
         }
-      });
+      } catch (error) {
+        logger.error("[NotificationHandler] TASK_APPROVED handler failed", error);
+      }
+    });
 
     // Task Rejected → Notify user
     DomainEventBus.subscribe(TaskEvents.TASK_REJECTED, async (payload) => {
+      try {
         if (payload.userId) {
           logger.log(
             `[NotificationHandler] Notifying user ${payload.userId} of rejection: ${payload.title}`,
@@ -108,10 +128,14 @@ export const NotificationHandler = {
           );
           logResult("TASK_REJECTED", payload.userId, result);
         }
-      });
+      } catch (error) {
+        logger.error("[NotificationHandler] TASK_REJECTED handler failed", error);
+      }
+    });
 
     // Task Reassigned → Notify new user
     DomainEventBus.subscribe(TaskEvents.TASK_REASSIGNED, async (payload) => {
+      try {
         logger.log(
           `[NotificationHandler] Notifying user ${payload.newUserId} of reassignment: ${payload.title}`,
         );
@@ -124,10 +148,17 @@ export const NotificationHandler = {
           },
         );
         logResult("TASK_REASSIGNED", payload.newUserId, result);
-      });
+      } catch (error) {
+        logger.error(
+          "[NotificationHandler] TASK_REASSIGNED handler failed",
+          error,
+        );
+      }
+    });
 
     // Task Unassigned → Notify user
     DomainEventBus.subscribe(TaskEvents.TASK_UNASSIGNED, async (payload) => {
+      try {
         logger.log(
           `[NotificationHandler] Notifying user ${payload.userId} of unassignment: ${payload.title}`,
         );
@@ -140,7 +171,13 @@ export const NotificationHandler = {
           },
         );
         logResult("TASK_UNASSIGNED", payload.userId, result);
-      });
+      } catch (error) {
+        logger.error(
+          "[NotificationHandler] TASK_UNASSIGNED handler failed",
+          error,
+        );
+      }
+    });
 
     logger.log("[NotificationHandler] Subscribed to events.");
   },

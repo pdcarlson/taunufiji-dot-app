@@ -25,20 +25,27 @@ if (!parsed.success && !skipValidation) {
 const validatedEnv = parsed.success ? parsed.data : undefined;
 
 function resolveSkipValidationEnv(): ServerEnv {
-  try {
-    return serverEnvSchema.parse(readServerEnv());
-  } catch (error) {
-    if (error instanceof Error) {
-      console.warn(
-        `⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback. Reason: ${error.message}`,
-      );
-    } else {
-      console.warn(
-        "⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback.",
-      );
-    }
-    return process.env as unknown as ServerEnv;
+  const relaxedParsed = serverEnvSchema.partial().safeParse(readServerEnv());
+
+  if (relaxedParsed.success) {
+    return {
+      ...(process.env as unknown as ServerEnv),
+      NODE_ENV: serverEnvSchema.shape.NODE_ENV.parse(undefined),
+      ...relaxedParsed.data,
+    } as ServerEnv;
   }
+
+  if (relaxedParsed.error instanceof Error) {
+    console.warn(
+      `⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback. Reason: ${relaxedParsed.error.message}`,
+    );
+  } else {
+    console.warn(
+      "⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback.",
+    );
+  }
+
+  return process.env as unknown as ServerEnv;
 }
 
 /**

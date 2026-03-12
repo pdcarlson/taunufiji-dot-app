@@ -63,10 +63,20 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
       : [];
 
   const handleChange = (key: keyof LibraryFiltersState, value: string) => {
-    setFilters((previousFilters) => ({
-      ...previousFilters,
-      [key]: value,
-    }));
+    setFilters((previousFilters) => {
+      if (key === "department") {
+        return {
+          ...previousFilters,
+          department: value,
+          course_number: "",
+        };
+      }
+
+      return {
+        ...previousFilters,
+        [key]: value,
+      };
+    });
   };
 
   if (loading) {

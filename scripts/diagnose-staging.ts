@@ -237,4 +237,7 @@ async function main(): Promise<void> {
   console.log("\nAll staging diagnostics passed.");
 }
 
-void main();
+main().catch((error) => {
+  console.error("Diagnostic failed:", error);
+  process.exit(1);
+});
