@@ -54,13 +54,14 @@ export default function LeaderboardWidget({
   }, [initialLeaderboard, prefetched]);
 
   // Helper to handle conditional my-rank call
-  const getLeadersMyRank = async (
-    token: string,
-  ): Promise<{ rank: number; points: number } | null> => {
-    // If we are authorized, we can get rank.
-    // The action handles internal logic.
-    return await getMyRankAction(token);
-  };
+  const getLeadersMyRank = useCallback(
+    async (token: string): Promise<{ rank: number; points: number } | null> => {
+      // If we are authorized, we can get rank.
+      // The action handles internal logic.
+      return await getMyRankAction(token);
+    },
+    [getMyRankAction],
+  );
 
   const fetchLeaders = useCallback(async () => {
     try {
