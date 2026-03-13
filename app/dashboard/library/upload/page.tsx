@@ -67,9 +67,8 @@ export default function UnifiedUploadPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        // Use Server Action (Cookie Auth)
-        // const { jwt } = await account.createJWT();
-        const data = await getMetadataAction(); // No JWT needed
+        const jwt = await getToken();
+        const data = await getMetadataAction(jwt, { throwOnError: true });
         if (data) {
           setCourseData(data.courses);
           setProfessors(data.professors);
@@ -82,7 +81,7 @@ export default function UnifiedUploadPage() {
       }
     };
     load();
-  }, []);
+  }, [getToken]);
 
   // --- HANDLERS ---
 
@@ -175,6 +174,7 @@ export default function UnifiedUploadPage() {
     const toastId = toast.loading("Processing...");
 
     try {
+      const jwt = await getToken();
       let fileToUpload: File = currentFile;
       // 0. CHECK DUPLICATE (Requires filename + version)
       const stdName = generateFilename("pdf");
@@ -187,8 +187,7 @@ export default function UnifiedUploadPage() {
           year: stickyMetadata.year,
           version: stickyMetadata.version,
         },
-        // Pass JWT
-        await getToken(),
+        jwt,
       );
 
       if (isDuplicate) {
@@ -219,7 +218,6 @@ export default function UnifiedUploadPage() {
       formData.append("file", fileToUpload);
       // formData.append("jwt", jwt); // Pass JWT
 
-      const jwt = await getToken();
       // We need a server action that accepts FormData for upload
       const uploadRes = await uploadFileAction(formData, jwt);
       if (!uploadRes || !uploadRes.$id) throw new Error("Upload failed");
@@ -248,7 +246,7 @@ export default function UnifiedUploadPage() {
       // Generate JWT for secure server-side verification
       // WE ALREADY HAVE JWT from step 2 (Upload)
       // const { jwt } = await account.createJWT(); <--- REMOVED
-      await createLibraryResourceAction(resourceData);
+      await createLibraryResourceAction(resourceData, jwt);
 
       toast.success("Success! (+10 PTS)", { id: toastId });
       removeCurrentFileFromQueue();

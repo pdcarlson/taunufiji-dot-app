@@ -1,5 +1,21 @@
 # Project Log
 
+## 2026-03-13: Library Upload Auth + Metadata Stability Fix
+
+- **Upload auth correctness**:
+  - Fixed Library upload submit flow to reuse a single JWT and pass it to all authenticated actions, including metadata write/finalization.
+  - Updated upload-page metadata bootstrap to fetch with JWT and fail loudly in upload context instead of silently falling back to empty metadata.
+- **Metadata reliability**:
+  - Normalized Department/Course/Professor inputs (trim + whitespace normalization; uppercase for Dept/Course Number) before persistence checks.
+  - Removed hard dependency on Appwrite fulltext index for professor matching in `ensureMetadata`; now performs paginated normalized matching without `Query.search` on `professors.name`.
+  - Expanded metadata reads to paginated collection traversal so existing entries are not hidden after the first page.
+- **UX correctness**:
+  - Updated combobox create gating to use normalized equality so existing values do not incorrectly show a "Create" action.
+  - Trimmed created values before callback dispatch to prevent whitespace-only variants.
+- **Regression coverage**:
+  - Added tests for metadata read action error behavior and combobox normalized create behavior.
+  - Added repository regression tests for normalized professor/course metadata upsert behavior, including the no-fulltext-index path.
+
 ## 2026-03-11: Staging QA Audit Hardening
 
 - **Specs & Documentation**:

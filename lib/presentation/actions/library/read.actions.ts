@@ -4,15 +4,25 @@ import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 import type { LibrarySearchFilters } from "@/lib/domain/ports/library.repository";
 import type { LibraryResource } from "@/lib/domain/types/library";
 
-export async function getMetadataAction(jwt?: string) {
+interface MetadataActionOptions {
+  throwOnError?: boolean;
+}
+
+export async function getMetadataAction(
+  jwt?: string,
+  options: MetadataActionOptions = {},
+) {
   const result = await actionWrapper(
     async ({ container }) => {
       return await container.libraryService.getSearchMetadata();
     },
-    { jwt },
+    { jwt, actionName: "library-get-metadata" },
   );
 
   if (result.success && result.data) return result.data;
+  if (options.throwOnError) {
+    throw new Error(result.error || "Failed to load metadata");
+  }
   return { courses: {}, professors: [] };
 }
 
