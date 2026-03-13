@@ -9,6 +9,8 @@ const TEST_APP_URL = "http://localhost:3000"; // pragma: allowlist secret
 Object.assign(process.env, {
   NODE_ENV: "test",
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? TEST_APP_URL,
+  // Force UTC for scheduler/eastern-time tests so rrule TZID=America/New_York yields consistent UTC
+  TZ: "UTC",
 });
 process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT = "http://localhost/v1";
 process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID = "test-project";

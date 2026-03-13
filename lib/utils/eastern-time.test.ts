@@ -34,8 +34,9 @@ describe("eastern-time utilities", () => {
 
     expect(result).not.toBeNull();
     // Scheduler uses rrule TZID output as UTC; unlock is 24h before due
-    expect(result?.dueAt.toISOString()).toBe("2026-03-08T23:59:00.000Z");
-    expect(result?.unlockAt.toISOString()).toBe("2026-03-07T23:59:00.000Z");
+    // 23:59 ET after DST (Mar 2026) = 03:59 UTC next day
+    expect(result?.dueAt.toISOString()).toBe("2026-03-09T03:59:00.000Z");
+    expect(result?.unlockAt.toISOString()).toBe("2026-03-08T03:59:00.000Z");
   });
 
   it("returns ET-formatted today date input", () => {
