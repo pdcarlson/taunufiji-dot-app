@@ -3,25 +3,25 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = 3000;
 const baseURL = `http://127.0.0.1:${PORT}`;
 
-const E2E_ENV = [
-  "SKIP_ENV_VALIDATION=true",
-  "NEXT_PUBLIC_APPWRITE_ENDPOINT=https://example.com",
-  "NEXT_PUBLIC_APPWRITE_PROJECT_ID=test-project",
-  "APPWRITE_API_KEY=test-key",
-  "AWS_REGION=test-region",
-  "AWS_ACCESS_KEY_ID=test-access-key",
-  "AWS_SECRET_ACCESS_KEY=test-secret-key",
-  "AWS_BUCKET_NAME=test-bucket",
-  "DISCORD_APP_ID=test-app-id",
-  "DISCORD_PUBLIC_KEY=test-public-key",
-  "DISCORD_BOT_TOKEN=test-bot-token",
-  "DISCORD_GUILD_ID=test-guild-id",
-  "DISCORD_HOUSING_CHANNEL_ID=test-channel-id",
-  "DISCORD_ROLE_ID_BROTHER=test-role-brother",
-  "DISCORD_ROLE_ID_CABINET=test-role-cabinet",
-  "DISCORD_ROLE_ID_HOUSING_CHAIR=test-role-housing",
-  "CRON_SECRET=test-cron-secret",
-].join(" ");
+const E2E_ENV: NodeJS.ProcessEnv = {
+  SKIP_ENV_VALIDATION: "true",
+  NEXT_PUBLIC_APPWRITE_ENDPOINT: "https://example.com",
+  NEXT_PUBLIC_APPWRITE_PROJECT_ID: "test-project",
+  APPWRITE_API_KEY: "test-key",
+  AWS_REGION: "test-region",
+  AWS_ACCESS_KEY_ID: "test-access-key",
+  AWS_SECRET_ACCESS_KEY: "test-secret-key",
+  AWS_BUCKET_NAME: "test-bucket",
+  DISCORD_APP_ID: "test-app-id",
+  DISCORD_PUBLIC_KEY: "test-public-key",
+  DISCORD_BOT_TOKEN: "test-bot-token",
+  DISCORD_GUILD_ID: "test-guild-id",
+  DISCORD_HOUSING_CHANNEL_ID: "test-channel-id",
+  DISCORD_ROLE_ID_BROTHER: "test-role-brother",
+  DISCORD_ROLE_ID_CABINET: "test-role-cabinet",
+  DISCORD_ROLE_ID_HOUSING_CHAIR: "test-role-housing",
+  CRON_SECRET: "test-cron-secret",
+};
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -43,9 +43,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `${E2E_ENV} npm run dev -- --port ${PORT}`,
+    command: `npm run dev -- --port ${PORT}`,
     url: `${baseURL}/login`,
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
+    env: E2E_ENV,
   },
 });

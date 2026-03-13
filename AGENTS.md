@@ -40,6 +40,7 @@ Full style guides are in `docs/style-guide/`. Key rules to always follow:
 The codebase follows Clean Architecture (Onion) with strict layer boundaries. See `docs/architecture.md` for details.
 
 **Rules**:
+
 - `lib/domain/` must have **zero imports** from infrastructure, application, or presentation layers.
 - Dependencies flow inwards only: Presentation → Application → Domain ← Infrastructure.
 - All infrastructure adapters must implement a domain port (interface). Never use concrete infrastructure classes directly in application services.
@@ -49,6 +50,8 @@ The codebase follows Clean Architecture (Onion) with strict layer boundaries. Se
 ### Skill: Quality Gates
 
 **When to use**: Before every commit and PR.
+
+**Always run the full quality gate locally before pushing or opening a PR** so CI does not fail. Do not wait for the PR to run CI to discover failures.
 
 Run these checks (matching CI in `.github/workflows/ci.yml`):
 
@@ -80,6 +83,7 @@ Format: `type(scope): description`
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 Examples:
+
 ```
 feat(housing): add ad-hoc point request flow
 fix(auth): resolve infinite redirect loop on login
@@ -94,14 +98,14 @@ chore(deps): update next to 16.1.6
 
 When making changes to the codebase, update documentation as needed:
 
-| What changed | Update |
-|---|---|
-| New feature or module | Create spec in `docs/spec/current/`, update `docs/product.md` if user-facing |
-| Architecture or patterns | Update `docs/architecture.md` |
-| Tech stack (new dependency, framework upgrade) | Update `docs/tech-stack.md` |
-| Deployment or CI/CD | Update `docs/deployment.md` |
-| Significant completed work | Add entry to `docs/changelog.md` |
-| UI/UX guidelines | Update `docs/product.md` |
+| What changed                                   | Update                                                                       |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| New feature or module                          | Create spec in `docs/spec/current/`, update `docs/product.md` if user-facing |
+| Architecture or patterns                       | Update `docs/architecture.md`                                                |
+| Tech stack (new dependency, framework upgrade) | Update `docs/tech-stack.md`                                                  |
+| Deployment or CI/CD                            | Update `docs/deployment.md`                                                  |
+| Significant completed work                     | Add entry to `docs/changelog.md`                                             |
+| UI/UX guidelines                               | Update `docs/product.md`                                                     |
 
 ## Branch Workflow
 
@@ -120,21 +124,22 @@ Use `staging` as the integration branch for all active development work.
 
 The cloud environment has the following secrets injected (from the developer's `.env.local`):
 
-| Variable | Available | Notes |
-|---|---|---|
-| `NEXT_PUBLIC_APPWRITE_ENDPOINT` | Yes | Points to the Appwrite instance |
-| `NEXT_PUBLIC_APPWRITE_PROJECT_ID` | Yes | Project ID |
-| `APPWRITE_API_KEY` | Yes | Server-side API key |
-| `APPWRITE_STAGING_API_KEY` | Yes | Staging project API key |
-| `APPWRITE_PRODUCTION_API_KEY` | Yes | Production project API key |
-| `AWS_*` | Yes | S3 credentials for library storage |
-| `DISCORD_*` | Yes | Full Discord bot credentials and role IDs |
-| `CRON_SECRET` | Yes | Cron endpoint auth |
-| `GITHUB_PERSONAL_ACCESS_TOKEN` | Yes | Full repo access PAT |
+| Variable                          | Available | Notes                                     |
+| --------------------------------- | --------- | ----------------------------------------- |
+| `NEXT_PUBLIC_APPWRITE_ENDPOINT`   | Yes       | Points to the Appwrite instance           |
+| `NEXT_PUBLIC_APPWRITE_PROJECT_ID` | Yes       | Project ID                                |
+| `APPWRITE_API_KEY`                | Yes       | Server-side API key                       |
+| `APPWRITE_STAGING_API_KEY`        | Yes       | Staging project API key                   |
+| `APPWRITE_PRODUCTION_API_KEY`     | Yes       | Production project API key                |
+| `AWS_*`                           | Yes       | S3 credentials for library storage        |
+| `DISCORD_*`                       | Yes       | Full Discord bot credentials and role IDs |
+| `CRON_SECRET`                     | Yes       | Cron endpoint auth                        |
+| `GITHUB_PERSONAL_ACCESS_TOKEN`    | Yes       | Full repo access PAT                      |
 
 The agent has access to both **production** and **staging** Appwrite projects, the full GitHub repo via PAT, and the Discord bot. Use with appropriate guardrails (prefer staging for testing, never delete production data).
 
 To create a working `.env.local` from injected secrets:
+
 ```bash
 cat > .env.local << 'EOF'
 NEXT_PUBLIC_APPWRITE_ENDPOINT=$NEXT_PUBLIC_APPWRITE_ENDPOINT
