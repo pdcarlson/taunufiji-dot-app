@@ -27,9 +27,17 @@ export default function Combobox({
   const [isCreating, setIsCreating] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const normalizeOption = (option: string) =>
+    option.trim().replace(/\s+/g, " ").toLowerCase();
+
+  const normalizedQuery = normalizeOption(query);
+  const matchedOption = options.find(
+    (option) => normalizeOption(option) === normalizedQuery,
+  );
+
   // Filter options based on query
   const filtered = options.filter((opt) =>
-    opt.toLowerCase().includes(query.toLowerCase())
+    normalizeOption(opt).includes(normalizedQuery),
   );
 
   // Close when clicking outside
@@ -53,11 +61,20 @@ export default function Combobox({
   };
 
   const handleCreate = async () => {
-    if (!onCreate || !query) return;
+    const trimmedQuery = query.trim();
+    if (!onCreate || !trimmedQuery) return;
+
+    if (matchedOption) {
+      onChange(matchedOption);
+      setIsOpen(false);
+      setQuery("");
+      return;
+    }
+
     setIsCreating(true);
     try {
-      await onCreate(query);
-      onChange(query); // Select the new value
+      await onCreate(trimmedQuery);
+      onChange(trimmedQuery); // Select the new value
       setIsOpen(false);
       setQuery("");
     } catch (e) {
@@ -120,7 +137,7 @@ export default function Combobox({
             ))}
 
             {/* CREATE OPTION */}
-            {onCreate && query && !filtered.includes(query) && (
+            {onCreate && normalizedQuery && !matchedOption && (
               <button
                 onClick={handleCreate}
                 disabled={isCreating}
