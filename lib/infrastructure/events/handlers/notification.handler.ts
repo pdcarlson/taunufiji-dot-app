@@ -2,33 +2,40 @@
  * Notification Handler
  *
  * Listens for business domain events and sends notifications via Discord.
+ * Notifications are fire-and-forget from the event handler's perspective;
+ * failures are logged but do not block business logic.
  */
 
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
-import {
-  TaskEvents,
-  TaskCreatedEvent,
-  TaskClaimedEvent,
-  TaskSubmittedEvent,
-  TaskApprovedEvent,
-  TaskRejectedEvent,
-  TaskReassignedEvent,
-  TaskUnassignedEvent,
-} from "@/lib/domain/events";
+import { TaskEvents } from "@/lib/domain/events";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
 import { logger } from "@/lib/utils/logger";
+
+/**
+ * Log a notification result for observability.
+ */
+function logResult(
+  event: string,
+  target: string,
+  result: { success: boolean; error?: string },
+) {
+  if (!result.success) {
+    logger.error(
+      `[NotificationHandler] ${event} notification to ${target} failed: ${result.error}`,
+    );
+  }
+}
 
 export const NotificationHandler = {
   init: () => {
     // Task Created → Notify assignee if pre-assigned
-    DomainEventBus.subscribe<TaskCreatedEvent>(
-      TaskEvents.TASK_CREATED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_CREATED, async (payload) => {
+      try {
         if (payload.assignedTo) {
           logger.log(
             `[NotificationHandler] Notifying user ${payload.assignedTo} of new task: ${payload.title}`,
           );
-          await NotificationService.sendNotification(
+          const result = await NotificationService.sendNotification(
             payload.assignedTo,
             "assigned",
             {
@@ -36,68 +43,96 @@ export const NotificationHandler = {
               taskId: payload.taskId,
             },
           );
+          logResult("TASK_CREATED", payload.assignedTo, result);
         }
-      },
-    );
+      } catch (error) {
+        logger.error("[NotificationHandler] TASK_CREATED handler failed", {
+          taskId: payload.taskId,
+          assignedTo: payload.assignedTo,
+          error,
+        });
+      }
+    });
 
     // Task Claimed → Notify admin channel
-    DomainEventBus.subscribe<TaskClaimedEvent>(
-      TaskEvents.TASK_CLAIMED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_CLAIMED, async (payload) => {
+      try {
         logger.log(
           `[NotificationHandler] Task claimed: ${payload.title} by ${payload.userId}`,
         );
-        await NotificationService.notifyAdmins(
+        const result = await NotificationService.notifyAdmins(
           `📋 Task claimed: **${payload.title}** by <@${payload.userId}>`,
           { taskId: payload.taskId },
         );
-      },
-    );
+        logResult("TASK_CLAIMED", "admin_channel", result);
+      } catch (error) {
+        logger.error("[NotificationHandler] TASK_CLAIMED handler failed", {
+          taskId: payload.taskId,
+          userId: payload.userId,
+          error,
+        });
+      }
+    });
 
     // Task Submitted → Notify admins for review
-    DomainEventBus.subscribe<TaskSubmittedEvent>(
-      TaskEvents.TASK_SUBMITTED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_SUBMITTED, async (payload) => {
+      try {
         logger.log(
           `[NotificationHandler] Task submitted: ${payload.title} by ${payload.userId}`,
         );
-        await NotificationService.notifyAdmins(
+        const result = await NotificationService.notifyAdmins(
           `📤 Proof submitted for **${payload.title}** by <@${payload.userId}>. Ready for review.`,
           { taskId: payload.taskId },
         );
-      },
-    );
+        logResult("TASK_SUBMITTED", "admin_channel", result);
+      } catch (error) {
+        logger.error("[NotificationHandler] TASK_SUBMITTED handler failed", {
+          taskId: payload.taskId,
+          userId: payload.userId,
+          error,
+        });
+      }
+    });
 
     // Task Approved → Notify user
-    DomainEventBus.subscribe<TaskApprovedEvent>(
-      TaskEvents.TASK_APPROVED,
-      async (payload) => {
-        if (payload.userId) {
-          logger.log(
-            `[NotificationHandler] Notifying user ${payload.userId} of approval: ${payload.title}`,
-          );
-          await NotificationService.sendNotification(
-            payload.userId,
-            "approved",
-            {
-              title: payload.title,
-              taskId: payload.taskId,
-              points: payload.points,
-            },
-          );
-        }
-      },
-    );
+    DomainEventBus.subscribe(TaskEvents.TASK_APPROVED, async (payload) => {
+      try {
+        logger.log(
+          `[NotificationHandler] Notifying user ${payload.userId} of approval: ${payload.title}`,
+        );
+        const result = await NotificationService.sendNotification(
+          payload.userId,
+          "approved",
+          {
+            title: payload.title,
+            taskId: payload.taskId,
+            points: payload.points,
+          },
+        );
+        logResult("TASK_APPROVED", payload.userId, result);
+        logger.log("[NotificationHandler] TASK_APPROVED sent", {
+          userId: payload.userId,
+          taskId: payload.taskId,
+          title: payload.title,
+          success: result.success,
+        });
+      } catch (error) {
+        logger.error("[NotificationHandler] TASK_APPROVED handler failed", {
+          taskId: payload.taskId,
+          userId: payload.userId,
+          error,
+        });
+      }
+    });
 
     // Task Rejected → Notify user
-    DomainEventBus.subscribe<TaskRejectedEvent>(
-      TaskEvents.TASK_REJECTED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_REJECTED, async (payload) => {
+      try {
         if (payload.userId) {
           logger.log(
             `[NotificationHandler] Notifying user ${payload.userId} of rejection: ${payload.title}`,
           );
-          await NotificationService.sendNotification(
+          const result = await NotificationService.sendNotification(
             payload.userId,
             "rejected",
             {
@@ -106,18 +141,24 @@ export const NotificationHandler = {
               reason: payload.reason,
             },
           );
+          logResult("TASK_REJECTED", payload.userId, result);
         }
-      },
-    );
+      } catch (error) {
+        logger.error("[NotificationHandler] TASK_REJECTED handler failed", {
+          taskId: payload.taskId,
+          userId: payload.userId,
+          error,
+        });
+      }
+    });
 
     // Task Reassigned → Notify new user
-    DomainEventBus.subscribe<TaskReassignedEvent>(
-      TaskEvents.TASK_REASSIGNED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_REASSIGNED, async (payload) => {
+      try {
         logger.log(
           `[NotificationHandler] Notifying user ${payload.newUserId} of reassignment: ${payload.title}`,
         );
-        await NotificationService.sendNotification(
+        const result = await NotificationService.sendNotification(
           payload.newUserId,
           "assigned",
           {
@@ -125,17 +166,23 @@ export const NotificationHandler = {
             taskId: payload.taskId,
           },
         );
-      },
-    );
+        logResult("TASK_REASSIGNED", payload.newUserId, result);
+      } catch (error) {
+        logger.error("[NotificationHandler] TASK_REASSIGNED handler failed", {
+          taskId: payload.taskId,
+          newUserId: payload.newUserId,
+          error,
+        });
+      }
+    });
 
     // Task Unassigned → Notify user
-    DomainEventBus.subscribe<TaskUnassignedEvent>(
-      TaskEvents.TASK_UNASSIGNED,
-      async (payload) => {
+    DomainEventBus.subscribe(TaskEvents.TASK_UNASSIGNED, async (payload) => {
+      try {
         logger.log(
           `[NotificationHandler] Notifying user ${payload.userId} of unassignment: ${payload.title}`,
         );
-        await NotificationService.sendNotification(
+        const result = await NotificationService.sendNotification(
           payload.userId,
           "unassigned",
           {
@@ -143,8 +190,15 @@ export const NotificationHandler = {
             taskId: payload.taskId,
           },
         );
-      },
-    );
+        logResult("TASK_UNASSIGNED", payload.userId, result);
+      } catch (error) {
+        logger.error("[NotificationHandler] TASK_UNASSIGNED handler failed", {
+          taskId: payload.taskId,
+          userId: payload.userId,
+          error,
+        });
+      }
+    });
 
     logger.log("[NotificationHandler] Subscribed to events.");
   },

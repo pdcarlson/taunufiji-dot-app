@@ -4,8 +4,6 @@ import {
   AlertCircle,
   Home,
   Zap,
-  ArrowUpRight,
-  ArrowDownLeft,
 } from "lucide-react";
 import Link from "next/link";
 

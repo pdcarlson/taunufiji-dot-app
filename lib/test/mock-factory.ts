@@ -61,8 +61,8 @@ export const MockFactory = {
   }),
 
   createNotificationProvider: (): INotificationProvider => ({
-    sendDM: vi.fn(),
-    sendToChannel: vi.fn(),
+    sendDM: vi.fn().mockImplementation(async () => ({ success: true })),
+    sendToChannel: vi.fn().mockImplementation(async () => ({ success: true })),
   }),
 
   createIdentityProvider: (): IIdentityProvider => ({

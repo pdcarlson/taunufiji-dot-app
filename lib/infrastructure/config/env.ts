@@ -1,41 +1,55 @@
-import { z } from "zod";
+import "server-only";
+import { readServerEnv, ServerEnv, serverEnvSchema } from "./server-env-schema";
 
-const envSchema = z.object({
-  // Appwrite
-  NEXT_PUBLIC_APPWRITE_ENDPOINT: z.string().url(),
-  NEXT_PUBLIC_APPWRITE_PROJECT_ID: z.string().min(1),
-  APPWRITE_API_KEY: z.string().min(1).optional(), // Server-side only
+/**
+ * Environment Configuration
+ *
+ * NEXT_PUBLIC_ variables are inlined by the Next.js compiler.
+ * Server-only variables are protected by 'server-only' and only available in Node.js environments.
+ */
 
-  // AWS S3
-  AWS_REGION: z.string().min(1),
-  AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
-  AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
-  AWS_BUCKET_NAME: z.string().min(1),
+const skipValidation = process.env.SKIP_ENV_VALIDATION === "true";
+const parsed = serverEnvSchema.safeParse(readServerEnv());
 
-  // Discord
-  DISCORD_APP_ID: z.string().min(1).optional(),
-  DISCORD_PUBLIC_KEY: z.string().min(1).optional(),
-  DISCORD_BOT_TOKEN: z.string().min(1).optional(),
-  DISCORD_GUILD_ID: z.string().min(1).optional(),
-  DISCORD_HOUSING_CHANNEL_ID: z.string().min(1).optional(),
-
-  // App
-  NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
-});
-
-// Validate process.env
-const isTest = process.env.NODE_ENV === "test";
-const parsed = isTest
-  ? { success: true, data: process.env } // Skip validation in test
-  : envSchema.safeParse(process.env);
-
-if (!parsed.success) {
-  console.error(
-    "❌ Invalid environment variables:",
-    JSON.stringify((parsed as any).error.format(), null, 4),
+if (!parsed.success && !skipValidation) {
+  const formattedErrors = parsed.error.flatten().fieldErrors;
+  const invalidKeys = Object.keys(formattedErrors);
+  console.error("Server environment validation failed:", parsed.error.format());
+  throw new Error(
+    `Invalid server environment variables: ${
+      invalidKeys.length > 0 ? invalidKeys.join(", ") : "unknown"
+    }`,
   );
-  // In development, we might not want to crash immediately if just scaffolding, but ideally we do.
-  // process.exit(1);
 }
 
-export const env = parsed.success ? parsed.data : (process.env as any);
+const validatedEnv = parsed.success ? parsed.data : undefined;
+
+function resolveDefaultNodeEnv(): ServerEnv["NODE_ENV"] {
+  const parsedNodeEnv = serverEnvSchema.shape.NODE_ENV.safeParse(undefined);
+  return parsedNodeEnv.success ? parsedNodeEnv.data : "development";
+}
+
+function resolveSkipValidationEnv(): ServerEnv {
+  const rawEnv = readServerEnv();
+  const parsedWithValidation = serverEnvSchema.safeParse(rawEnv);
+
+  if (parsedWithValidation.success) {
+    return parsedWithValidation.data;
+  }
+
+  console.warn(
+    `⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback. Reason: ${parsedWithValidation.error.message}`,
+  );
+  return {
+    ...rawEnv,
+    NODE_ENV: rawEnv.NODE_ENV ?? resolveDefaultNodeEnv(),
+  } as ServerEnv;
+}
+
+/**
+ * Validated Environment Object
+ * (Server Only)
+ */
+export const env = skipValidation
+  ? resolveSkipValidationEnv()
+  : (validatedEnv as ServerEnv);

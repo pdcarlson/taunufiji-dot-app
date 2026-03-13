@@ -4,9 +4,7 @@ import { HistoryItem } from "@/lib/domain/entities/dashboard.dto";
 import { useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
-  CheckCircle2,
   History as HistoryIcon,
-  AlertCircle,
 } from "lucide-react";
 // import { cn } from "@/lib/utils";
 

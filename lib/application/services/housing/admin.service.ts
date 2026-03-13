@@ -10,6 +10,8 @@ import { CreateAssignmentDTO } from "@/lib/domain/types/task";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents } from "@/lib/domain/events";
 import { ScheduleService } from "./schedule.service";
+import { RecurringMutationOptions } from "@/lib/domain/types/recurring";
+import { logger } from "@/lib/utils/logger";
 
 export class AdminService {
   constructor(
@@ -37,7 +39,7 @@ export class AdminService {
         taskId: task.id,
         title: task.title,
         type: task.type as "duty" | "bounty" | "project" | "one_off",
-        assignedTo: task.assigned_to,
+        assignedTo: task.assigned_to ?? undefined,
       });
     }
 
@@ -51,7 +53,6 @@ export class AdminService {
   async verifyTask(
     taskId: string,
     _verifierId: string,
-    _rating: number = 5,
     overridePoints?: number,
   ) {
     const task = await this.taskRepository.findById(taskId);
@@ -62,6 +63,11 @@ export class AdminService {
     if (task.status !== "pending") {
       throw new Error("Task is not pending approval.");
     }
+    const assignedUserId = task.assigned_to;
+    if (!assignedUserId) {
+      throw new Error("Cannot approve task without an assignee.");
+    }
+    const originalPointsValue = task.points_value;
 
     // Update Task Status & potentially Points
     const updates: Partial<CreateAssignmentDTO> = {
@@ -75,35 +81,47 @@ export class AdminService {
 
     await this.taskRepository.update(taskId, updates);
 
+    const updatedTask = { ...task, ...updates };
+
     // Award Points & Notify (via Event)
     // Use override if provided, otherwise original
     const awardAmount =
       overridePoints !== undefined ? overridePoints : task.points_value;
-
     try {
       await DomainEventBus.publish(TaskEvents.TASK_APPROVED, {
         taskId: task.id,
         title: task.title,
-        userId: task.assigned_to,
+        userId: assignedUserId,
         points: awardAmount,
       });
     } catch (error) {
-      // Rollback status if points fail?
-      // For now, we propagate the error so the UI shows failure.
-      // Ideally we would revert the transaction here.
-      await this.taskRepository.update(taskId, {
-        status: "pending",
-        completed_at: null,
-      });
+      const originalError =
+        error instanceof Error ? error : new Error(String(error));
+      Promise.resolve(
+        this.taskRepository.update(taskId, {
+          status: "pending",
+          completed_at: null,
+          points_value: originalPointsValue,
+        }),
+      )
+        .catch((rollbackError) => {
+          logger.error(
+            `[AdminService.verifyTask] Rollback failed for taskId=${taskId}`,
+            rollbackError,
+          );
+        });
       throw new Error(
-        `Failed to complete approval process: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to complete approval process: ${originalError.message}`,
       );
     }
 
-    // Trigger Recurrence
+    // Trigger Recurrence (pass updated task so scheduler sees completed_at)
     if (task.schedule_id) {
       try {
-        await this.scheduleService.triggerNextInstance(task.schedule_id, task);
+        await this.scheduleService.triggerNextInstance(
+          task.schedule_id,
+          updatedTask,
+        );
       } catch (e) {
         console.error("Failed to trigger next instance", e);
       }
@@ -124,14 +142,16 @@ export class AdminService {
 
     // For ad-hoc tasks: delete entirely on rejection
     if (task.type === "ad_hoc") {
-      await this.taskRepository.delete(taskId);
+      if (task.assigned_to) {
+        await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
+          taskId: task.id,
+          title: task.title,
+          userId: task.assigned_to,
+          reason,
+        });
+      }
 
-      await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
-        taskId: task.id,
-        title: task.title,
-        userId: task.assigned_to,
-        reason,
-      });
+      await this.taskRepository.delete(taskId);
       return true;
     }
 
@@ -144,13 +164,33 @@ export class AdminService {
       proof_s3_key: null,
       assigned_to: shouldUnassign ? null : task.assigned_to,
     });
-
-    await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
-      taskId: task.id,
-      title: task.title,
-      userId: task.assigned_to,
-      reason,
-    });
+    try {
+      if (task.assigned_to) {
+        await DomainEventBus.publish(TaskEvents.TASK_REJECTED, {
+          taskId: task.id,
+          title: task.title,
+          userId: task.assigned_to,
+          reason,
+        });
+      }
+    } catch (error) {
+      const originalError =
+        error instanceof Error ? error : new Error(String(error));
+      Promise.resolve(
+        this.taskRepository.update(taskId, {
+          status: task.status,
+          proof_s3_key: task.proof_s3_key,
+          assigned_to: task.assigned_to,
+        }),
+      )
+        .catch((rollbackError) => {
+          logger.error(
+            `[AdminService.rejectTask] Rollback failed for taskId=${taskId}`,
+            rollbackError,
+          );
+        });
+      throw originalError;
+    }
 
     return true;
   }
@@ -158,8 +198,45 @@ export class AdminService {
   /**
    * Update task details
    */
-  async updateTask(taskId: string, data: Partial<CreateAssignmentDTO>) {
-    return await this.taskRepository.update(taskId, data);
+  async updateTask(
+    taskId: string,
+    data: Partial<CreateAssignmentDTO>,
+    recurringOptions?: RecurringMutationOptions,
+  ) {
+    const task = await this.taskRepository.findById(taskId);
+    if (!task) {
+      throw new Error("Task not found.");
+    }
+
+    if (
+      !task.schedule_id ||
+      !recurringOptions ||
+      recurringOptions.scope === "this_instance"
+    ) {
+      return await this.taskRepository.update(taskId, data);
+    }
+
+    if (recurringOptions.scope === "entire_series") {
+      return await this.scheduleService.updateTaskEntireSeries(
+        task,
+        data,
+        undefined,
+      );
+    }
+
+    const effectiveFromDueAt =
+      recurringOptions.effectiveFromDueAt ?? task.due_at ?? undefined;
+    if (!effectiveFromDueAt) {
+      throw new Error(
+        "effectiveFromDueAt or task.due_at required for scoped recurring updates",
+      );
+    }
+
+    return await this.scheduleService.updateTaskThisAndFuture(
+      task,
+      data,
+      effectiveFromDueAt,
+    );
   }
 
   /**
@@ -192,7 +269,40 @@ export class AdminService {
   /**
    * Delete a task
    */
-  async deleteTask(taskId: string) {
-    await this.taskRepository.delete(taskId);
+  async deleteTask(
+    taskId: string,
+    recurringOptions?: RecurringMutationOptions,
+  ) {
+    const task = await this.taskRepository.findById(taskId);
+    if (!task) {
+      throw new Error("Task not found.");
+    }
+
+    if (
+      !task.schedule_id ||
+      !recurringOptions ||
+      recurringOptions.scope === "this_instance"
+    ) {
+      await this.taskRepository.delete(taskId);
+      return;
+    }
+
+    if (recurringOptions.scope === "entire_series") {
+      await this.scheduleService.deleteTaskEntireSeries(task, undefined);
+      return;
+    }
+
+    const effectiveFromDueAt =
+      recurringOptions.effectiveFromDueAt ?? task.due_at ?? undefined;
+    if (!effectiveFromDueAt) {
+      throw new Error(
+        "effectiveFromDueAt or task.due_at required for scoped recurring deletes",
+      );
+    }
+
+    await this.scheduleService.deleteTaskThisAndFuture(
+      task,
+      effectiveFromDueAt,
+    );
   }
 }

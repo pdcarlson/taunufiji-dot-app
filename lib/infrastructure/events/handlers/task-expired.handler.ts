@@ -1,37 +1,34 @@
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
-import { TaskEvents, TaskExpiredEvent } from "@/lib/domain/events";
+import { TaskEvents } from "@/lib/domain/events";
 import { getContainer } from "@/lib/infrastructure/container";
-import { ScheduleService } from "@/lib/application/services/housing/schedule.service";
 import { logger } from "@/lib/utils/logger";
 
 export const TaskExpiredHandler = {
   init: () => {
     // Task Expired -> Trigger Next Instance
-    DomainEventBus.subscribe<TaskExpiredEvent>(
-      TaskEvents.TASK_EXPIRED,
-      async (payload) => {
-        logger.log(
-          `[TaskExpiredHandler] Task expired: ${payload.title} (${payload.taskId})`,
-        );
+    DomainEventBus.subscribe(TaskEvents.TASK_EXPIRED, async (payload) => {
+      logger.log(
+        `[TaskExpiredHandler] Task expired taskId=${payload.taskId}`,
+      );
 
-        // We need to fetch the task to get the schedule_id
-        // Payload currently only has basic info.
-        // ideally payload should have scheduleId, but if not we fetch.
-        try {
-          const { taskRepository } = getContainer();
-          const task = await taskRepository.findById(payload.taskId);
+      let scheduleId: string | null = null;
+      try {
+        const { taskRepository, scheduleService } = getContainer();
+        const task = await taskRepository.findById(payload.taskId);
+        scheduleId = task?.schedule_id ?? null;
 
-          if (task && task.schedule_id) {
-            logger.log(
-              `[TaskExpiredHandler] Triggering next instance for schedule ${task.schedule_id}`,
-            );
-            const { scheduleService } = getContainer();
-            await scheduleService.triggerNextInstance(task.schedule_id, task);
-          }
-        } catch (e) {
-          logger.error("[TaskExpiredHandler] Failed to handle expiry", e);
+        if (task && task.schedule_id) {
+          logger.log(
+            `[TaskExpiredHandler] Triggering next instance for schedule ${task.schedule_id}`,
+          );
+          await scheduleService.triggerNextInstance(task.schedule_id, task);
         }
-      },
-    );
+      } catch (e) {
+        logger.error(
+          `[TaskExpiredHandler] Failed to handle expiry for taskId=${payload.taskId}${scheduleId ? ` scheduleId=${scheduleId}` : ""}`,
+          e,
+        );
+      }
+    });
   },
 };

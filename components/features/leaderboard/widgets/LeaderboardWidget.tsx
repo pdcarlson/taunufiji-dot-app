@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 // import { getLeaderboard } from "@/lib/tasks"; // Need to check where this function is in internal-os
 import { useAuth } from "@/components/providers/AuthProvider";
 import {
@@ -12,73 +12,158 @@ import clsx from "clsx";
 
 interface LeaderboardMember {
   id: string;
-  userId: string;
+  userId?: string;
   name: string;
   points: number;
+  rank?: number;
 }
 
 interface LeaderboardWidgetProps {
   initialLeaderboard?: LeaderboardMember[];
+  initialLeaderboardPrefetched?: boolean;
 }
 
 export default function LeaderboardWidget({
-  initialLeaderboard = [],
+  initialLeaderboard,
+  initialLeaderboardPrefetched = false,
 }: LeaderboardWidgetProps) {
-  const { user, profile, getToken } = useAuth();
-  const [leaders, setLeaders] =
-    useState<LeaderboardMember[]>(initialLeaderboard);
+  const { user, getToken } = useAuth();
+  const propProvided = initialLeaderboard !== undefined;
+  const prefetched = initialLeaderboardPrefetched === true;
+  const [leaders, setLeaders] = useState<LeaderboardMember[]>(
+    initialLeaderboard ?? [],
+  );
   const [myStats, setMyStats] = useState<{
     rank: number;
     points: number;
   } | null>(null);
-  const [loading, setLoading] = useState(initialLeaderboard.length === 0);
+  const [loading, setLoading] = useState(
+    !prefetched && (initialLeaderboard ?? []).length === 0,
+  );
   const [error, setError] = useState<string | null>(null);
-
-  const fetchLeaders = async () => {
-    try {
-      if (!user) return;
-
-      const token = await getToken();
-
-      // Use Server Action
-      // If we already have leaders, we only need my rank
-      const promises: Promise<any>[] = [getLeadersMyRank(token)];
-      if (leaders.length === 0) {
-        promises.push(getLeaderboardAction(token));
-      }
-
-      const [myData, data] = await Promise.all(promises);
-
-      if (data && Array.isArray(data)) {
-        setLeaders(data as any);
-      }
-      if (myData) {
-        setMyStats(myData);
-      }
-    } catch (err) {
-      console.error("Leaderboard error:", err);
-      // Don't error out if we have initial data, just log
-      if (leaders.length === 0) setError("Failed to load");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Helper to handle conditional my rank call
-  const getLeadersMyRank = async (token: string) => {
-    // If we are authorized, we can get rank.
-    // The action handles internal logic.
-    return await getMyRankAction(token);
-  };
+  const hasFetchedRef = useRef(prefetched);
+  const requestTokenRef = useRef(0);
 
   useEffect(() => {
-    // If we have initial data, we only need to fetch user rank if user is present
-    if (user) {
-      fetchLeaders();
-    } else if (initialLeaderboard.length > 0) {
+    setLeaders(initialLeaderboard ?? []);
+    hasFetchedRef.current = prefetched || (initialLeaderboard?.length ?? 0) > 0;
+
+    if (prefetched || (initialLeaderboard?.length ?? 0) > 0) {
+      setError(null);
       setLoading(false);
     }
-  }, [user, profile]);
+  }, [initialLeaderboard, prefetched]);
+
+  useEffect(() => {
+    requestTokenRef.current += 1;
+    hasFetchedRef.current = false;
+    setMyStats(null);
+    setError(null);
+
+    if (!user) {
+      setLeaders([]);
+      setLoading(false);
+      return;
+    }
+
+    setLeaders(initialLeaderboard ?? []);
+    setLoading(!prefetched && (initialLeaderboard ?? []).length === 0);
+  }, [user, initialLeaderboard, prefetched]);
+
+  // Helper to handle conditional my-rank call
+  const getLeadersMyRank = useCallback(
+    async (token: string): Promise<{ rank: number; points: number } | null> => {
+      // If we are authorized, we can get rank.
+      // The action handles internal logic.
+      return await getMyRankAction(token);
+    },
+    [],
+  );
+
+  const fetchLeaders = useCallback(async () => {
+    const requestToken = ++requestTokenRef.current;
+    try {
+      if (!user) {
+        if (requestToken === requestTokenRef.current) {
+          setMyStats(null);
+          setLeaders([]);
+          setError(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      const token = await getToken();
+      if (requestToken !== requestTokenRef.current) {
+        return;
+      }
+
+      const leadersPromise: Promise<LeaderboardMember[] | null> =
+        hasFetchedRef.current || prefetched
+          ? Promise.resolve(null)
+          : (getLeaderboardAction(token) as Promise<LeaderboardMember[]>);
+      const [rankResult, leadersResult] = await Promise.allSettled([
+        getLeadersMyRank(token),
+        leadersPromise,
+      ]);
+      if (requestToken !== requestTokenRef.current) {
+        return;
+      }
+
+      if (leadersResult.status === "fulfilled" && leadersResult.value) {
+        setLeaders(leadersResult.value);
+        setError(null);
+        hasFetchedRef.current = true;
+      } else if (leadersResult.status === "rejected") {
+        const reason =
+          leadersResult.reason instanceof Error
+            ? leadersResult.reason.message
+            : String(leadersResult.reason);
+        console.error("Leaderboard fetch failed", reason);
+        setError("Unable to load leaderboard");
+      }
+
+      if (rankResult.status === "fulfilled") {
+        setMyStats(rankResult.value);
+      } else {
+        console.error("Leaderboard rank fetch failed", rankResult.reason);
+        setMyStats(null);
+      }
+    } catch (err) {
+      if (requestToken !== requestTokenRef.current) {
+        return;
+      }
+      console.error("Leaderboard error:", err);
+      if (!hasFetchedRef.current && !prefetched) {
+        setError("Unable to load leaderboard");
+      }
+    } finally {
+      if (requestToken === requestTokenRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [user, getToken, prefetched, getLeadersMyRank]);
+
+  useEffect(() => {
+    return () => {
+      requestTokenRef.current += 1;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchLeaders();
+    } else {
+      setLoading(false);
+      setError(null);
+    }
+  }, [
+    user,
+    fetchLeaders,
+    propProvided,
+    prefetched,
+    initialLeaderboard?.length,
+  ]);
 
   // Standardized Name Formatter
   const formatName = (fullName: string) => {
@@ -91,9 +176,13 @@ export default function LeaderboardWidget({
 
   // Find my stats
   // Prioritize fetched myStats, fallback to list search (for consistency/optimistic)
-  const listIndex = leaders.findIndex((m) => m.userId === user?.$id);
+  const listIndex = leaders.findIndex(
+    (member) => (member.userId ?? member.id) === user?.$id,
+  );
+  const fallbackRank =
+    listIndex !== -1 ? (leaders[listIndex]?.rank ?? listIndex + 1) : "-";
 
-  const displayRank = myStats?.rank || (listIndex !== -1 ? listIndex + 1 : "-");
+  const displayRank = myStats?.rank ?? fallbackRank;
   const displayPoints =
     myStats?.points ?? (listIndex !== -1 ? leaders[listIndex].points : 0);
 

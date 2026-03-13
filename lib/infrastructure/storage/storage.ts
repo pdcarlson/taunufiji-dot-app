@@ -54,13 +54,17 @@ export class S3StorageService implements IStorageService {
   /**
    * Uploads a file buffer directly to S3 (Server -> S3)
    */
-  async uploadFile(buffer: Buffer, key: string, contentType: string) {
+  async uploadFile(
+    buffer: Buffer,
+    key: string,
+    contentType: string,
+  ): Promise<void> {
     const command = new PutObjectCommand({
       Bucket: env.AWS_BUCKET_NAME,
       Key: key,
       Body: buffer,
       ContentType: contentType,
     });
-    return await s3.send(command);
+    await s3.send(command);
   }
 }

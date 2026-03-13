@@ -175,3 +175,5 @@ Code quality is enforced via GitHub Actions (`.github/workflows/ci.yml`).
 ---
 
 _Engineered by [Paul Carlson](https://github.com/pdcarlson) for Phi Gamma Delta._
+
+Backlog and roadmap items are tracked in the [issue tracker](https://github.com/pdcarlson/taunufiji-dot-app/issues).

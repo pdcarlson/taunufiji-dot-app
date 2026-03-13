@@ -23,6 +23,7 @@ _Briefly describe the purpose of this PR. What problem does it solve?_
 
 ## ✅ Verification
 
-- [ ] I have updated the `project_log.md`.
+- [ ] I have updated the `docs/changelog.md`.
+- [ ] I have run `npm run build` locally.
 - [ ] I have run `npm run test` locally.
 - [ ] I have verified the UI on Mobile and Desktop.

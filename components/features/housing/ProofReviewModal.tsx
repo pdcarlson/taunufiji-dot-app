@@ -65,7 +65,7 @@ export default function ProofReviewModal({
     };
 
     fetchDetails();
-  }, [task]);
+  }, [task, getJWT]);
 
   // Move hooks to top level (unconditional)
   const [pointsReward, setPointsReward] = useState(task?.points_value || 0);

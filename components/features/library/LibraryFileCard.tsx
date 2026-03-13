@@ -8,13 +8,13 @@ import {
   AlertCircle,
   ShieldCheck,
   GraduationCap,
-  Calendar,
   User,
 } from "lucide-react";
 
+import { LibraryResource } from "@/lib/domain/types/library";
 import { getDownloadLinkAction } from "@/lib/presentation/actions/library/read.actions";
 
-export default function LibraryFileCard({ file }: { file: any }) {
+export default function LibraryFileCard({ file }: { file: LibraryResource }) {
   const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,9 +33,11 @@ export default function LibraryFileCard({ file }: { file: any }) {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Download failed");
+      const errorMessage =
+        err instanceof Error ? err.message : "Download failed";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -130,7 +132,7 @@ export default function LibraryFileCard({ file }: { file: any }) {
           <div className="flex items-center gap-4 w-full md:w-auto">
             {error && (
               <span className="text-xs text-red-500 font-bold flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> Error
+                <AlertCircle className="w-3 h-3" /> {error}
               </span>
             )}
 

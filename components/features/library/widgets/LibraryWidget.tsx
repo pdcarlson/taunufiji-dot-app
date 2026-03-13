@@ -3,21 +3,7 @@
 import { BookOpen, Upload } from "lucide-react";
 import Link from "next/link";
 
-interface LibraryWidgetProps {
-  stats?: {
-    libraryHistory?: {
-      id: string;
-      reason: string;
-      amount: number;
-      category: string;
-      timestamp: string;
-    }[];
-  };
-}
-
-export default function LibraryWidget({ stats }: LibraryWidgetProps) {
-  // const history = stats?.libraryHistory || []; // unused
-
+export default function LibraryWidget() {
   return (
     <div className="bg-white border border-stone-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full min-h-[280px]">
       <div>

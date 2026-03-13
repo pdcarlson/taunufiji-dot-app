@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import useDebounce from "@/hooks/useDebounce";
 import LibraryFilters from "./LibraryFilters";
+import type { LibraryFiltersState } from "./LibraryFilters";
 import LibraryFileCard from "./LibraryFileCard";
 import LibrarySkeleton from "./LibrarySkeleton";
 import ScholarshipStats from "./ScholarshipStats";
@@ -12,6 +13,7 @@ import { toast } from "react-hot-toast";
 import {
   searchLibraryAction,
   getLibraryStatsAction,
+  type LibrarySearchResult,
 } from "@/lib/presentation/actions/library/read.actions";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -20,13 +22,15 @@ import { useAuth } from "@/components/providers/AuthProvider";
 // unless we want to use generic Search Actions.
 // For now, keeping the API fetch for dynamic search is fine, but we accept initial data.
 
+import { LibraryResource } from "@/lib/domain/types/library";
+
 interface LibraryClientProps {
   initialTotal: number;
   initialUserFiles: number;
-  initialResources?: any[];
+  initialResources?: LibraryResource[];
 }
 
-const INITIAL_FILTERS = {
+const INITIAL_FILTERS: LibraryFiltersState = {
   department: "All",
   course_number: "All",
   professor: "",
@@ -36,14 +40,37 @@ const INITIAL_FILTERS = {
   version: "All",
 };
 
+const FILTER_KEYS: (keyof LibraryFiltersState)[] = [
+  "department",
+  "course_number",
+  "professor",
+  "semester",
+  "year",
+  "assessment_type",
+  "version",
+];
+
+function areResourcesEquivalent(
+  left: LibraryResource[] | null,
+  right: LibraryResource[],
+): boolean {
+  if (!left) {
+    return right.length === 0;
+  }
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((resource, index) => resource.id === right[index]?.id);
+}
+
 export default function LibraryClient({
   initialTotal,
   initialUserFiles,
   initialResources = [],
 }: LibraryClientProps) {
   const { getToken, user } = useAuth();
-  const [filters, setFilters] = useState(INITIAL_FILTERS);
-  const debouncedFilters = useDebounce(filters, 500);
+  const [filters, setFilters] = useState<LibraryFiltersState>(INITIAL_FILTERS);
+  const debouncedFilters = useDebounce<LibraryFiltersState>(filters, 500);
 
   // Stats State
   const [stats, setStats] = useState({
@@ -65,64 +92,90 @@ export default function LibraryClient({
       }
     };
     fetchStats();
-  }, [user]);
+  }, [user, getToken]);
 
   // Data State
-  const [results, setResults] = useState<any[] | null>(initialResources);
+  const [results, setResults] = useState<LibraryResource[] | null>(
+    initialResources,
+  );
   const [searchTotal, setSearchTotal] = useState(initialTotal);
   // If we have initial resources, we aren't loading initially
   const [loading, setLoading] = useState(initialResources.length === 0);
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const isFirstLoad = useRef(true);
+  const currentRequestId = useRef(0);
+  const hasActiveFilters = FILTER_KEYS.some(
+    (key) => filters[key] !== INITIAL_FILTERS[key],
+  );
 
   useEffect(() => {
-    // Skip the very first run if we have initial data AND filters haven't changed
-    // But debouncedFilters changes on mount? No, it initializes with value.
-    // We want to skip search if filters are default AND we have initial data.
+    const resourcesChanged = !areResourcesEquivalent(results, initialResources);
+    const totalChanged = searchTotal !== initialTotal;
 
-    const isDefaultFilters = Object.keys(INITIAL_FILTERS).every(
-      (k) =>
-        // @ts-ignore
-        filters[k] === INITIAL_FILTERS[k],
+    if (!hasActiveFilters || resourcesChanged) {
+      if (resourcesChanged) {
+        setResults(initialResources);
+      }
+      if (totalChanged) {
+        setSearchTotal(initialTotal);
+      }
+      if (initialResources.length > 0) {
+        setLoading(false);
+      }
+    }
+  }, [hasActiveFilters, initialResources, initialTotal, results, searchTotal]);
+
+  useEffect(() => {
+    const isDefaultFilters = FILTER_KEYS.every(
+      (key) => debouncedFilters[key] === INITIAL_FILTERS[key],
     );
 
-    if (isFirstLoad && initialResources.length > 0 && isDefaultFilters) {
-      setIsFirstLoad(false);
+    if (
+      isFirstLoad.current &&
+      initialResources.length > 0 &&
+      isDefaultFilters
+    ) {
+      isFirstLoad.current = false;
       return;
     }
 
     const runSearch = async () => {
+      const requestId = ++currentRequestId.current;
       setLoading(true);
       try {
-        const apiFilters: any = {};
-        Object.keys(debouncedFilters).forEach((key) => {
-          // @ts-ignore
+        const apiFilters: Partial<LibraryFiltersState> = {};
+        FILTER_KEYS.forEach((key) => {
           const value = debouncedFilters[key];
           if (value && value !== "All") {
             apiFilters[key] = value;
           }
         });
 
-        if (apiFilters.year && !isNaN(parseInt(apiFilters.year))) {
-          apiFilters.year = parseInt(apiFilters.year);
-        }
-
         const jwt = await getToken();
         // Server Action Call
-        const data = await searchLibraryAction(apiFilters, jwt);
+        const data: LibrarySearchResult = await searchLibraryAction(
+          apiFilters,
+          jwt,
+        );
 
-        setResults(data.documents);
-        setSearchTotal(data.total);
+        if (requestId === currentRequestId.current) {
+          setResults(data.documents);
+          setSearchTotal(data.total);
+        }
       } catch (err) {
         console.error("Search failed:", err);
-        toast.error("Failed to load library");
+        if (requestId === currentRequestId.current) {
+          toast.error("Failed to load library");
+        }
       } finally {
-        setLoading(false);
+        if (requestId === currentRequestId.current) {
+          setLoading(false);
+        }
       }
     };
 
     runSearch();
-    setIsFirstLoad(false);
-  }, [debouncedFilters]);
+    isFirstLoad.current = false;
+  }, [debouncedFilters, getToken, initialResources.length]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -172,8 +225,8 @@ export default function LibraryClient({
 
         {!loading &&
           results &&
-          results.map((doc: any) => (
-            <LibraryFileCard key={doc.$id || doc.id} file={doc} />
+          results.map((doc: LibraryResource) => (
+            <LibraryFileCard key={doc.id} file={doc} />
           ))}
 
         {!loading && results && results.length < searchTotal && (

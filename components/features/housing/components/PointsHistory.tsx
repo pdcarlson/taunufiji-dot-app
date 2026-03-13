@@ -1,39 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getTransactionHistoryAction } from "@/lib/presentation/actions/ledger.actions";
+import { LedgerEntry } from "@/lib/domain/entities";
 
-import { Models } from "appwrite";
-import { LedgerSchema } from "@/lib/domain/entities/appwrite.schema";
 import { ArrowDownLeft, ArrowUpRight, History } from "lucide-react";
 import { Loader } from "@/components/ui/Loader";
-
-type LedgerEntry = Models.Document & LedgerSchema;
 
 export default function PointsHistory() {
   const { user, getToken } = useAuth();
   const [history, setHistory] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
+    const activeRequestId = ++requestIdRef.current;
+    let cancelled = false;
+
     const loadData = async () => {
-      if (!user) return;
-      setLoading(true);
+      if (!user) {
+        if (!cancelled && activeRequestId === requestIdRef.current) {
+          setHistory([]);
+          setLoading(false);
+        }
+        return;
+      }
+      if (!cancelled && activeRequestId === requestIdRef.current) {
+        setHistory([]);
+        setLoading(true);
+      }
       try {
         const jwt = await getToken();
         // Action now only requires JWT (userId derived for security)
         const data = await getTransactionHistoryAction(jwt);
-        // Verify data shape or cast if action returns generic Document[]
-        setHistory(data as unknown as LedgerEntry[]);
+        if (!cancelled && activeRequestId === requestIdRef.current) {
+          setHistory(data);
+        }
       } catch (e) {
-        console.error("Failed to load history", e);
+        if (!cancelled && activeRequestId === requestIdRef.current) {
+          console.error("Failed to load history", e);
+          setHistory([]);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled && activeRequestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
     loadData();
-  }, [user]);
+
+    return () => {
+      cancelled = true;
+      requestIdRef.current = activeRequestId + 1;
+    };
+  }, [user, getToken]);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden">
@@ -67,7 +88,7 @@ export default function PointsHistory() {
 
             return (
               <div
-                key={tx.$id}
+                key={tx.id}
                 className="group hover:bg-stone-50 p-4 rounded-xl border border-stone-100 transition-colors flex items-center justify-between"
               >
                 <div className="flex items-center gap-4">

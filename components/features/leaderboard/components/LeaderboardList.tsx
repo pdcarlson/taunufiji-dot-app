@@ -12,20 +12,44 @@ export default function LeaderboardList() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchUsers = async () => {
-      if (!user) return;
+      if (!user) {
+        if (!cancelled) {
+          setUsers([]);
+          setLoading(false);
+        }
+        return;
+      }
+      if (!cancelled) {
+        setLoading(true);
+      }
       try {
         const token = await getToken();
+        if (cancelled) {
+          return;
+        }
         const data = await getLeaderboardAction(token);
-        setUsers(data);
+        if (!cancelled) {
+          setUsers(data);
+        }
       } catch (e) {
-        console.error(e);
+        if (!cancelled) {
+          console.error(e);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
     fetchUsers();
-  }, [user]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, getToken]);
 
   if (loading) {
     return (

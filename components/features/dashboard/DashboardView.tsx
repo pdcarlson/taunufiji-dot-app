@@ -10,17 +10,21 @@ import MyDutiesWidget from "@/components/features/housing/MyDutiesWidget";
 import PointsLedger from "./PointsLedger";
 import AdHocRequestCard from "@/components/features/housing/AdHocRequestCard";
 import { HousingTask } from "@/lib/domain/types/task";
+import { DashboardStats } from "@/lib/domain/entities/dashboard.dto";
+import { LeaderboardEntry } from "@/lib/presentation/queries/dashboard.queries";
 import { Loader2 } from "lucide-react";
 
 interface DashboardViewProps {
-  initialLeaderboard: any[];
+  initialLeaderboard: LeaderboardEntry[];
+  initialLeaderboardPrefetched: boolean;
 }
 
 export default function DashboardView({
   initialLeaderboard,
+  initialLeaderboardPrefetched,
 }: DashboardViewProps) {
   const { getToken, user, profile } = useAuth();
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [myTasks, setMyTasks] = useState<HousingTask[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +49,7 @@ export default function DashboardView({
     };
 
     fetchData();
-  }, [user]);
+  }, [user, getToken]);
 
   if (loading) {
     return (
@@ -82,7 +86,10 @@ export default function DashboardView({
 
         {/* RIGHT COLUMN (Rankings) */}
         <div className="flex flex-col">
-          <LeaderboardWidget initialLeaderboard={initialLeaderboard} />
+          <LeaderboardWidget
+            initialLeaderboard={initialLeaderboard}
+            initialLeaderboardPrefetched={initialLeaderboardPrefetched}
+          />
         </div>
       </div>
 

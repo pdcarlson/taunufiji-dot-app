@@ -1,24 +1,14 @@
 import { HousingTask } from "@/lib/domain/entities";
-import {
-  CheckCircle,
-  Clock,
-  XCircle,
-  ChevronRight,
-  Zap,
-  RefreshCw,
-  Briefcase,
-} from "lucide-react";
+import { ChevronRight, Zap, RefreshCw, Briefcase } from "lucide-react";
 import { TimeDisplay } from "../TimeDisplay";
 
 interface CollapsedDutyCardProps {
   task: HousingTask;
-  isActive: boolean;
   onClick: () => void;
 }
 
 export default function CollapsedDutyCard({
   task,
-  isActive,
   onClick,
 }: CollapsedDutyCardProps) {
   const isPending = task.status === "pending";

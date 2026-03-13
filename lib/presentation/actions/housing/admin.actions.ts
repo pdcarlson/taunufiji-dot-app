@@ -2,13 +2,19 @@
 
 import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 import { CreateAssignmentDTO } from "@/lib/domain/types/task";
+import { HOUSING_ADMIN_ROLES } from "@/lib/infrastructure/config/roles";
+import { RecurringMutationOptions } from "@/lib/domain/types/recurring";
 
 export async function createTaskAction(data: CreateAssignmentDTO, jwt: string) {
   return await actionWrapper(
     async ({ container }) => {
       return await container.adminService.createTask(data);
     },
-    { jwt },
+    {
+      jwt,
+      allowedRoles: HOUSING_ADMIN_ROLES,
+      actionName: "housing.createTask",
+    },
   );
 }
 
@@ -16,22 +22,35 @@ export async function updateTaskAction(
   taskId: string,
   data: Partial<CreateAssignmentDTO>,
   jwt: string,
+  recurringOptions?: RecurringMutationOptions,
 ) {
   return await actionWrapper(
     async ({ container }) => {
-      return await container.adminService.updateTask(taskId, data);
+      return await container.adminService.updateTask(taskId, data, recurringOptions);
     },
-    { jwt },
+    {
+      jwt,
+      allowedRoles: HOUSING_ADMIN_ROLES,
+      actionName: "housing.updateTask",
+    },
   );
 }
 
-export async function deleteTaskAction(taskId: string, jwt: string) {
+export async function deleteTaskAction(
+  taskId: string,
+  jwt: string,
+  recurringOptions?: RecurringMutationOptions,
+) {
   return await actionWrapper(
     async ({ container }) => {
-      await container.adminService.deleteTask(taskId);
+      await container.adminService.deleteTask(taskId, recurringOptions);
       return true;
     },
-    { jwt },
+    {
+      jwt,
+      allowedRoles: HOUSING_ADMIN_ROLES,
+      actionName: "housing.deleteTask",
+    },
   );
 }
 
@@ -46,11 +65,14 @@ export async function approveTaskAction(
       return await container.adminService.verifyTask(
         taskId,
         userId,
-        5,
         pointsOverride,
       );
     },
-    { jwt },
+    {
+      jwt,
+      allowedRoles: HOUSING_ADMIN_ROLES,
+      actionName: "housing.approveTask",
+    },
   );
 }
 
@@ -63,6 +85,10 @@ export async function rejectTaskAction(
     async ({ container }) => {
       return await container.adminService.rejectTask(taskId, reason);
     },
-    { jwt },
+    {
+      jwt,
+      allowedRoles: HOUSING_ADMIN_ROLES,
+      actionName: "housing.rejectTask",
+    },
   );
 }

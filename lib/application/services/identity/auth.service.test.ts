@@ -1,4 +1,3 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { AuthService } from "./auth.service";
 import { MockFactory } from "@/lib/test/mock-factory";
 import { setContainer, resetContainer } from "@/lib/infrastructure/container";
@@ -7,9 +6,12 @@ import { Member } from "@/lib/domain/entities";
 // Mock Env
 vi.mock("@/lib/infrastructure/config/env", () => ({
   env: {
+    NODE_ENV: "test",
     NEXT_PUBLIC_APPWRITE_ENDPOINT: "http://localhost/v1",
     NEXT_PUBLIC_APPWRITE_PROJECT_ID: "test-project",
     APPWRITE_API_KEY: "test-key",
+    DISCORD_GUILD_ID: "test_guild",
+    DISCORD_BOT_TOKEN: "test_token",
   },
 }));
 

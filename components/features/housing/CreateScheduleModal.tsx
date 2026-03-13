@@ -5,6 +5,8 @@ import { X, Calendar, User, FileText, Check, Clock } from "lucide-react";
 import { createScheduleAction } from "@/lib/presentation/actions/housing/schedule.actions";
 import { useJWT } from "@/hooks/useJWT";
 import toast from "react-hot-toast";
+import { getHousingActionErrorMessage } from "./actionError";
+import { buildWeeklyEasternRecurrenceRule } from "@/lib/utils/eastern-time";
 
 import { Member } from "@/lib/domain/entities";
 
@@ -32,7 +34,6 @@ export default function CreateScheduleModal({
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -51,20 +52,7 @@ export default function CreateScheduleModal({
     try {
       const jwt = await getJWT();
 
-      // RRule runs in UTC timezone
-      // For 11:59 PM EST: EST is UTC-5, so 11:59 PM EST = 04:59 AM UTC (next day)
-      // Shift to next day of week since 04:59 crosses midnight
-      const dayShiftMap: Record<string, string> = {
-        MO: "TU", // Monday 11:59 PM EST = Tuesday 04:59 AM UTC
-        TU: "WE",
-        WE: "TH",
-        TH: "FR",
-        FR: "SA",
-        SA: "SU",
-        SU: "MO",
-      };
-      const nextDay = dayShiftMap[data.freq_day];
-      const rrule = `FREQ=WEEKLY;BYDAY=${nextDay};BYHOUR=4;BYMINUTE=59`;
+      const rrule = buildWeeklyEasternRecurrenceRule(data.freq_day);
 
       const payload = {
         title: data.title,
@@ -82,9 +70,11 @@ export default function CreateScheduleModal({
         onSuccess();
         onClose();
       } else {
-        toast.error(res.error || "Failed to create schedule");
+        console.error("[CreateScheduleModal] createScheduleAction failed", res);
+        toast.error(getHousingActionErrorMessage(res));
       }
     } catch (e) {
+      console.error(e);
       toast.error("An error occurred");
     } finally {
       setLoading(false);

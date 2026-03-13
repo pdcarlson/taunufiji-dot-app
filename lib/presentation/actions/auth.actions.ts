@@ -1,5 +1,6 @@
 "use server";
 
+import { env } from "@/lib/infrastructure/config/env";
 import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 import { logger } from "@/lib/utils/logger";
 import { HOUSING_ADMIN_ROLES } from "@/lib/infrastructure/config/roles";
@@ -38,7 +39,7 @@ export async function getProfileAction(jwt: string) {
       // 2. Check Auth
       const isAuthorized = await container.authService.verifyBrother(userId);
 
-      if (process.env.NODE_ENV === "development") {
+      if (env.NODE_ENV === "development") {
         logger.log(
           `[getProfileAction] ${userId} -> Authorized: ${isAuthorized}`,
         );

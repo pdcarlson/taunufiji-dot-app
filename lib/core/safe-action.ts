@@ -1,13 +1,12 @@
 import { getContainer, Container } from "@/lib/infrastructure/container";
 import {
-  createSessionClient,
   createJWTClient,
 } from "@/lib/presentation/server/appwrite";
 
 type ActionContext = {
   container: Container;
   userId: string; // The authenticated Appwrite Auth ID
-  account: any;
+  account: unknown;
 };
 
 type ActionOptions = {
@@ -34,7 +33,7 @@ export async function safeAction<T>(
 ): Promise<ActionResult<T>> {
   try {
     const container = getContainer();
-    let account;
+    let account: { get: () => Promise<{ $id: string }> } | null = null;
     let userId = "";
 
     // 1. Authentication

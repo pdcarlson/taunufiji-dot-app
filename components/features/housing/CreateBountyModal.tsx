@@ -7,6 +7,7 @@ import { createTaskAction } from "@/lib/presentation/actions/housing/admin.actio
 import { useJWT } from "@/hooks/useJWT";
 import toast from "react-hot-toast";
 import { CreateAssignmentDTO } from "@/lib/domain/types/task";
+import { getHousingActionErrorMessage } from "./actionError";
 
 interface Props {
   onClose: () => void;
@@ -57,10 +58,12 @@ export default function CreateBountyModal({ onClose, onSuccess }: Props) {
         toast.success("Bounty Posted!");
         onSuccess();
       } else {
-        toast.error(res.error || "Failed to post bounty");
+        console.error("[CreateBountyModal] createTaskAction failed", res);
+        toast.error(getHousingActionErrorMessage(res));
       }
     } catch (e) {
       toast.error("An error occurred");
+      console.error(e);
     } finally {
       setLoading(false);
     }

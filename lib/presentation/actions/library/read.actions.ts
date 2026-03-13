@@ -1,6 +1,8 @@
 "use server";
 
 import { actionWrapper } from "@/lib/presentation/utils/action-handler";
+import type { LibrarySearchFilters } from "@/lib/domain/ports/library.repository";
+import type { LibraryResource } from "@/lib/domain/types/library";
 
 export async function getMetadataAction(jwt?: string) {
   const result = await actionWrapper(
@@ -49,34 +51,76 @@ export async function checkDuplicateResourceAction(
 /**
  * Searches the library primarily for client-side filtering interactions
  */
-interface LibrarySearchFilters {
+interface LibrarySearchRequestFilters {
   department?: string;
   course_number?: string;
   professor?: string;
   year?: string | number;
-  [key: string]: any; // Allow extensibility if needed, or keep strict?
-  // Let's keep it somewhat strict but pragmatic.
+  semester?: string;
+  assessment_type?: string;
+  type?: string;
+  version?: string;
+}
+
+export interface LibrarySearchResult {
+  documents: LibraryResource[];
+  total: number;
 }
 
 export async function searchLibraryAction(
-  filters: LibrarySearchFilters,
+  filters: LibrarySearchRequestFilters,
   jwt?: string,
-) {
+): Promise<LibrarySearchResult> {
   const result = await actionWrapper(
     async ({ container }) => {
       // Sanitize filters
-      const searchFilters: Record<string, string | number> = {};
+      const searchFilters: LibrarySearchFilters = {};
 
       if (filters.department && filters.department !== "All")
         searchFilters.department = filters.department;
       if (filters.course_number && filters.course_number !== "All")
         searchFilters.course_number = filters.course_number;
       if (filters.professor) searchFilters.professor = filters.professor;
-      if (filters.year)
-        searchFilters.year =
+      if (filters.year !== undefined && filters.year !== "") {
+        const yearCandidate =
           typeof filters.year === "string"
-            ? parseInt(filters.year)
-            : filters.year;
+            ? parseInt(filters.year, 10)
+            : Number(filters.year);
+        if (
+          Number.isInteger(yearCandidate) &&
+          isFinite(yearCandidate) &&
+          yearCandidate > 0
+        ) {
+          searchFilters.year = yearCandidate;
+        }
+      }
+      if (filters.semester && filters.semester !== "All") {
+        searchFilters.semester = filters.semester;
+      }
+      const normalizedType =
+        filters.type && filters.type !== "All" ? filters.type : undefined;
+      const normalizedAssessmentType =
+        filters.assessment_type && filters.assessment_type !== "All"
+          ? filters.assessment_type
+          : undefined;
+
+      if (
+        normalizedType &&
+        normalizedAssessmentType &&
+        normalizedType !== normalizedAssessmentType
+      ) {
+        throw new Error(
+          "Invalid filters: type and assessment_type must match when both are provided.",
+        );
+      }
+
+      const resolvedType = normalizedType ?? normalizedAssessmentType;
+      if (resolvedType) {
+        searchFilters.type = resolvedType;
+      }
+      if (filters.version && filters.version !== "All") {
+        searchFilters.version = filters.version;
+      }
 
       return await container.libraryService.search(searchFilters);
     },

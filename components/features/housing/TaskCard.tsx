@@ -66,7 +66,6 @@ export default function TaskCard(props: TaskCardProps) {
         task={task}
         userId={props.userId}
         getJWT={props.getJWT}
-        onEdit={props.onEdit}
       />
     );
   }
@@ -79,7 +78,6 @@ export default function TaskCard(props: TaskCardProps) {
       userId={props.userId}
       profileId={props.profileId}
       getJWT={props.getJWT}
-      onEdit={props.onEdit}
       variant={variant}
     />
   );

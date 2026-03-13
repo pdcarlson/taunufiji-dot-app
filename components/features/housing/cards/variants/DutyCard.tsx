@@ -35,9 +35,8 @@ export default function DutyCard({
   userId,
   profileId,
   getJWT,
-  onEdit,
   variant = "square",
-}: DutyCardProps) {
+}: Omit<DutyCardProps, 'onEdit'>) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 

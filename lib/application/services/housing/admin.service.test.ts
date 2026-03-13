@@ -1,4 +1,3 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AdminService } from "./admin.service";
 import { MockFactory } from "@/lib/test/mock-factory";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
@@ -10,6 +9,10 @@ const mockTaskRepo = MockFactory.createTaskRepository();
 // Partial mock for ScheduleService as it's complex
 const mockScheduleService = {
   triggerNextInstance: vi.fn(),
+  updateTaskThisAndFuture: vi.fn(),
+  updateTaskEntireSeries: vi.fn(),
+  deleteTaskThisAndFuture: vi.fn(),
+  deleteTaskEntireSeries: vi.fn(),
 } as any;
 
 // Mock Event Bus
@@ -99,8 +102,7 @@ describe("AdminService", () => {
         "Failed to complete approval process: Event Error",
       );
 
-      // Verify Rollback
-      expect(mockTaskRepo.update).toHaveBeenCalledTimes(2); // 1. approve, 2. rollback/pending
+      expect(mockTaskRepo.update).toHaveBeenCalledTimes(2);
       expect(mockTaskRepo.update).toHaveBeenLastCalledWith(
         taskId,
         expect.objectContaining({
@@ -119,7 +121,7 @@ describe("AdminService", () => {
         assigned_to: "user-1",
       } as any);
 
-      await service.verifyTask(taskId, "admin-1", 5, 20);
+      await service.verifyTask(taskId, "admin-1", 20);
 
       // Verify update called with new points
       expect(mockTaskRepo.update).toHaveBeenCalledWith(
@@ -173,6 +175,91 @@ describe("AdminService", () => {
       expect(mockTaskRepo.update).toHaveBeenCalledWith(
         taskId,
         expect.objectContaining({ status: "rejected" }),
+      );
+      expect(mockTaskRepo.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("recurring scope mutations", () => {
+    it("updates only one task when scope is this_instance", async () => {
+      (mockTaskRepo.findById as any).mockResolvedValue({
+        id: "task-1",
+        schedule_id: "schedule-1",
+      });
+      (mockTaskRepo.update as any).mockResolvedValue({ id: "task-1" });
+
+      await service.updateTask(
+        "task-1",
+        { title: "Updated title" },
+        { scope: "this_instance" },
+      );
+
+      expect(mockTaskRepo.update).toHaveBeenCalledWith("task-1", {
+        title: "Updated title",
+      });
+      expect(
+        mockScheduleService.updateTaskThisAndFuture,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("routes update to schedule service for this_and_future scope", async () => {
+      const task = {
+        id: "task-2",
+        schedule_id: "schedule-2",
+        due_at: "2026-03-10T03:59:00.000Z",
+      };
+      (mockTaskRepo.findById as any).mockResolvedValue(task);
+      (mockScheduleService.updateTaskThisAndFuture as any).mockResolvedValue(
+        task,
+      );
+
+      await service.updateTask(
+        "task-2",
+        { description: "next" },
+        {
+          scope: "this_and_future",
+        },
+      );
+
+      expect(mockScheduleService.updateTaskThisAndFuture).toHaveBeenCalledWith(
+        task,
+        { description: "next" },
+        "2026-03-10T03:59:00.000Z",
+      );
+    });
+
+    it("routes update to entire_series without requiring due_at", async () => {
+      const task = {
+        id: "task-X",
+        schedule_id: "schedule-X",
+      };
+      const payload = { title: "Series title" };
+      (mockTaskRepo.findById as any).mockResolvedValue(task);
+      (mockScheduleService.updateTaskEntireSeries as any).mockResolvedValue(
+        task,
+      );
+
+      await service.updateTask("task-X", payload, { scope: "entire_series" });
+
+      expect(mockScheduleService.updateTaskEntireSeries).toHaveBeenCalledWith(
+        task,
+        payload,
+        undefined,
+      );
+    });
+
+    it("routes delete to schedule service for entire_series scope", async () => {
+      const task = {
+        id: "task-Y",
+        schedule_id: "schedule-Y",
+      };
+      (mockTaskRepo.findById as any).mockResolvedValue(task);
+
+      await service.deleteTask("task-Y", { scope: "entire_series" });
+
+      expect(mockScheduleService.deleteTaskEntireSeries).toHaveBeenCalledWith(
+        task,
+        undefined,
       );
       expect(mockTaskRepo.delete).not.toHaveBeenCalled();
     });

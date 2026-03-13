@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest"
+    "test": "vitest",
+    "test:coverage": "vitest --run --coverage",
+    "test:coverage:critical": "vitest --run --config vitest.critical.config.ts",
+    "test:integration": "vitest --run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test",
+    "diagnose:staging": "tsx scripts/diagnose-staging.ts",
+    "discord:register": "tsx scripts/register-discord-commands.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.515.0",
@@ -34,6 +40,7 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -41,13 +48,16 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "^5.1.2",
+    "@vitest/coverage-v8": "^4.0.18",
     "autoprefixer": "latest",
+    "dotenv": "^17.3.1",
     "eslint": "latest",
     "eslint-config-next": "^16.1.6",
     "jsdom": "^27.4.0",
     "lightningcss": "^1.31.1",
     "postcss": "latest",
     "tailwindcss": "^4.1.18",
+    "tsx": "^4.19.3",
     "typescript": "latest",
     "vitest": "^4.0.18"
   },

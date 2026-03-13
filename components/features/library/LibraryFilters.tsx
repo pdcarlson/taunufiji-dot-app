@@ -1,16 +1,26 @@
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
+import { Dispatch, SetStateAction } from "react";
 import { useEffect, useState } from "react";
-import { ASSESSMENT_TYPES, VERSIONS, SEMESTERS } from "@/lib/utils/courseData";
+import { ASSESSMENT_TYPES, SEMESTERS, VERSIONS } from "@/lib/utils/courseData";
 import { Search, Filter, Loader2 } from "lucide-react";
 
-import toast from "react-hot-toast";
 import { getMetadataAction } from "@/lib/presentation/actions/library/read.actions";
 
+export interface LibraryFiltersState {
+  department: string;
+  course_number: string;
+  professor: string;
+  semester: string;
+  year: string;
+  assessment_type: string;
+  version: string;
+}
+
 interface FilterProps {
-  filters: any;
-  setFilters: (f: any) => void;
+  filters: LibraryFiltersState;
+  setFilters: Dispatch<SetStateAction<LibraryFiltersState>>;
 }
 
 export default function LibraryFilters({ filters, setFilters }: FilterProps) {
@@ -36,14 +46,14 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
           setCourseData(data.courses);
           setProfessors(data.professors);
         }
-      } catch (e) {
-        console.error("Failed to load filter data", e);
+      } catch (error: unknown) {
+        console.error("Failed to load filter data", error);
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [getToken]);
 
   // Derived Options
   const deptOptions = Object.keys(courseData).sort();
@@ -52,8 +62,21 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
       ? courseData[filters.department] || []
       : [];
 
-  const handleChange = (key: string, val: string) => {
-    setFilters({ ...filters, [key]: val });
+  const handleChange = (key: keyof LibraryFiltersState, value: string) => {
+    setFilters((previousFilters) => {
+      if (key === "department") {
+        return {
+          ...previousFilters,
+          department: value,
+          course_number: "All",
+        };
+      }
+
+      return {
+        ...previousFilters,
+        [key]: value,
+      };
+    });
   };
 
   if (loading) {
@@ -181,6 +204,29 @@ export default function LibraryFilters({ filters, setFilters }: FilterProps) {
             {ASSESSMENT_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* VERSION */}
+        <div className="col-span-1">
+          <label
+            htmlFor="version-select"
+            className="text-[10px] font-bold text-stone-400 uppercase mb-1 block"
+          >
+            Version
+          </label>
+          <select
+            id="version-select"
+            className="w-full p-2 border border-stone-200 rounded text-sm bg-stone-50 h-10"
+            value={filters.version}
+            onChange={(e) => handleChange("version", e.target.value)}
+          >
+            <option value="All">All Versions</option>
+            {VERSIONS.map((version) => (
+              <option key={version} value={version}>
+                {version}
               </option>
             ))}
           </select>

@@ -6,9 +6,13 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import toast from "react-hot-toast";
+import { getHousingActionErrorMessage } from "./actionError";
+import {
+  easternDateInputToIso,
+  getTodayEasternDateInput,
+} from "@/lib/utils/eastern-time";
 
 import { Member } from "@/lib/domain/entities";
-import { CreateAssignmentDTO } from "@/lib/domain/types/task";
 
 interface CreateOneOffModalProps {
   onClose: () => void;
@@ -29,25 +33,32 @@ export default function CreateOneOffModal({
     setLoading(true);
     try {
       const jwt = await getJWT();
+      const dueDateInput =
+        typeof data.due_at === "string"
+          ? data.due_at
+          : String(data.due_at ?? "");
+      const dueAtIso = easternDateInputToIso(dueDateInput);
 
       const payload = {
         title: data.title,
         description: data.description,
         points_value: 0, // Default 0 for Duties
         assigned_to: data.assigned_to || undefined,
-        // Force Noon Logic
-        due_at: new Date(`${data.due_at}T23:59:00`).toISOString(),
+        due_at: dueAtIso,
         type: "one_off" as const,
       };
 
       const res = await createTaskAction(payload, jwt);
-      if (!res.success) throw new Error(res.error);
+      if (!res.success) {
+        toast.error(getHousingActionErrorMessage(res));
+        return;
+      }
       toast.success("Duty Assigned");
       onSuccess();
       onClose();
     } catch (e) {
       console.error(e);
-      toast.error("Failed to assign duty");
+      toast.error("Failed to assign duty. Please retry.");
     } finally {
       setLoading(false);
     }
@@ -102,12 +113,12 @@ export default function CreateOneOffModal({
               </label>
               <input
                 type="date"
-                min={new Date().toISOString().split("T")[0]}
+                min={getTodayEasternDateInput()}
                 {...register("due_at", { required: true })}
                 className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-fiji-purple/20"
               />
               <p className="text-[10px] text-stone-400 mt-1">
-                Defaults to 12:00 PM (Noon)
+                Defaults to 11:59 PM ET (end of day)
               </p>
             </div>
           </div>

@@ -1,10 +1,11 @@
 import { Client, Account, Databases, Storage } from "appwrite";
+import { clientEnv } from "@/lib/infrastructure/config/client-env";
 
 const client = new Client();
 
 client
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
+  .setEndpoint(clientEnv.NEXT_PUBLIC_APPWRITE_ENDPOINT)
+  .setProject(clientEnv.NEXT_PUBLIC_APPWRITE_PROJECT_ID);
 
 export const account = new Account(client);
 export const databases = new Databases(client);

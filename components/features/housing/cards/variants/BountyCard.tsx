@@ -10,15 +10,9 @@ interface BountyCardProps {
   task: HousingTask;
   userId: string;
   getJWT: () => Promise<string>;
-  onEdit?: (task: HousingTask) => void;
 }
 
-export default function BountyCard({
-  task,
-  userId,
-  getJWT,
-  onEdit,
-}: BountyCardProps) {
+export default function BountyCard({ task, userId, getJWT }: BountyCardProps) {
   const [loading, setLoading] = useState(false);
 
   const handleClaim = async () => {
@@ -28,11 +22,7 @@ export default function BountyCard({
       const res = await claimTaskAction(task.id, userId, jwt);
       if (!res.success) throw new Error(res.error);
       toast.success("Bounty Claimed!");
-      // We rely on parent to refresh or optimistic update?
-      // The original code called onRefresh(). properties passed didn't include onRefresh?
-      // Wait, TaskCardProps HAS onRefresh. But BountyCardProps in TaskCard.tsx DOES NOT pass it?
-      // Let's check TaskCard.tsx usages.
-      window.location.reload(); // Fallback if no refresh provided, or better: just toast.
+      window.location.reload(); // Force full refresh to update state
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Error claiming task";

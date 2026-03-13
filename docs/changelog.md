@@ -1,5 +1,47 @@
 # Project Log
 
+## 2026-03-11: Staging QA Audit Hardening
+
+- **Specs & Documentation**:
+  - Added `docs/spec/archive/qa-audit-and-staging-hardening.md` and updated `docs/spec/current/staging-environment-setup.md` with runtime-readiness acceptance criteria.
+  - Added `docs/behavior.md` as a durable behavior/edge-case reference.
+  - Expanded deployment docs with environment matrix, diagnostics command, and staging troubleshooting runbook.
+- **Environment Diagnostics**:
+  - Added `npm run diagnose:staging` (`scripts/diagnose-staging.ts`) to verify Appwrite and Discord staging dependencies.
+  - Refactored server environment schema into reusable `server-env-schema.ts` for safer validation in both app runtime and diagnostics tooling.
+- **Housing Security & UX**:
+  - Enforced `HOUSING_ADMIN_ROLES` on housing mutation actions (`create/update/delete/review/schedule`).
+  - Improved task-creation UX with categorized failure messaging (auth, role, validation, database, external service).
+  - Added action-level error classification and contextual logging in `actionWrapper`.
+- **Testing System Upgrade**:
+  - Added coverage tooling (`@vitest/coverage-v8`) and critical-module coverage gate (`npm run test:coverage:critical`) with 90%+ thresholds.
+  - Added integration suites for `actionWrapper`, housing admin actions, and schedule actions.
+  - Added Playwright smoke tests (`tests/e2e/smoke.spec.ts`) and CI execution steps for browser installation + e2e run.
+  - Added Vitest coverage reporting script (`npm run test:coverage`) and excluded e2e specs from Vitest discovery.
+- **Repository Organization Realignment**:
+  - Archived completed specs to `docs/spec/archive/` and updated spec workflow references/indexes.
+  - Moved Playwright smoke coverage from root `e2e/` to `tests/e2e/` and updated related configs/docs.
+- **Lint Quality Drive**:
+  - Reduced lint output to zero warnings by replacing legacy `any` usage with stricter unknown/typed contracts and cleaning hook dependency/type-safety issues.
+- **Observed Staging Diagnostic Outcome**:
+  - Staging diagnostics now pass end-to-end after correcting `DISCORD_HOUSING_CHANNEL_ID`.
+  - The exact channel ID is tracked in environment configuration and the staging runbook, not in changelog history.
+
+## 2026-03-13: Recurring Task Stabilization and Verification Fixes
+
+- **Recurring Task Stabilization**:
+  - Scope-aware edit/delete for recurring duties: "This instance", "This and future", "Entire series" in `EditTaskModal` with `effectiveFromDueAt` validation in admin and schedule services.
+  - `admin.service`: `updateTask` and `deleteTask` throw when both `effectiveFromDueAt` and `task.due_at` are absent for scoped recurring mutations.
+  - `schedule.service`: `updateTaskThisAndFuture`, `updateTaskEntireSeries`, `deleteTaskThisAndFuture`, `deleteTaskEntireSeries`; JSDoc for entire-series methods documenting unused `effectiveFromDueAt` param (interface consistency).
+  - EditTaskModal: lead-time update only when schedule loaded or lead time dirty; conditional date input `min` so existing tasks with past due dates can be saved; delete path uses persisted `task.due_at` for slice (not form value).
+- **Verification Fixes**:
+  - AGENTS.md: default agent profile is staging/read-only; production and full-repo tokens marked "No (elevated)"; added Elevation subsection for requesting `APPWRITE_PRODUCTION_API_KEY` and `GITHUB_PERSONAL_ACCESS_TOKEN`.
+  - Playwright: `NODE_ENV: "test"` added to `E2E_ENV` for webServer env.
+- **Spec**:
+  - Completed and archived `docs/spec/current/recurring-task-update-scopes.md` to `docs/spec/archive/recurring-task-update-scopes.md` (acceptance criteria met).
+- **Other**:
+  - Scheduler DST assertions aligned with rrule UTC output in tests. Playwright webServer env typed as `Record<string, string>` for tsc.
+
 ## 2026-01-12: Housing V2 - Scheduels & Bounties
 
 - **Feature Completion**: Implemented full UI for Creating Recurring Schedules and Posting Bounties.
@@ -554,3 +596,37 @@
   - `app/api/cron/housing/`: **Deleted** — insecure route with no auth guard. Main `/api/cron` route already handles all jobs.
 - **Verification**: Build passes, 29/29 tests pass.
 - **Impact**: Cron workflow should now succeed on next scheduled run (every 12 minutes).
+
+## 2026-02-19: CI/CD Consolidation & Staging Environment
+
+- **Infrastructure**:
+  - Implemented **CI-Only Deployments**: Removed reliance on Appwrite Sites auto-deploy.
+  - Created `.github/workflows/deploy-staging.yml`: Deploys `staging` branch to Staging environment.
+  - Updated `.github/workflows/deploy-prod.yml`: Deploys `v*` tags to Production environment.
+  - Secrets are now strictly managed via **GitHub Environments** (`production` vs `staging`).
+- **Data Sync**:
+  - Created `scripts/sync-staging.ts`: Automated script to clone Production schema and data to Staging during deploy.
+  - **Safety**: Sensitive data (Housing Schedules, Assignments) is synced as Schema-Only to prevent accidental test notifications.
+  - **Data**: Users, Professors, Courses, Ledger, and Library Resources are fully synced.
+- **Observability**:
+  - Enhanced `NotificationService` to return detailed `NotificationResult`.
+  - Fixed `NotifyUrgentJob` ordering bug (notification now sent before DB update).
+  - Added `WORKFLOW.md` documentation.
+
+## 2026-02-19: Architecture Isolation & Configuration Refactor
+
+- **Full Environment Isolation**:
+  - Eliminated hardcoded production URLs and IDs from the codebase.
+  - Refactored `scripts/sync-staging.ts` to be fully configuration-driven, using dedicated source/target environment variables.
+  - Removed hardcoded production domain fallbacks in `NotificationService`.
+- **Configuration-Driven Logic**:
+  - Expanded `lib/infrastructure/config/env.ts` to centralize all external dependencies and domain constants (fine amounts, lead times).
+  - Centralized magic numbers and **branding literals** (`APP_NAME`, `APP_DESCRIPTION`) into `lib/constants.ts` for easy single-point maintenance without infrastructure changes.
+  - Implemented runtime configuration validation via Zod, ensuring missing critical variables fail fast in production.
+- **Branding & UI**:
+  - Centralized branding strings (`APP_NAME`, `APP_DESCRIPTION`) to ensure consistency across Layout, Metadata, and Notifications.
+  - Implemented dynamic page titles that automatically prefix the environment name (e.g., `[STAGING]`) for better visual distinction.
+- **Verification**:
+  - Executed successful production build (`npm run build`).
+  - Verified 100% test pass rate across 31 units.
+  - Resolved type safety issues in `DashboardView` and `PointsService`.

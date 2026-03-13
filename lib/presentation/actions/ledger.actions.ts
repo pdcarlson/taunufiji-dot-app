@@ -2,10 +2,13 @@
 
 import { createJWTClient } from "@/lib/presentation/server/appwrite";
 import { getContainer } from "@/lib/infrastructure/container";
+import { LedgerEntry } from "@/lib/domain/entities";
 
 // Helper removed (single usage refactored inline)
 
-export async function getTransactionHistoryAction(jwt: string) {
+export async function getTransactionHistoryAction(
+  jwt: string,
+): Promise<LedgerEntry[]> {
   try {
     const { account } = createJWTClient(jwt);
     const session = await account.get();
@@ -22,7 +25,7 @@ export async function getTransactionHistoryAction(jwt: string) {
     if (!profile) return [];
 
     const res = await pointsService.getHistory(profile.discord_id);
-    return JSON.parse(JSON.stringify(res));
+    return res;
   } catch (error) {
     console.error("Failed to fetch history", error);
     return [];

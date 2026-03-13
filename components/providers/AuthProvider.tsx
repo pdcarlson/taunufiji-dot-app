@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
   ReactNode,
 } from "react";
 import { account } from "@/lib/infrastructure/persistence/appwrite.web";
@@ -15,12 +16,14 @@ import {
   checkHousingAdminAction,
 } from "@/lib/presentation/actions/auth.actions";
 
+import { Member } from "@/lib/domain/entities";
+
 interface AuthContextType {
   user: Models.User<Models.Preferences> | null;
-  profile: any | null;
+  profile: Member | null;
   isHousingAdmin: boolean;
   loading: boolean;
-  error: any | null;
+  error: string | null;
   login: () => void;
   logout: () => Promise<void>;
   getToken: () => Promise<string>;
@@ -32,10 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Models.User<Models.Preferences> | null>(
     null,
   );
-  const [profile, setProfile] = useState<any | null>(null);
+  const [profile, setProfile] = useState<Member | null>(null);
   const [isHousingAdmin, setIsHousingAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -56,18 +59,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Create JWT for Server Action Verification
         const jwtResponse = await account.createJWT();
 
-        const [userProfile, adminStatus] = await Promise.all([
+        const [userProfileData, adminStatus] = await Promise.all([
           getProfileAction(jwtResponse.jwt),
           checkHousingAdminAction(jwtResponse.jwt),
         ]);
 
-        setProfile(userProfile);
+        // getProfileAction returns { profile: Member | null, isAuthorized: boolean } | null
+        setProfile(userProfileData?.profile ?? null);
         setIsHousingAdmin(adminStatus);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.warn("[AuthProvider] No session found", err);
         setUser(null);
         setProfile(null);
-        setError(err.message || err.toString());
+        setError(err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
       }
@@ -84,10 +88,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const getToken = async () => {
+  const getToken = useCallback(async () => {
     const { jwt } = await account.createJWT();
     return jwt;
-  };
+  }, []);
 
   const logout = async () => {
     await account.deleteSession("current");
