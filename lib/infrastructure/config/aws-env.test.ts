@@ -11,7 +11,9 @@ describe("AWS Environment Configuration", () => {
   beforeEach(() => {
     originalEnv = { ...process.env };
     vi.resetModules();
-    AWS_ENV_KEYS.forEach((key) => delete process.env[key]);
+    for (const key of AWS_ENV_KEYS) {
+      delete process.env[key];
+    }
   });
 
   afterEach(() => {

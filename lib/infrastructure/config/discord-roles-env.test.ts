@@ -10,7 +10,9 @@ describe("Discord Role Environment Configuration", () => {
   beforeEach(() => {
     originalEnv = { ...process.env };
     vi.resetModules();
-    DISCORD_ROLE_ENV_KEYS.forEach((key) => delete process.env[key]);
+    for (const key of DISCORD_ROLE_ENV_KEYS) {
+      delete process.env[key];
+    }
   });
 
   afterEach(() => {

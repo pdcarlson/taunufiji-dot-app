@@ -35,7 +35,11 @@ if (!parsed.success && !skipValidation) {
   );
 }
 
-function resolveSkipValidationEnv(): DiscordRolesEnv {
+/**
+ * When validation is skipped, this can include undefined values.
+ * Callers must explicitly guard or validate before relying on fields.
+ */
+function resolveSkipValidationEnv(): Partial<DiscordRolesEnv> {
   const rawEnv = readDiscordRolesEnv();
   const parsedWithValidation = discordRolesEnvSchema.safeParse(rawEnv);
 
@@ -46,9 +50,9 @@ function resolveSkipValidationEnv(): DiscordRolesEnv {
   console.warn(
     `⚠️ SKIP_ENV_VALIDATION=true enabled for Discord roles; using raw process.env fallback. Reason: ${parsedWithValidation.error.message}`,
   );
-  return rawEnv as DiscordRolesEnv;
+  return rawEnv;
 }
 
-export const discordRolesEnv = skipValidation
+export const discordRolesEnv: Partial<DiscordRolesEnv> = skipValidation
   ? resolveSkipValidationEnv()
   : (parsed.data as DiscordRolesEnv);
