@@ -27,6 +27,21 @@
   - Staging diagnostics now pass end-to-end after correcting `DISCORD_HOUSING_CHANNEL_ID`.
   - The exact channel ID is tracked in environment configuration and the staging runbook, not in changelog history.
 
+## 2026-03-13: Recurring Task Stabilization and Verification Fixes
+
+- **Recurring Task Stabilization**:
+  - Scope-aware edit/delete for recurring duties: "This instance", "This and future", "Entire series" in `EditTaskModal` with `effectiveFromDueAt` validation in admin and schedule services.
+  - `admin.service`: `updateTask` and `deleteTask` throw when both `effectiveFromDueAt` and `task.due_at` are absent for scoped recurring mutations.
+  - `schedule.service`: `updateTaskThisAndFuture`, `updateTaskEntireSeries`, `deleteTaskThisAndFuture`, `deleteTaskEntireSeries`; JSDoc for entire-series methods documenting unused `effectiveFromDueAt` param (interface consistency).
+  - EditTaskModal: lead-time update only when schedule loaded or lead time dirty; conditional date input `min` so existing tasks with past due dates can be saved; delete path uses persisted `task.due_at` for slice (not form value).
+- **Verification Fixes**:
+  - AGENTS.md: default agent profile is staging/read-only; production and full-repo tokens marked "No (elevated)"; added Elevation subsection for requesting `APPWRITE_PRODUCTION_API_KEY` and `GITHUB_PERSONAL_ACCESS_TOKEN`.
+  - Playwright: `NODE_ENV: "test"` added to `E2E_ENV` for webServer env.
+- **Spec**:
+  - Completed and archived `docs/spec/current/recurring-task-update-scopes.md` to `docs/spec/archive/recurring-task-update-scopes.md` (acceptance criteria met).
+- **Other**:
+  - Scheduler DST assertions aligned with rrule UTC output in tests. Playwright webServer env typed as `Record<string, string>` for tsc.
+
 ## 2026-01-12: Housing V2 - Scheduels & Bounties
 
 - **Feature Completion**: Implemented full UI for Creating Recurring Schedules and Posting Bounties.
