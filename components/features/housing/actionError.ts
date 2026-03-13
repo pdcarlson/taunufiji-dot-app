@@ -17,16 +17,14 @@ const ERROR_MESSAGE_BY_CODE: Record<ActionErrorCode, string> = {
 };
 
 export function getHousingActionErrorMessage(failure: ActionFailure): string {
-  if (failure.success === false || !!failure.error) {
-    const isDev = process.env.NODE_ENV !== "production";
-    if (isDev) {
-      console.error("[HousingAction] action failed", failure);
-    } else {
-      console.error("[HousingAction] action failed", {
-        success: failure.success,
-        errorCode: failure.errorCode,
-      });
-    }
+  const isDev = process.env.NODE_ENV !== "production";
+  if (isDev) {
+    console.error("[HousingAction] action failed", failure);
+  } else {
+    console.error("[HousingAction] action failed", {
+      success: failure.success,
+      errorCode: failure.errorCode,
+    });
   }
 
   if (failure.errorCode && ERROR_MESSAGE_BY_CODE[failure.errorCode]) {

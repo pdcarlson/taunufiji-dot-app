@@ -8,7 +8,7 @@ export const TaskExpiredHandler = {
     // Task Expired -> Trigger Next Instance
     DomainEventBus.subscribe(TaskEvents.TASK_EXPIRED, async (payload) => {
       logger.log(
-        `[TaskExpiredHandler] Task expired: ${payload.title} (${payload.taskId})`,
+        `[TaskExpiredHandler] Task expired taskId=${payload.taskId}`,
       );
 
       let scheduleId: string | null = null;

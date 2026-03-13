@@ -24,6 +24,16 @@ function safeErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function isDiscordRole(item: unknown): item is { id: string; name?: string } {
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    typeof (item as { id?: unknown }).id === "string" &&
+    (typeof (item as { name?: unknown }).name === "string" ||
+      typeof (item as { name?: unknown }).name === "undefined")
+  );
+}
+
 async function runAppwriteChecks(
   client: Databases,
 ): Promise<DiagnosticResult[]> {
@@ -32,10 +42,12 @@ async function runAppwriteChecks(
 
   async function withTimeout<T>(operation: Promise<T>): Promise<T> {
     let timeoutId: NodeJS.Timeout | undefined;
+    operation.catch(() => undefined);
     return await Promise.race([
       operation,
       new Promise<T>((_, reject) => {
         timeoutId = setTimeout(() => {
+          timeoutId = undefined;
           reject(new Error(appwriteTimeoutMessage));
         }, REQUEST_TIMEOUT_MS);
       }),
@@ -226,14 +238,7 @@ async function runDiscordChecks(
         return checks;
       }
 
-      const roles = rolesPayload.filter(
-        (item): item is { id: string; name?: string } =>
-          typeof item === "object" &&
-          item !== null &&
-          typeof (item as { id?: unknown }).id === "string" &&
-          (typeof (item as { name?: unknown }).name === "string" ||
-            typeof (item as { name?: unknown }).name === "undefined"),
-      );
+      const roles = rolesPayload.filter(isDiscordRole);
 
       if (roles.length !== rolesPayload.length) {
         console.error(

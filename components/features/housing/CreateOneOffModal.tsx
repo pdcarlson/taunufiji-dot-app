@@ -7,7 +7,10 @@ import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import toast from "react-hot-toast";
 import { getHousingActionErrorMessage } from "./actionError";
-import { easternDateInputToIso } from "@/lib/utils/eastern-time";
+import {
+  easternDateInputToIso,
+  getTodayEasternDateInput,
+} from "@/lib/utils/eastern-time";
 
 import { Member } from "@/lib/domain/entities";
 
@@ -110,12 +113,12 @@ export default function CreateOneOffModal({
               </label>
               <input
                 type="date"
-                min={new Date().toISOString().split("T")[0]}
+                min={getTodayEasternDateInput()}
                 {...register("due_at", { required: true })}
                 className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-fiji-purple/20"
               />
               <p className="text-[10px] text-stone-400 mt-1">
-                Defaults to 12:00 PM (Noon)
+                Defaults to 11:59 PM ET (end of day)
               </p>
             </div>
           </div>

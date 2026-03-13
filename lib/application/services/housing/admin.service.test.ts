@@ -229,19 +229,38 @@ describe("AdminService", () => {
       );
     });
 
+    it("routes update to entire_series without requiring due_at", async () => {
+      const task = {
+        id: "task-X",
+        schedule_id: "schedule-X",
+      };
+      const payload = { title: "Series title" };
+      (mockTaskRepo.findById as any).mockResolvedValue(task);
+      (mockScheduleService.updateTaskEntireSeries as any).mockResolvedValue(
+        task,
+      );
+
+      await service.updateTask("task-X", payload, { scope: "entire_series" });
+
+      expect(mockScheduleService.updateTaskEntireSeries).toHaveBeenCalledWith(
+        task,
+        payload,
+        undefined,
+      );
+    });
+
     it("routes delete to schedule service for entire_series scope", async () => {
       const task = {
-        id: "task-3",
-        schedule_id: "schedule-3",
-        due_at: "2026-03-10T03:59:00.000Z",
+        id: "task-Y",
+        schedule_id: "schedule-Y",
       };
       (mockTaskRepo.findById as any).mockResolvedValue(task);
 
-      await service.deleteTask("task-3", { scope: "entire_series" });
+      await service.deleteTask("task-Y", { scope: "entire_series" });
 
       expect(mockScheduleService.deleteTaskEntireSeries).toHaveBeenCalledWith(
         task,
-        "2026-03-10T03:59:00.000Z",
+        undefined,
       );
       expect(mockTaskRepo.delete).not.toHaveBeenCalled();
     });

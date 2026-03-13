@@ -42,6 +42,7 @@ export default function LeaderboardWidget({
   );
   const [error, setError] = useState<string | null>(null);
   const hasFetchedRef = useRef(prefetched);
+  const requestTokenRef = useRef(0);
 
   useEffect(() => {
     setLeaders(initialLeaderboard ?? []);
@@ -52,6 +53,22 @@ export default function LeaderboardWidget({
       setLoading(false);
     }
   }, [initialLeaderboard, prefetched]);
+
+  useEffect(() => {
+    requestTokenRef.current += 1;
+    hasFetchedRef.current = false;
+    setMyStats(null);
+    setError(null);
+
+    if (!user) {
+      setLeaders([]);
+      setLoading(false);
+      return;
+    }
+
+    setLeaders(initialLeaderboard ?? []);
+    setLoading(!prefetched && (initialLeaderboard ?? []).length === 0);
+  }, [user, initialLeaderboard, prefetched]);
 
   // Helper to handle conditional my-rank call
   const getLeadersMyRank = useCallback(
@@ -64,10 +81,22 @@ export default function LeaderboardWidget({
   );
 
   const fetchLeaders = useCallback(async () => {
+    const requestToken = ++requestTokenRef.current;
     try {
-      if (!user) return;
+      if (!user) {
+        if (requestToken === requestTokenRef.current) {
+          setMyStats(null);
+          setLeaders([]);
+          setError(null);
+          setLoading(false);
+        }
+        return;
+      }
 
       const token = await getToken();
+      if (requestToken !== requestTokenRef.current) {
+        return;
+      }
 
       const leadersPromise: Promise<LeaderboardMember[] | null> =
         hasFetchedRef.current || prefetched
@@ -77,6 +106,9 @@ export default function LeaderboardWidget({
         getLeadersMyRank(token),
         leadersPromise,
       ]);
+      if (requestToken !== requestTokenRef.current) {
+        return;
+      }
 
       if (leadersResult.status === "fulfilled" && leadersResult.value) {
         setLeaders(leadersResult.value);
@@ -98,14 +130,25 @@ export default function LeaderboardWidget({
         setMyStats(null);
       }
     } catch (err) {
+      if (requestToken !== requestTokenRef.current) {
+        return;
+      }
       console.error("Leaderboard error:", err);
       if (!hasFetchedRef.current && !prefetched) {
         setError("Unable to load leaderboard");
       }
     } finally {
-      setLoading(false);
+      if (requestToken === requestTokenRef.current) {
+        setLoading(false);
+      }
     }
   }, [user, getToken, prefetched, getLeadersMyRank]);
+
+  useEffect(() => {
+    return () => {
+      requestTokenRef.current += 1;
+    };
+  }, []);
 
   useEffect(() => {
     if (user) {

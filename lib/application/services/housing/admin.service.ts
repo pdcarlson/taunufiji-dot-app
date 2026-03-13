@@ -11,6 +11,7 @@ import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents } from "@/lib/domain/events";
 import { ScheduleService } from "./schedule.service";
 import { RecurringMutationOptions } from "@/lib/domain/types/recurring";
+import { logger } from "@/lib/utils/logger";
 
 export class AdminService {
   constructor(
@@ -94,13 +95,22 @@ export class AdminService {
         points: awardAmount,
       });
     } catch (error) {
-      await this.taskRepository.update(taskId, {
-        status: "pending",
-        completed_at: null,
-        points_value: originalPointsValue,
-      });
+      const originalError =
+        error instanceof Error ? error : new Error(String(error));
+      this.taskRepository
+        .update(taskId, {
+          status: "pending",
+          completed_at: null,
+          points_value: originalPointsValue,
+        })
+        .catch((rollbackError) => {
+          logger.error(
+            `[AdminService.verifyTask] Rollback failed for taskId=${taskId}`,
+            rollbackError,
+          );
+        });
       throw new Error(
-        `Failed to complete approval process: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to complete approval process: ${originalError.message}`,
       );
     }
 
@@ -163,12 +173,21 @@ export class AdminService {
         });
       }
     } catch (error) {
-      await this.taskRepository.update(taskId, {
-        status: task.status,
-        proof_s3_key: task.proof_s3_key,
-        assigned_to: task.assigned_to,
-      });
-      throw error;
+      const originalError =
+        error instanceof Error ? error : new Error(String(error));
+      this.taskRepository
+        .update(taskId, {
+          status: task.status,
+          proof_s3_key: task.proof_s3_key,
+          assigned_to: task.assigned_to,
+        })
+        .catch((rollbackError) => {
+          logger.error(
+            `[AdminService.rejectTask] Rollback failed for taskId=${taskId}`,
+            rollbackError,
+          );
+        });
+      throw originalError;
     }
 
     return true;
@@ -195,19 +214,19 @@ export class AdminService {
       return await this.taskRepository.update(taskId, data);
     }
 
+    if (recurringOptions.scope === "entire_series") {
+      return await this.scheduleService.updateTaskEntireSeries(
+        task,
+        data,
+        undefined,
+      );
+    }
+
     const effectiveFromDueAt =
       recurringOptions.effectiveFromDueAt ?? task.due_at ?? undefined;
     if (!effectiveFromDueAt) {
       throw new Error(
         "effectiveFromDueAt or task.due_at required for scoped recurring updates",
-      );
-    }
-
-    if (recurringOptions.scope === "entire_series") {
-      return await this.scheduleService.updateTaskEntireSeries(
-        task,
-        data,
-        effectiveFromDueAt,
       );
     }
 
@@ -266,20 +285,17 @@ export class AdminService {
       return;
     }
 
+    if (recurringOptions.scope === "entire_series") {
+      await this.scheduleService.deleteTaskEntireSeries(task, undefined);
+      return;
+    }
+
     const effectiveFromDueAt =
       recurringOptions.effectiveFromDueAt ?? task.due_at ?? undefined;
     if (!effectiveFromDueAt) {
       throw new Error(
         "effectiveFromDueAt or task.due_at required for scoped recurring deletes",
       );
-    }
-
-    if (recurringOptions.scope === "entire_series") {
-      await this.scheduleService.deleteTaskEntireSeries(
-        task,
-        effectiveFromDueAt,
-      );
-      return;
     }
 
     await this.scheduleService.deleteTaskThisAndFuture(

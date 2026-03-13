@@ -461,7 +461,7 @@ export class ScheduleService {
   async updateTaskEntireSeries(
     task: HousingTask,
     data: Partial<CreateAssignmentDTO>,
-    effectiveFromDueAt: string,
+    effectiveFromDueAt?: string,
   ) {
     void effectiveFromDueAt;
     if (!task.schedule_id) {
@@ -617,38 +617,44 @@ export class ScheduleService {
       return;
     }
 
-    await this.taskRepository.updateSchedule(task.schedule_id, {
-      active: false,
-      last_generated_at: new Date().toISOString(),
-    });
-
-    await this.taskRepository.delete(task.id);
-
     const effectiveFrom = new Date(effectiveFromDueAt);
     const seriesTasks = await this.findAllNonFinalByScheduleId(
       task.schedule_id,
     );
+    const futureTaskIds = seriesTasks
+      .filter((seriesTask) => {
+        if (seriesTask.id === task.id) {
+          return false;
+        }
+        if (!seriesTask.due_at) {
+          return false;
+        }
+        return new Date(seriesTask.due_at) >= effectiveFrom;
+      })
+      .map((seriesTask) => seriesTask.id);
+    const taskIdsToDelete = [task.id, ...futureTaskIds];
 
-    await Promise.all(
-      seriesTasks
-        .filter((seriesTask) => {
-          if (seriesTask.id === task.id) {
-            return false;
-          }
-          if (!seriesTask.due_at) {
-            return false;
-          }
-          return new Date(seriesTask.due_at) >= effectiveFrom;
-        })
-        .map((seriesTask) => this.taskRepository.delete(seriesTask.id)),
+    const deleteResults = await Promise.allSettled(
+      taskIdsToDelete.map((taskId) => this.taskRepository.delete(taskId)),
     );
+    const deleteFailure = deleteResults.find(
+      (result) => result.status === "rejected",
+    );
+    if (deleteFailure && deleteFailure.status === "rejected") {
+      throw deleteFailure.reason;
+    }
+
+    await this.taskRepository.updateSchedule(task.schedule_id, {
+      active: false,
+      last_generated_at: new Date().toISOString(),
+    });
   }
 
   /**
    * Deletes the task and all instances in the series (entire series).
    * @param effectiveFromDueAt Kept for interface consistency with this_and_future variants; unused for entire_series.
    */
-  async deleteTaskEntireSeries(task: HousingTask, effectiveFromDueAt: string) {
+  async deleteTaskEntireSeries(task: HousingTask, effectiveFromDueAt?: string) {
     void effectiveFromDueAt;
     if (!task.schedule_id) {
       await this.taskRepository.delete(task.id);

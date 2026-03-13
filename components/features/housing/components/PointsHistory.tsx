@@ -3,13 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getTransactionHistoryAction } from "@/lib/presentation/actions/ledger.actions";
+import { LedgerEntry } from "@/lib/domain/entities";
 
-import { Models } from "appwrite";
-import { LedgerSchema } from "@/lib/domain/entities/appwrite.schema";
 import { ArrowDownLeft, ArrowUpRight, History } from "lucide-react";
 import { Loader } from "@/components/ui/Loader";
-
-type LedgerEntry = Models.Document & LedgerSchema;
 
 export default function PointsHistory() {
   const { user, getToken } = useAuth();
@@ -30,6 +27,7 @@ export default function PointsHistory() {
         return;
       }
       if (!cancelled && activeRequestId === requestIdRef.current) {
+        setHistory([]);
         setLoading(true);
       }
       try {
@@ -37,12 +35,12 @@ export default function PointsHistory() {
         // Action now only requires JWT (userId derived for security)
         const data = await getTransactionHistoryAction(jwt);
         if (!cancelled && activeRequestId === requestIdRef.current) {
-          // Verify data shape or cast if action returns generic Document[]
-          setHistory(data as unknown as LedgerEntry[]);
+          setHistory(data);
         }
       } catch (e) {
         if (!cancelled && activeRequestId === requestIdRef.current) {
           console.error("Failed to load history", e);
+          setHistory([]);
         }
       } finally {
         if (!cancelled && activeRequestId === requestIdRef.current) {
@@ -90,7 +88,7 @@ export default function PointsHistory() {
 
             return (
               <div
-                key={tx.$id}
+                key={tx.id}
                 className="group hover:bg-stone-50 p-4 rounded-xl border border-stone-100 transition-colors flex items-center justify-between"
               >
                 <div className="flex items-center gap-4">
