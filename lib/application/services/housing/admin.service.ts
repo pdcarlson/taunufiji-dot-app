@@ -97,12 +97,13 @@ export class AdminService {
     } catch (error) {
       const originalError =
         error instanceof Error ? error : new Error(String(error));
-      this.taskRepository
-        .update(taskId, {
+      Promise.resolve(
+        this.taskRepository.update(taskId, {
           status: "pending",
           completed_at: null,
           points_value: originalPointsValue,
-        })
+        }),
+      )
         .catch((rollbackError) => {
           logger.error(
             `[AdminService.verifyTask] Rollback failed for taskId=${taskId}`,
@@ -175,12 +176,13 @@ export class AdminService {
     } catch (error) {
       const originalError =
         error instanceof Error ? error : new Error(String(error));
-      this.taskRepository
-        .update(taskId, {
+      Promise.resolve(
+        this.taskRepository.update(taskId, {
           status: task.status,
           proof_s3_key: task.proof_s3_key,
           assigned_to: task.assigned_to,
-        })
+        }),
+      )
         .catch((rollbackError) => {
           logger.error(
             `[AdminService.rejectTask] Rollback failed for taskId=${taskId}`,

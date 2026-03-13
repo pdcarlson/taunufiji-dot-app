@@ -1,4 +1,3 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { AuthService } from "./auth.service";
 import { MockFactory } from "@/lib/test/mock-factory";
 import { setContainer, resetContainer } from "@/lib/infrastructure/container";

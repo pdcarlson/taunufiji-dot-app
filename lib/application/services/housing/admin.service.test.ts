@@ -1,4 +1,3 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AdminService } from "./admin.service";
 import { MockFactory } from "@/lib/test/mock-factory";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";

@@ -1,4 +1,3 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PointsService } from "./points.service";
 import { MockFactory } from "@/lib/test/mock-factory";
 import { Member } from "@/lib/domain/entities";
