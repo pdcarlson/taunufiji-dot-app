@@ -103,13 +103,12 @@ export class AdminService {
           completed_at: null,
           points_value: originalPointsValue,
         }),
-      )
-        .catch((rollbackError) => {
-          logger.error(
-            `[AdminService.verifyTask] Rollback failed for taskId=${taskId}`,
-            rollbackError,
-          );
-        });
+      ).catch((rollbackError) => {
+        logger.error(
+          `[AdminService.verifyTask] Rollback failed for taskId=${taskId}`,
+          rollbackError,
+        );
+      });
       throw new Error(
         `Failed to complete approval process: ${originalError.message}`,
       );
@@ -182,13 +181,12 @@ export class AdminService {
           proof_s3_key: task.proof_s3_key,
           assigned_to: task.assigned_to,
         }),
-      )
-        .catch((rollbackError) => {
-          logger.error(
-            `[AdminService.rejectTask] Rollback failed for taskId=${taskId}`,
-            rollbackError,
-          );
-        });
+      ).catch((rollbackError) => {
+        logger.error(
+          `[AdminService.rejectTask] Rollback failed for taskId=${taskId}`,
+          rollbackError,
+        );
+      });
       throw originalError;
     }
 

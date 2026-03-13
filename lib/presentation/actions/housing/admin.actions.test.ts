@@ -96,15 +96,10 @@ describe("housing admin actions", () => {
   });
 
   it("forwards recurring scope options for update action", async () => {
-    await updateTaskAction(
-      "task-1",
-      { description: "updated" },
-      "jwt-token",
-      {
-        scope: "this_and_future",
-        effectiveFromDueAt: "2026-03-10T03:59:00.000Z",
-      },
-    );
+    await updateTaskAction("task-1", { description: "updated" }, "jwt-token", {
+      scope: "this_and_future",
+      effectiveFromDueAt: "2026-03-10T03:59:00.000Z",
+    });
 
     expect(hoisted.mockContainer.adminService.updateTask).toHaveBeenCalledWith(
       "task-1",

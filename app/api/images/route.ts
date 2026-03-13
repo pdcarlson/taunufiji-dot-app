@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { env } from "@/lib/infrastructure/config/env";
+import { awsEnv } from "@/lib/infrastructure/config/aws-env";
 
 import { Readable } from "stream";
 
@@ -16,10 +16,10 @@ function streamFile(stream: Readable): ReadableStream {
 }
 
 const s3 = new S3Client({
-  region: env.AWS_REGION,
+  region: awsEnv.AWS_REGION,
   credentials: {
-    accessKeyId: env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: awsEnv.AWS_ACCESS_KEY_ID,
+    secretAccessKey: awsEnv.AWS_SECRET_ACCESS_KEY,
   },
 });
 
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     // 3. Fetch from S3
     const command = new GetObjectCommand({
-      Bucket: env.AWS_BUCKET_NAME,
+      Bucket: awsEnv.AWS_BUCKET_NAME,
       Key: key,
     });
 
