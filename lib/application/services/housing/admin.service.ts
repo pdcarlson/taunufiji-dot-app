@@ -264,9 +264,12 @@ export class AdminService {
     }
 
     const effectiveFromDueAt =
-      recurringOptions.effectiveFromDueAt ||
-      task.due_at ||
-      new Date().toISOString();
+      recurringOptions.effectiveFromDueAt ?? task.due_at ?? undefined;
+    if (!effectiveFromDueAt) {
+      throw new Error(
+        "effectiveFromDueAt or task.due_at required for scoped recurring deletes",
+      );
+    }
 
     if (recurringOptions.scope === "entire_series") {
       await this.scheduleService.deleteTaskEntireSeries(

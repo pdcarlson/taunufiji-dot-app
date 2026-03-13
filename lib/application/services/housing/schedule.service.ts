@@ -265,6 +265,10 @@ export class ScheduleService {
     return await this.taskRepository.findById(task.id);
   }
 
+  /**
+   * Updates the task and all other instances in the series (entire series).
+   * @param effectiveFromDueAt Kept for interface consistency with this_and_future variants; unused for entire_series.
+   */
   async updateTaskEntireSeries(
     task: HousingTask,
     data: Partial<CreateAssignmentDTO>,
@@ -336,6 +340,10 @@ export class ScheduleService {
     );
   }
 
+  /**
+   * Deletes the task and all instances in the series (entire series).
+   * @param effectiveFromDueAt Kept for interface consistency with this_and_future variants; unused for entire_series.
+   */
   async deleteTaskEntireSeries(task: HousingTask, effectiveFromDueAt: string) {
     void effectiveFromDueAt;
     if (!task.schedule_id) {

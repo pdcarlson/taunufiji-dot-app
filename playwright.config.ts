@@ -4,6 +4,7 @@ const PORT = 3000;
 const baseURL = `http://127.0.0.1:${PORT}`;
 
 const E2E_ENV: Record<string, string> = {
+  NODE_ENV: "test",
   SKIP_ENV_VALIDATION: "true",
   NEXT_PUBLIC_APPWRITE_ENDPOINT: "https://example.com",
   NEXT_PUBLIC_APPWRITE_PROJECT_ID: "test-project",

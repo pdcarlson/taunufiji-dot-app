@@ -122,29 +122,30 @@ Use `staging` as the integration branch for all active development work.
 
 ### Environment & Secrets
 
-The cloud environment has the following secrets injected (from the developer's `.env.local`):
+The **default** agent profile receives staging and read-only credentials only. Production write access and full-repo GitHub access require explicit elevation (see Elevation below).
 
-| Variable                          | Available | Notes                                     |
-| --------------------------------- | --------- | ----------------------------------------- |
-| `NEXT_PUBLIC_APPWRITE_ENDPOINT`   | Yes       | Points to the Appwrite instance           |
-| `NEXT_PUBLIC_APPWRITE_PROJECT_ID` | Yes       | Project ID                                |
-| `APPWRITE_API_KEY`                | Yes       | Server-side API key                       |
-| `APPWRITE_STAGING_API_KEY`        | Yes       | Staging project API key                   |
-| `APPWRITE_PRODUCTION_API_KEY`     | Yes       | Production project API key                |
-| `AWS_*`                           | Yes       | S3 credentials for library storage        |
-| `DISCORD_*`                       | Yes       | Full Discord bot credentials and role IDs |
-| `CRON_SECRET`                     | Yes       | Cron endpoint auth                        |
-| `GITHUB_PERSONAL_ACCESS_TOKEN`    | Yes       | Full repo access PAT                      |
+| Variable                          | Available by default | Notes                                       |
+| --------------------------------- | -------------------- | ------------------------------------------- |
+| `NEXT_PUBLIC_APPWRITE_ENDPOINT`   | Yes                  | Points to the Appwrite instance             |
+| `NEXT_PUBLIC_APPWRITE_PROJECT_ID` | Yes                  | Project ID                                  |
+| `APPWRITE_API_KEY`                | Yes                  | Server-side API key (staging when used)     |
+| `APPWRITE_STAGING_API_KEY`        | Yes                  | Staging project API key                     |
+| `APPWRITE_PRODUCTION_API_KEY`     | No (elevated)        | Production project API key — elevation only |
+| `AWS_*`                           | Yes                  | S3 credentials for library storage          |
+| `DISCORD_*`                       | Yes                  | Full Discord bot credentials and role IDs   |
+| `CRON_SECRET`                     | Yes                  | Cron endpoint auth                          |
+| `GITHUB_READONLY_TOKEN`           | Yes                  | Read-only GitHub PAT (if configured)        |
+| `GITHUB_PERSONAL_ACCESS_TOKEN`    | No (elevated)        | Full repo access PAT — elevation only       |
 
-The agent has access to both **production** and **staging** Appwrite projects, the full GitHub repo via PAT, and the Discord bot. Use with appropriate guardrails (prefer staging for testing, never delete production data).
+By default the agent has access to the **staging** Appwrite project and, if provided, a read-only GitHub token. Use staging for all testing; never delete production data.
 
-To create a working `.env.local` from injected secrets:
+To create a working `.env.local` from the default injected secrets (staging only):
 
 ```bash
 cat > .env.local << 'EOF'
 NEXT_PUBLIC_APPWRITE_ENDPOINT=$NEXT_PUBLIC_APPWRITE_ENDPOINT
 NEXT_PUBLIC_APPWRITE_PROJECT_ID=$NEXT_PUBLIC_APPWRITE_PROJECT_ID
-APPWRITE_API_KEY=$APPWRITE_API_KEY
+APPWRITE_API_KEY=$APPWRITE_STAGING_API_KEY
 AWS_REGION=$AWS_REGION
 AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
@@ -160,6 +161,14 @@ DISCORD_ROLE_ID_HOUSING_CHAIR=$DISCORD_ROLE_ID_HOUSING_CHAIR
 CRON_SECRET=$CRON_SECRET
 EOF
 ```
+
+#### Elevation
+
+Production write and full-repo GitHub access are **not** in the default profile. To use them:
+
+- **`APPWRITE_PRODUCTION_API_KEY`** and **`GITHUB_PERSONAL_ACCESS_TOKEN`** must be explicitly authorized (e.g. via an elevated profile or manual approval workflow).
+- Only request or apply these variables when the task explicitly requires production writes or full repo access, and after approval.
+- Do not add them to the default `.env.local` snippet above; use a separate, documented elevation path (e.g. one-off injection or elevated Cursor profile) when authorized.
 
 If real credentials are not needed (e.g., for lint/test/build only), set `SKIP_ENV_VALIDATION=true` in `.env.local` with placeholder values.
 

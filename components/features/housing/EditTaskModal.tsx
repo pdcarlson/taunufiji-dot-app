@@ -47,13 +47,14 @@ export default function EditTaskModal({
   });
   const [mutationScope, setMutationScope] =
     useState<RecurringMutationScope>("this_and_future");
+  const [scheduleLoaded, setScheduleLoaded] = useState(false);
+  const [leadTimeDirty, setLeadTimeDirty] = useState(false);
 
   const isBounty = task.type === "bounty";
   const isRecurring = !!task.schedule_id;
   const isAssigned = !!task.assigned_to;
   const canDelete = isBounty ? !isAssigned : true;
 
-  // Fetch Schedule Details if Recurring
   // Fetch Schedule Details if Recurring
   useEffect(() => {
     const fetchSchedule = async () => {
@@ -63,6 +64,7 @@ export default function EditTaskModal({
           const jwt = await getJWT();
           const res = await getScheduleAction(task.schedule_id, jwt);
           if (res.success && res.data) {
+            setScheduleLoaded(true);
             setFormData((prev) => ({
               ...prev,
               lead_time_hours: res.data?.lead_time_hours || 24,
@@ -166,11 +168,13 @@ export default function EditTaskModal({
         throw new Error(taskRes.error || "Task update failed");
       }
 
-      if (
+      const shouldUpdateLeadTime =
         isRecurring &&
         task.schedule_id &&
-        mutationScope !== "this_instance"
-      ) {
+        mutationScope !== "this_instance" &&
+        typeof effectiveFromDueAt === "string" &&
+        (scheduleLoaded || leadTimeDirty);
+      if (shouldUpdateLeadTime && task.schedule_id) {
         const scheduleRes = await updateScheduleLeadTimeAction(
           task.schedule_id,
           Number(formData.lead_time_hours),
@@ -215,10 +219,9 @@ export default function EditTaskModal({
       const jwt = await getJWT();
       const result = await deleteTaskAction(task.id, jwt, {
         scope: mutationScope,
-        effectiveFromDueAt:
-          formData.due_at && isRecurring
-            ? easternDateInputToIso(formData.due_at)
-            : task.due_at || undefined,
+        effectiveFromDueAt: isRecurring
+          ? (task.due_at ?? undefined)
+          : undefined,
       });
       if (result.success) {
         toast.success("Task deleted");
@@ -355,12 +358,13 @@ export default function EditTaskModal({
                   required
                   className="w-full text-sm text-stone-700 border border-stone-200 rounded-lg p-2 focus:border-fiji-purple outline-none"
                   value={formData.lead_time_hours}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setLeadTimeDirty(true);
                     setFormData({
                       ...formData,
                       lead_time_hours: Number(e.target.value),
-                    })
-                  }
+                    });
+                  }}
                 />
               </div>
             ) : (
@@ -406,7 +410,12 @@ export default function EditTaskModal({
                 <input
                   type="date"
                   required
-                  min={getTodayEasternDateInput()}
+                  min={
+                    formData.due_at &&
+                    formData.due_at < getTodayEasternDateInput()
+                      ? undefined
+                      : getTodayEasternDateInput()
+                  }
                   className="w-full text-sm text-stone-600 border border-stone-200 rounded-lg p-2 outline-none"
                   value={formData.due_at}
                   onChange={(e) =>
