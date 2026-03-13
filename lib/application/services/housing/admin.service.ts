@@ -76,6 +76,8 @@ export class AdminService {
 
     await this.taskRepository.update(taskId, updates);
 
+    const updatedTask = { ...task, ...updates };
+
     // Award Points & Notify (via Event)
     // Use override if provided, otherwise original
     const awardAmount =
@@ -104,10 +106,13 @@ export class AdminService {
       );
     }
 
-    // Trigger Recurrence
+    // Trigger Recurrence (pass updated task so scheduler sees completed_at)
     if (task.schedule_id) {
       try {
-        await this.scheduleService.triggerNextInstance(task.schedule_id, task);
+        await this.scheduleService.triggerNextInstance(
+          task.schedule_id,
+          updatedTask,
+        );
       } catch (e) {
         console.error("Failed to trigger next instance", e);
       }

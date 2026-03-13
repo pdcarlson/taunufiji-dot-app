@@ -1,4 +1,5 @@
 export const EASTERN_TIME_ZONE = "America/New_York";
+/** Stable reference datetime (YYYYMMDDTHHMMSS) for RRULE/weekly recurrence in Eastern time. End-of-day 2024-01-01 avoids DST edge cases and gives a deterministic week boundary; used with EASTERN_TIME_ZONE for consistent recurrence calculations. */
 const EASTERN_REFERENCE_START = "20240101T235900";
 
 function pad(value: number): string {

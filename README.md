@@ -176,12 +176,4 @@ Code quality is enforced via GitHub Actions (`.github/workflows/ci.yml`).
 
 _Engineered by [Paul Carlson](https://github.com/pdcarlson) for Phi Gamma Delta._
 
-<!-- TODO
----- Add slash command for /request points or the ad-hoc submission.
----- Standardize notifications
----- Fix task schedule editing
----- Add consistency to the create task modals
----- Fix the library uploads
----- Update the development workflow and CI/CD
----- More spec driven testing
---->
+Backlog and roadmap items are tracked in the [issue tracker](https://github.com/pdcarlson/taunufiji-dot-app/issues).

@@ -4,7 +4,7 @@
 
 The application is built on a Clean Architecture foundation, strictly enforcing the Dependency Rule: inner layers (Domain) are independent of outer layers (Infrastructure/Presentation).
 
-```
+```text
 Presentation → Application → Domain ← Infrastructure
 ```
 

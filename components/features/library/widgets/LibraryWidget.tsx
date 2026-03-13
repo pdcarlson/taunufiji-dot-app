@@ -4,8 +4,6 @@ import { BookOpen, Upload } from "lucide-react";
 import Link from "next/link";
 
 export default function LibraryWidget() {
-  // const history = stats?.libraryHistory || []; // unused
-
   return (
     <div className="bg-white border border-stone-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full min-h-[280px]">
       <div>

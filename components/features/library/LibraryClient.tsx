@@ -96,11 +96,21 @@ export default function LibraryClient({
   const currentRequestId = useRef(0);
 
   useEffect(() => {
+    setResults(initialResources);
+    setSearchTotal(initialTotal);
+    if (initialResources.length > 0) setLoading(false);
+  }, [initialResources, initialTotal]);
+
+  useEffect(() => {
     const isDefaultFilters = FILTER_KEYS.every(
       (key) => debouncedFilters[key] === INITIAL_FILTERS[key],
     );
 
-    if (isFirstLoad.current && initialResources.length > 0 && isDefaultFilters) {
+    if (
+      isFirstLoad.current &&
+      initialResources.length > 0 &&
+      isDefaultFilters
+    ) {
       isFirstLoad.current = false;
       return;
     }

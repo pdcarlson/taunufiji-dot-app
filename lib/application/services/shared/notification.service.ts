@@ -35,7 +35,8 @@ export const NotificationService = {
       const finalContent = link ? `${message} \n[View Task](${link})` : message;
       return await notificationProvider.sendDM(userId, finalContent);
     } catch (e) {
-      const error = `Notification to ${userId} (${type}) failed: ${e instanceof Error ? e.message : String(e)}`;
+      const maskedUserId = userId.length > 4 ? `***${userId.slice(-4)}` : "***";
+      const error = `Notification to ${maskedUserId} (${type}) failed: ${e instanceof Error ? e.message : String(e)}`;
       console.error(`[NotificationService] ${error}`);
       return { success: false, error };
     }
@@ -62,10 +63,18 @@ export const NotificationService = {
       content += `\n[Review Proof](${link})`;
     }
 
-    return await notificationProvider.sendToChannel(
-      env.DISCORD_HOUSING_CHANNEL_ID,
-      content,
-    );
+    try {
+      return await notificationProvider.sendToChannel(
+        env.DISCORD_HOUSING_CHANNEL_ID,
+        content,
+      );
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      return {
+        success: false,
+        error: `Admin notification failed: ${errMsg}`,
+      };
+    }
   },
 
   /**

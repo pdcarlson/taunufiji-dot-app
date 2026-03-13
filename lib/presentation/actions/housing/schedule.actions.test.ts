@@ -160,6 +160,7 @@ describe("housing schedule actions", () => {
     });
 
     const result = await getSchedulesAction("jwt-token");
+    expect(hoisted.mockActionWrapper).toHaveBeenCalled();
     expect(result).toEqual([]);
   });
 });

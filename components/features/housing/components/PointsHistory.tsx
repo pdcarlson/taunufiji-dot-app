@@ -18,7 +18,10 @@ export default function PointsHistory() {
 
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const jwt = await getToken();

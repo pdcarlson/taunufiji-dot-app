@@ -16,7 +16,6 @@ test("root route redirects unauthenticated users to login flow", async ({
 }) => {
   await page.goto("/");
   await page.waitForURL("**/login");
-  await expect(page).toHaveURL(/\/login$/);
 });
 
 test("unauthorized route renders static access restriction copy", async ({

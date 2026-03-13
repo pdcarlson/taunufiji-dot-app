@@ -30,23 +30,16 @@ function resolveDefaultNodeEnv(): ServerEnv["NODE_ENV"] {
 }
 
 function resolveSkipValidationEnv(): ServerEnv {
-  const parsedWithValidation = serverEnvSchema.safeParse(readServerEnv());
+  const rawEnv = readServerEnv();
+  const parsedWithValidation = serverEnvSchema.safeParse(rawEnv);
 
   if (parsedWithValidation.success) {
     return parsedWithValidation.data;
   }
 
-  if (parsedWithValidation.error instanceof Error) {
-    console.warn(
-      `⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback. Reason: ${parsedWithValidation.error.message}`,
-    );
-  } else {
-    console.warn(
-      "⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback.",
-    );
-  }
-
-  const rawEnv = readServerEnv();
+  console.warn(
+    `⚠️ SKIP_ENV_VALIDATION=true enabled; using raw process.env fallback. Reason: ${parsedWithValidation.error.message}`,
+  );
   return {
     ...rawEnv,
     NODE_ENV: rawEnv.NODE_ENV ?? resolveDefaultNodeEnv(),

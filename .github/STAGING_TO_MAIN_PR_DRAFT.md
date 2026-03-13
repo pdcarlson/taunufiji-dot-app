@@ -13,7 +13,7 @@ Use this when opening a pull request with **base: main**, **compare: staging**.
 
 ## Summary
 
-Merge staging into main: recurring task scopes, QA audit hardening, repo restructure (docs/AGENTS.md), env/CI and testing upgrades, and verification fixes. Ready for production deploy.
+Merge staging into main: recurring task scopes, QA audit hardening, repo restructure (docs/AGENTS.md), env/CI and testing upgrades, and verification fixes. Ready pending verification.
 
 ## Technical Breakdown
 
@@ -30,7 +30,7 @@ Merge staging into main: recurring task scopes, QA audit hardening, repo restruc
 - **Security:** Housing mutations already gated by HOUSING_ADMIN_ROLES. AGENTS.md documents elevation for production tokens (not in default profile).
 - **Impact:** Production will get scope-aware recurring edits/deletes and all staging fixes. Recommend a quick smoke of housing (edit/delete recurring) and login after deploy.
 
-## Verification
+## Verification (pending final verification)
 
 - [x] Updated `docs/changelog.md` (2026-03-13 entry).
 - [ ] Run `npm run build` locally on staging.

@@ -151,6 +151,7 @@ export default function DutyRoster({
             </p>
           </div>
           <button
+            type="button"
             onClick={onRefresh}
             className="p-2 text-stone-400 hover:text-fiji-purple transition-colors"
             title="Refresh Roster"

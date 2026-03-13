@@ -9,21 +9,29 @@ export const dynamic = "force-dynamic"; // ensure no caching
 
 export async function GET(req: Request) {
   try {
-    // 1. Security check
-    const { searchParams } = new URL(req.url);
-    const key = searchParams.get("key");
+    // 1. Security check: Bearer token from Authorization header
     const CRON_SECRET = env.CRON_SECRET;
 
     if (!CRON_SECRET) {
-      console.error("Cron Job Failed: CRON_SECRET is not configured on the server.");
-      return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+      console.error(
+        "Cron Job Failed: CRON_SECRET is not configured on the server.",
+      );
+      return NextResponse.json(
+        { error: "Server Configuration Error" },
+        { status: 500 },
+      );
     }
 
-    if (!key || key !== CRON_SECRET) {
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : null;
+    if (!token || token !== CRON_SECRET) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 2. Run cron job based on 'job' parameter
+    const { searchParams } = new URL(req.url);
     const job = searchParams.get("job");
     let result: CronResult | { errors: string[] } | void;
 

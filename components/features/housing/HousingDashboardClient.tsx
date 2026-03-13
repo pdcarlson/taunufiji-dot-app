@@ -89,9 +89,6 @@ export default function HousingDashboardClient({
     }
   };
 
-  const currentProfile =
-    profile || members.find((m) => m.discord_id === currentUser?.$id) || null;
-
   // Filters
   const pendingReviews = isAdmin
     ? tasks.filter((t) => t.status === "pending" && t.proof_s3_key)
@@ -147,7 +144,7 @@ export default function HousingDashboardClient({
             <MyDutiesWidget
               initialTasks={myDuties}
               userId={currentUser?.$id || ""}
-              profileId={currentProfile?.discord_id || currentUser?.$id || ""}
+              profileId={profile?.discord_id || currentUser?.$id || ""}
               variant="minimal"
             />
           </div>
@@ -179,7 +176,7 @@ export default function HousingDashboardClient({
                       key={t.id}
                       task={t}
                       userId={currentUser?.$id || ""}
-                      profileId={currentProfile?.discord_id || ""}
+                      profileId={profile?.discord_id || ""}
                       userName={currentUser?.name || "Guest"}
                       isAdmin={isAdmin}
                       getJWT={getToken}
@@ -212,7 +209,7 @@ export default function HousingDashboardClient({
                     key={t.id}
                     task={t}
                     userId={currentUser?.$id || ""}
-                    profileId={currentProfile?.discord_id || ""}
+                    profileId={profile?.discord_id || ""}
                     userName={currentUser?.name || "Guest"}
                     isAdmin={isAdmin}
                     getJWT={getToken}

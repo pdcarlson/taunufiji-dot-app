@@ -75,11 +75,19 @@ export async function searchLibraryAction(
       if (filters.course_number && filters.course_number !== "All")
         searchFilters.course_number = filters.course_number;
       if (filters.professor) searchFilters.professor = filters.professor;
-      if (filters.year)
-        searchFilters.year =
+      if (filters.year !== undefined && filters.year !== "") {
+        const yearCandidate =
           typeof filters.year === "string"
             ? parseInt(filters.year, 10)
-            : filters.year;
+            : Number(filters.year);
+        if (
+          Number.isInteger(yearCandidate) &&
+          isFinite(yearCandidate) &&
+          yearCandidate > 0
+        ) {
+          searchFilters.year = yearCandidate;
+        }
+      }
       if (filters.semester && filters.semester !== "All") {
         searchFilters.semester = filters.semester;
       }

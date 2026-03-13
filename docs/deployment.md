@@ -27,6 +27,7 @@ This workflow does **not** handle deployment. It serves strictly as a quality ga
 - Appwrite is connected directly to the GitHub repository
 - Listens for pushes to `staging` and auto-deploys to the Staging Appwrite Site
 - Environment variables managed in the Appwrite Console (Staging project)
+- For the staging Appwrite project, set `NODE_ENV=staging` in the Console so the app title and metadata show a `[STAGING]` prefix and distinguish the environment from production.
 
 ## 3. Production Deployment
 
@@ -43,14 +44,14 @@ This workflow does **not** handle deployment. It serves strictly as a quality ga
 
 ## Environment Matrix (Minimum Required)
 
-| Concern | Variables |
-|---|---|
-| App URL | `NEXT_PUBLIC_APP_URL` |
-| Appwrite | `NEXT_PUBLIC_APPWRITE_ENDPOINT`, `NEXT_PUBLIC_APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY` |
-| Discord Core | `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_HOUSING_CHANNEL_ID` |
-| Discord Roles | `DISCORD_ROLE_ID_BROTHER`, `DISCORD_ROLE_ID_CABINET`, `DISCORD_ROLE_ID_HOUSING_CHAIR` |
-| AWS/S3 | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME` |
-| Cron | `CRON_SECRET` |
+| Concern       | Variables                                                                              |
+| ------------- | -------------------------------------------------------------------------------------- |
+| App URL       | `NEXT_PUBLIC_APP_URL`                                                                  |
+| Appwrite      | `NEXT_PUBLIC_APPWRITE_ENDPOINT`, `NEXT_PUBLIC_APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY` |
+| Discord Core  | `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_HOUSING_CHANNEL_ID`                  |
+| Discord Roles | `DISCORD_ROLE_ID_BROTHER`, `DISCORD_ROLE_ID_CABINET`, `DISCORD_ROLE_ID_HOUSING_CHAIR`  |
+| AWS/S3        | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME`          |
+| Cron          | `CRON_SECRET`                                                                          |
 
 `SKIP_ENV_VALIDATION=true` is intended for CI/build fallback scenarios only. Runtime staging validation should be done with real environment values.
 
@@ -86,9 +87,9 @@ If this command fails, do not promote staging to production until the failing ch
 
 ### Symptom: User can view dashboard but mutation fails with authorization
 
-1. Confirm the user has the Brother role for baseline access.
-2. Confirm the user has a housing-admin role for housing mutations.
-3. Confirm staging role IDs point to the correct guild roles (not production roles).
+1. Verify the user has the Brother role for baseline access.
+2. Ensure the user has a housing-admin role for housing mutations.
+3. Check that staging role IDs point to the correct guild roles (not production roles).
 
 ## Cron Jobs
 

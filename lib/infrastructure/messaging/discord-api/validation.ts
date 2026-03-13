@@ -1,15 +1,8 @@
 import { z } from "zod";
+import type { DiscordInteractionDataOption } from "./types";
 
-interface DiscordInteractionOption {
-  name: string;
-  type: number;
-  value?: string | number | boolean;
-  options?: DiscordInteractionOption[];
-  focused?: boolean;
-}
-
-// Basic recursive schema for options
-const optionSchema: z.ZodType<DiscordInteractionOption> = z.lazy(() =>
+// Basic recursive schema for options (matches DiscordInteractionDataOption)
+const optionSchema: z.ZodType<DiscordInteractionDataOption> = z.lazy(() =>
   z.object({
     name: z.string(),
     type: z.number(),

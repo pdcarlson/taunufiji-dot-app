@@ -118,7 +118,7 @@ Use `staging` as the integration branch for all active development work.
 
 ---
 
-## Cursor Cloud specific instructions
+## Cursor Cloud-specific instructions
 
 ### Environment & Secrets
 

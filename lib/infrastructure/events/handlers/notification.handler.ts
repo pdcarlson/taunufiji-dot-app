@@ -7,9 +7,7 @@
  */
 
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
-import {
-  TaskEvents,
-} from "@/lib/domain/events";
+import { TaskEvents } from "@/lib/domain/events";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
 import { logger } from "@/lib/utils/logger";
 
@@ -88,14 +86,11 @@ export const NotificationHandler = {
         );
         logResult("TASK_SUBMITTED", "admin_channel", result);
       } catch (error) {
-        logger.error(
-          "[NotificationHandler] TASK_SUBMITTED handler failed",
-          {
-            taskId: payload.taskId,
-            userId: payload.userId,
-            error,
-          },
-        );
+        logger.error("[NotificationHandler] TASK_SUBMITTED handler failed", {
+          taskId: payload.taskId,
+          userId: payload.userId,
+          error,
+        });
       }
     });
 
@@ -115,6 +110,12 @@ export const NotificationHandler = {
           },
         );
         logResult("TASK_APPROVED", payload.userId, result);
+        logger.log("[NotificationHandler] TASK_APPROVED sent", {
+          userId: payload.userId,
+          taskId: payload.taskId,
+          title: payload.title,
+          success: result.success,
+        });
       } catch (error) {
         logger.error("[NotificationHandler] TASK_APPROVED handler failed", {
           taskId: payload.taskId,
@@ -167,14 +168,11 @@ export const NotificationHandler = {
         );
         logResult("TASK_REASSIGNED", payload.newUserId, result);
       } catch (error) {
-        logger.error(
-          "[NotificationHandler] TASK_REASSIGNED handler failed",
-          {
-            taskId: payload.taskId,
-            newUserId: payload.newUserId,
-            error,
-          },
-        );
+        logger.error("[NotificationHandler] TASK_REASSIGNED handler failed", {
+          taskId: payload.taskId,
+          newUserId: payload.newUserId,
+          error,
+        });
       }
     });
 
@@ -194,14 +192,11 @@ export const NotificationHandler = {
         );
         logResult("TASK_UNASSIGNED", payload.userId, result);
       } catch (error) {
-        logger.error(
-          "[NotificationHandler] TASK_UNASSIGNED handler failed",
-          {
-            taskId: payload.taskId,
-            userId: payload.userId,
-            error,
-          },
-        );
+        logger.error("[NotificationHandler] TASK_UNASSIGNED handler failed", {
+          taskId: payload.taskId,
+          userId: payload.userId,
+          error,
+        });
       }
     });
 

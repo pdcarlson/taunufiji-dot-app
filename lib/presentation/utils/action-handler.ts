@@ -31,6 +31,17 @@ type ActionResult<T> =
   | { success: true; data: T; error?: never; errorCode?: never }
   | { success: false; data?: never; error: string; errorCode: ActionErrorCode };
 
+/**
+ * Maps thrown/returned errors to ActionErrorCode.
+ * Prefers structured errors (object with code property). Legacy fallback uses
+ * message string fragments:
+ * - Authentication: "authentication required", "no jwt", "unauthenticated"
+ * - Authorization: "unauthorized", "insufficient permissions", "verified brother"
+ * - Validation: "invalid", "missing", "not found"
+ * - Database: "database operation failed"
+ * - External: "discord", "s3", "fetch failed", "external service"
+ * TODO: Migrate callers to throw errors with explicit code property.
+ */
 function classifyActionError(error: unknown): ActionErrorCode {
   if (
     typeof error === "object" &&
@@ -48,6 +59,7 @@ function classifyActionError(error: unknown): ActionErrorCode {
     if (code === "EXTERNAL_SERVICE_ERROR") return "EXTERNAL_SERVICE_ERROR";
   }
 
+  // Legacy: message-based fallback
   const message =
     error instanceof Error
       ? error.message.toLowerCase()

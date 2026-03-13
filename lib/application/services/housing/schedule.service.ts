@@ -126,7 +126,10 @@ export class ScheduleService {
       points_value: schedule.points_value,
       type: "duty",
       schedule_id: schedule.id,
-      assigned_to: schedule.assigned_to || previousTask.assigned_to,
+      assigned_to:
+        schedule.assigned_to === undefined
+          ? previousTask.assigned_to
+          : schedule.assigned_to,
       due_at: nextInstance.dueAt.toISOString(),
       unlock_at: nextInstance.unlockAt.toISOString(),
       status: isLocked ? "locked" : "open",

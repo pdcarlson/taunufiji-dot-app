@@ -45,7 +45,7 @@ export default function LeaderboardWidget({
 
   useEffect(() => {
     setLeaders(initialLeaderboard ?? []);
-    hasFetchedRef.current = prefetched;
+    hasFetchedRef.current = prefetched || (initialLeaderboard?.length ?? 0) > 0;
 
     if (prefetched || (initialLeaderboard?.length ?? 0) > 0) {
       setError(null);
@@ -87,7 +87,8 @@ export default function LeaderboardWidget({
           leadersResult.reason instanceof Error
             ? leadersResult.reason.message
             : String(leadersResult.reason);
-        setError(reason);
+        console.error("Leaderboard fetch failed", reason);
+        setError("Unable to load leaderboard");
       }
 
       if (rankResult.status === "fulfilled") {
@@ -98,14 +99,13 @@ export default function LeaderboardWidget({
       }
     } catch (err) {
       console.error("Leaderboard error:", err);
-      // Don't error out if we have initial data, just log
       if (!hasFetchedRef.current && !prefetched) {
-        setError("Failed to load");
+        setError("Unable to load leaderboard");
       }
     } finally {
       setLoading(false);
     }
-  }, [user, getToken, prefetched]);
+  }, [user, getToken, prefetched, getLeadersMyRank]);
 
   useEffect(() => {
     // If we have initial data, we only need to fetch user rank if user is present
@@ -117,11 +117,21 @@ export default function LeaderboardWidget({
     } else if (propProvided && (initialLeaderboard?.length ?? 0) > 0) {
       setLoading(false);
       setError(null);
-    } else if (!user && !prefetched && (initialLeaderboard?.length ?? 0) === 0) {
+    } else if (
+      !user &&
+      !prefetched &&
+      (initialLeaderboard?.length ?? 0) === 0
+    ) {
       setLoading(false);
       setError(null);
     }
-  }, [user, fetchLeaders, propProvided, prefetched, initialLeaderboard?.length]);
+  }, [
+    user,
+    fetchLeaders,
+    propProvided,
+    prefetched,
+    initialLeaderboard?.length,
+  ]);
 
   // Standardized Name Formatter
   const formatName = (fullName: string) => {

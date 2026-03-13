@@ -6,7 +6,7 @@ Based on the [Google TypeScript Style Guide](https://google.github.io/styleguide
 
 - **Variable Declarations**: Always use `const` or `let`. `var` is forbidden. Use `const` by default.
 - **Modules**: Use ES6 modules (`import`/`export`). Do not use `namespace`.
-- **Exports**: Use named exports (`export { MyClass }`). Do not use default exports.
+- **Exports**: Prefer named exports (`export { MyClass }`). Use default exports only when required by framework conventions (e.g. Next.js `page.tsx`, `layout.tsx`).
 - **Classes**:
   - Do not use `#private` fields. Use TypeScript's `private` visibility modifier.
   - Mark properties never reassigned outside the constructor with `readonly`.

@@ -10,6 +10,7 @@ import { IIdentityProvider } from "@/lib/domain/ports/identity.provider";
 import { LIBRARY_ACCESS_ROLES } from "@/lib/infrastructure/config/roles";
 import { CreateUserDTO, User } from "@/lib/domain/types/user";
 import { env } from "@/lib/infrastructure/config/env";
+import { logger } from "@/lib/utils/logger";
 
 // Discord API Helpers
 const DISCORD_API = "https://discord.com/api/v10";
@@ -38,7 +39,9 @@ async function getDiscordMember(discordUserId: string) {
   }
 
   if (env.NODE_ENV === "development") {
-    console.log(`[DiscordAPI] Fetching member ${discordUserId} from Guild ${GUILD_ID}`);
+    const maskedId =
+      discordUserId.length > 4 ? `***${discordUserId.slice(-4)}` : "***";
+    logger.debug(`[DiscordAPI] Fetching member ${maskedId} from Guild`);
   }
 
   // 1. Check Cache

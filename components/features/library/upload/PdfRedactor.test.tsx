@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import PdfRedactor from "./PdfRedactor";
 
 // Mock pdfjs-dist and pdf-lib
@@ -7,10 +7,15 @@ vi.mock("pdfjs-dist", () => ({
   getDocument: vi.fn(() => ({
     promise: Promise.resolve({
       numPages: 1,
-      getPage: vi.fn(() => Promise.resolve({
-        getViewport: vi.fn(() => ({ width: 600, height: 800 })),
-        render: vi.fn(() => ({ promise: Promise.resolve() })),
-      })),
+      getPage: vi.fn(() =>
+        Promise.resolve({
+          getViewport: vi.fn(() => ({ width: 600, height: 800 })),
+          render: vi.fn(() => ({
+            promise: Promise.resolve(),
+            cancel: vi.fn(),
+          })),
+        }),
+      ),
     }),
   })),
   GlobalWorkerOptions: { workerSrc: "" },
@@ -30,17 +35,18 @@ vi.mock("pdf-lib", () => ({
 }));
 
 describe("PdfRedactor Coordinate Mapping", () => {
-  it("should initialize correctly with a file", () => {
+  it("should initialize correctly with a file", async () => {
     const file = new File(["test"], "test.pdf", { type: "application/pdf" });
-    // JSDOM File might lack arrayBuffer
     file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(8));
-    
+
     render(<PdfRedactor file={file} />);
-    // Verify canvas exists
-    expect(document.querySelector("canvas")).not.toBeNull();
+
+    await waitFor(() => {
+      expect(document.querySelector("canvas")).not.toBeNull();
+    });
   });
 
-  // Since actual canvas interaction is hard to test in JSDOM, 
+  // Since actual canvas interaction is hard to test in JSDOM,
   // we will focus on verifying that coordinate math logic is consistent.
   // In a real scenario, we'd test the coordinate conversion functions if they were exported.
 });

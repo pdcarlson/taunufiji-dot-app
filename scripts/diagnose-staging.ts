@@ -14,7 +14,7 @@ type DiagnosticResult = {
 };
 
 const DISCORD_API = "https://discord.com/api/v10";
-const DISCORD_REQUEST_TIMEOUT_MS = 8_000;
+const REQUEST_TIMEOUT_MS = 8_000;
 
 function safeErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -23,9 +23,11 @@ function safeErrorMessage(error: unknown): string {
   return String(error);
 }
 
-async function runAppwriteChecks(client: Databases): Promise<DiagnosticResult[]> {
+async function runAppwriteChecks(
+  client: Databases,
+): Promise<DiagnosticResult[]> {
   const checks: DiagnosticResult[] = [];
-  const appwriteTimeoutMessage = `Request timed out after ${DISCORD_REQUEST_TIMEOUT_MS}ms`;
+  const appwriteTimeoutMessage = `Request timed out after ${REQUEST_TIMEOUT_MS}ms`;
 
   async function withTimeout<T>(operation: Promise<T>): Promise<T> {
     let timeoutId: NodeJS.Timeout | undefined;
@@ -34,7 +36,7 @@ async function runAppwriteChecks(client: Databases): Promise<DiagnosticResult[]>
       new Promise<T>((_, reject) => {
         timeoutId = setTimeout(() => {
           reject(new Error(appwriteTimeoutMessage));
-        }, DISCORD_REQUEST_TIMEOUT_MS);
+        }, REQUEST_TIMEOUT_MS);
       }),
     ]).finally(() => {
       if (timeoutId) {
@@ -100,7 +102,10 @@ async function runDiscordChecks(
 
   async function fetchWithTimeout(url: string): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), DISCORD_REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(
+      () => controller.abort(),
+      DISCORD_REQUEST_TIMEOUT_MS,
+    );
 
     try {
       return await fetch(url, {
@@ -262,9 +267,8 @@ async function main(): Promise<void> {
   console.log(`   Appwrite endpoint host: ${endpointHost}`);
   console.log(`   Appwrite project id: ${env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`);
 
-  const { getAdminClient } = await import(
-    "@/lib/infrastructure/persistence/client"
-  );
+  const { getAdminClient } =
+    await import("@/lib/infrastructure/persistence/client");
   const databases = new Databases(getAdminClient());
 
   const results: DiagnosticResult[] = [

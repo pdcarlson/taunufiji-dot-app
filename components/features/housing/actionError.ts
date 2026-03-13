@@ -10,8 +10,7 @@ const ERROR_MESSAGE_BY_CODE: Record<string, string> = {
     "You do not have housing admin permissions for this action.",
   VALIDATION_ERROR:
     "Some task details are invalid. Please review the form and retry.",
-  DATABASE_ERROR:
-    "Unable to save your changes. Please try again.",
+  DATABASE_ERROR: "Unable to save your changes. Please try again.",
   EXTERNAL_SERVICE_ERROR:
     "An external service dependency failed. Please retry shortly.",
   UNKNOWN_ERROR: "Something unexpected failed. Please retry.",
@@ -23,10 +22,17 @@ export function getHousingActionErrorMessage(failure: ActionFailure): string {
   }
 
   if (failure.error) {
-    console.error("Unhandled housing action error", {
-      errorCode: failure.errorCode,
-      error: failure.error,
-    });
+    const isDev = process.env.NODE_ENV !== "production";
+    if (isDev) {
+      console.error("Unhandled housing action error", {
+        errorCode: failure.errorCode,
+        error: failure.error,
+      });
+    } else {
+      console.error("Unhandled housing action error", {
+        errorCode: failure.errorCode,
+      });
+    }
   }
 
   return ERROR_MESSAGE_BY_CODE.UNKNOWN_ERROR;

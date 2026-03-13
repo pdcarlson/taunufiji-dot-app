@@ -174,9 +174,10 @@ export default function EditTaskModal({
         mutationScope !== "this_instance" &&
         typeof effectiveFromDueAt === "string" &&
         (scheduleLoaded || leadTimeDirty);
-      if (shouldUpdateLeadTime && task.schedule_id) {
+      if (shouldUpdateLeadTime) {
+        const scheduleId = task.schedule_id!;
         const scheduleRes = await updateScheduleLeadTimeAction(
-          task.schedule_id,
+          scheduleId,
           Number(formData.lead_time_hours),
           jwt,
           {
