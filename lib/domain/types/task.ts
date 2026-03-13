@@ -36,7 +36,7 @@ export const HousingTaskSchema = BaseEntitySchema.extend({
   due_at: z.string().optional().nullable(),
   expires_at: z.string().optional().nullable(),
   unlock_at: z.string().optional().nullable(),
-  is_fine: z.boolean().optional(), // Appwrite boolean can be null if not set default? assume strict boolean or optional
+  is_fine: z.boolean().optional().nullable(), // Appwrite returns null when attribute is unset
   notification_level: NotificationLevelSchema,
   execution_limit: z.number().optional().nullable(),
   completed_at: z.string().optional().nullable(),
