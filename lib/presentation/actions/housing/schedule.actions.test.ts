@@ -104,9 +104,13 @@ describe("housing schedule actions", () => {
 
     expect(
       hoisted.mockContainer.scheduleService.updateSchedule,
-    ).toHaveBeenCalledWith("schedule-1", {
-      lead_time_hours: 48,
-    });
+    ).toHaveBeenCalledWith(
+      "schedule-1",
+      {
+        lead_time_hours: 48,
+      },
+      undefined,
+    );
     expect(hoisted.mockActionWrapper).toHaveBeenCalledWith(
       expect.any(Function),
       expect.objectContaining({
@@ -114,6 +118,24 @@ describe("housing schedule actions", () => {
         allowedRoles: HOUSING_ADMIN_ROLES,
         actionName: "housing.updateScheduleLeadTime",
       }),
+    );
+  });
+
+  it("forwards recurring scope options when updating lead time", async () => {
+    await updateScheduleLeadTimeAction("schedule-1", 48, "jwt-token", {
+      scope: "this_and_future",
+      effectiveFromDueAt: "2026-03-10T03:59:00.000Z",
+    });
+
+    expect(
+      hoisted.mockContainer.scheduleService.updateSchedule,
+    ).toHaveBeenCalledWith(
+      "schedule-1",
+      { lead_time_hours: 48 },
+      {
+        scope: "this_and_future",
+        effectiveFromDueAt: "2026-03-10T03:59:00.000Z",
+      },
     );
   });
 

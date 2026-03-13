@@ -3,6 +3,7 @@
 import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 import { CreateScheduleDTO } from "@/lib/domain/types/schedule";
 import { HOUSING_ADMIN_ROLES } from "@/lib/infrastructure/config/roles";
+import { RecurringMutationOptions } from "@/lib/domain/types/recurring";
 
 export async function createScheduleAction(
   data: CreateScheduleDTO,
@@ -37,12 +38,13 @@ export async function updateScheduleLeadTimeAction(
   scheduleId: string,
   leadTimeHours: number,
   jwt: string,
+  recurringOptions?: RecurringMutationOptions,
 ) {
   return await actionWrapper(
     async ({ container }) => {
       return await container.scheduleService.updateSchedule(scheduleId, {
         lead_time_hours: leadTimeHours,
-      });
+      }, recurringOptions);
     },
     {
       jwt,

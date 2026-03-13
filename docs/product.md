@@ -52,3 +52,33 @@ Access is strictly managed via Discord Role verification.
 - **Staging Environment**: Functional staging environment for testing changes before production.
 - **AI-Agent Alignment**: Codebase structured to be navigable and understandable for AI pair-programmers.
 - **CI/CD Maturity**: Standardized build, lint, and test gates for a predictable deployment process.
+
+## Product Guidelines
+
+### Visual Identity and Aesthetics
+
+- **High-Contrast and Professional**: Maintain a focused, professional palette with sharp borders and high contrast. The goal is a "Digital Chapter" look that feels reliable and authoritative.
+- **Typography**: Utilize established brand fonts ("Bebas Neue", "Langdon") to maintain fraternal identity.
+- **Flexible Utility-Based Design**: Stick with the utility-first (Tailwind) approach for speed and flexibility. Focus on consistent patterns rather than rigid, over-abstracted component libraries.
+
+### Communication and Prose Style
+
+- **Casual and Direct**: Keep notifications and instructions short, punchy, and modern. Communication should be efficient.
+- **Encouraging and Positive**: While direct, the system should highlight the value of contributions and the benefits of earning Scholarship Points to drive engagement.
+- **Terminology**: Use specific fraternal terms where appropriate ("Brothers", "Cabinet", "Housing Chair") but keep surrounding language accessible.
+
+### Error Handling and Feedback
+
+- **Technical and Transparent**: Since the user/developer base is technically inclined, provide detailed error messages.
+- **Actionable Failures**: Even when technical, errors should imply or state next steps (for example: missing permissions, network timeouts).
+
+### Responsive Strategy
+
+- **Balanced Responsive**: Features must function seamlessly across all screen sizes.
+  - **Mobile**: Critical for Brothers performing chores and submitting proof in real-time.
+  - **Desktop**: Critical for admin roles managing complex schedules and reviewing data-heavy ledger histories.
+
+### Engineering Principles for UI
+
+- **Pattern Over Abstraction**: Prioritize repeating successful UI patterns from the existing dashboard over creating new, isolated components.
+- **Performance**: Ensure interactions are snappy, using optimistic UI updates where appropriate.

@@ -11,6 +11,12 @@ export const ensureFutureTasksJob = async () => {
     let healedCount = 0;
 
     for (const schedule of schedules) {
+      // Defensive check: intentional recurring cancellations are represented by
+      // schedule deactivation and must never be resurrected by this job.
+      if (!schedule.active) {
+        continue;
+      }
+
       // 1. Check for Active Tasks (Open/Pending/Locked)
       // We don't care about dates here, just existence.
       // If a task is "locked" for next year, that counts as "Future".

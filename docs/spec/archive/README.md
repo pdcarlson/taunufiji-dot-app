@@ -2,7 +2,7 @@
 
 This directory contains completed implementation specs that are no longer active planning artifacts.
 
-Use `spec/` for in-progress specs and this archive for shipped work history.
+Use `docs/spec/current/` for in-progress specs and this archive for shipped work history.
 
 ## Contents
 

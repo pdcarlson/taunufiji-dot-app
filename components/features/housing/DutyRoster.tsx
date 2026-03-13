@@ -209,6 +209,7 @@ export default function DutyRoster({
                           dateStyle: "short",
                           timeStyle: "short",
                           hour12: true,
+                          timeZone: "America/New_York",
                         })
                       : "-"}
                   </td>

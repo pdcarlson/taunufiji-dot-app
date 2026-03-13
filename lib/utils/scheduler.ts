@@ -1,4 +1,5 @@
 import { RRule, RRuleSet, rrulestr } from "rrule";
+import { easternWallClockToUtcDate } from "@/lib/utils/eastern-time";
 
 export interface ScheduleCalculation {
   dueAt: Date;
@@ -80,7 +81,11 @@ export function calculateNextInstance(
         // No future occurrences (e.g., COUNT reached)
         return null;
       }
-      dueAt = nextDate;
+      const isEasternTimeZoneRule =
+        recurrenceRule.includes("TZID=America/New_York");
+      dueAt = isEasternTimeZoneRule
+        ? easternWallClockToUtcDate(nextDate)
+        : nextDate;
     }
 
     // --- UNLOCK CALCULATION ---

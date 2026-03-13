@@ -14,12 +14,12 @@ For full product context, see `docs/product.md`. For architecture details, see `
 
 **When to use**: Before implementing any non-trivial feature, refactor, or infrastructure change.
 
-Read `spec/README.md` for the full guide and template. Key rules:
+Read `docs/spec/README.md` for the full guide and template. Key rules:
 
-1. **Always check for an existing spec** in `spec/` before starting work. If one exists, follow it.
-2. **Create a new spec** if none exists and the change is non-trivial (touches 3+ files or takes more than a few hours). Use the template in `spec/README.md`.
+1. **Always check for an existing spec** in `docs/spec/current/` before starting work. If one exists, follow it.
+2. **Create a new spec** if none exists and the change is non-trivial (touches 3+ files or takes more than a few hours). Use the template in `docs/spec/README.md`.
 3. **Update the spec** if requirements change during implementation.
-4. **Move to `docs/archive/specs/`** when the work ships, with all acceptance criteria checked off.
+4. **Move to `docs/spec/archive/`** when the work ships, with all acceptance criteria checked off.
 5. **Reference the spec** in PR descriptions and commit messages.
 
 ### Skill: Code Style
@@ -96,12 +96,21 @@ When making changes to the codebase, update documentation as needed:
 
 | What changed | Update |
 |---|---|
-| New feature or module | Create spec in `spec/`, update `docs/product.md` if user-facing |
+| New feature or module | Create spec in `docs/spec/current/`, update `docs/product.md` if user-facing |
 | Architecture or patterns | Update `docs/architecture.md` |
 | Tech stack (new dependency, framework upgrade) | Update `docs/tech-stack.md` |
 | Deployment or CI/CD | Update `docs/deployment.md` |
 | Significant completed work | Add entry to `docs/changelog.md` |
-| UI/UX guidelines | Update `docs/product-guidelines.md` |
+| UI/UX guidelines | Update `docs/product.md` |
+
+## Branch Workflow
+
+Use `staging` as the integration branch for all active development work.
+
+1. If currently on `staging` and beginning a new task, create a feature branch: `feature/<descriptive-name>`.
+2. If already on a feature branch for the current task, continue working on that branch.
+3. Open pull requests from feature branches to `staging`.
+4. Do not commit directly to `staging` or `main`.
 
 ---
 

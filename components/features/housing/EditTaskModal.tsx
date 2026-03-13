@@ -12,6 +12,12 @@ import { Member, HousingTask } from "@/lib/domain/entities";
 import { Loader } from "@/components/ui/Loader";
 import { X, Calendar, Edit2, Users, Clock, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
+import {
+  easternDateInputToIso,
+  getTodayEasternDateInput,
+  isoToEasternDateInput,
+} from "@/lib/utils/eastern-time";
+import { RecurringMutationScope } from "@/lib/domain/types/recurring";
 
 interface EditTaskModalProps {
   task: HousingTask;
@@ -34,12 +40,13 @@ export default function EditTaskModal({
     description: task.description,
     points_value: task.points_value,
     assigned_to: task.assigned_to || "",
-    // Extract YYYY-MM-DD from ISO string
-    due_at: task.due_at ? task.due_at.split("T")[0] : "",
+    due_at: task.due_at ? isoToEasternDateInput(task.due_at) : "",
     unlock_at: task.unlock_at ? task.unlock_at.split("T")[0] : "",
     execution_limit: task.execution_limit || undefined,
     lead_time_hours: 24, // Default, updated via fetch
   });
+  const [mutationScope, setMutationScope] =
+    useState<RecurringMutationScope>("this_and_future");
 
   const isBounty = task.type === "bounty";
   const isRecurring = !!task.schedule_id;
@@ -100,7 +107,7 @@ export default function EditTaskModal({
         // Duty Specific
         payload.assigned_to = formData.assigned_to || null;
         if (formData.due_at) {
-          const dueIso = new Date(`${formData.due_at}T23:59:00`).toISOString();
+          const dueIso = easternDateInputToIso(formData.due_at);
           payload.due_at = dueIso;
 
           // Recalculate Unlock Logic if Recurring
@@ -140,16 +147,33 @@ export default function EditTaskModal({
         }
       }
 
+      const effectiveFromDueAt = payload.due_at || task.due_at || undefined;
+      const recurringOptions =
+        isRecurring && task.schedule_id
+          ? {
+              scope: mutationScope,
+              effectiveFromDueAt,
+            }
+          : undefined;
+
       // Parallel Actions
-      const taskPromise = updateTaskAction(task.id, payload, jwt);
+      const taskPromise = updateTaskAction(task.id, payload, jwt, recurringOptions);
       let schedulePromise = null;
 
       // If Recurring & Lead Time Changed, update Schedule
-      if (isRecurring && task.schedule_id) {
+      if (
+        isRecurring &&
+        task.schedule_id &&
+        mutationScope !== "this_instance"
+      ) {
         schedulePromise = updateScheduleLeadTimeAction(
           task.schedule_id,
           Number(formData.lead_time_hours),
           jwt,
+          {
+            scope: mutationScope,
+            effectiveFromDueAt,
+          },
         );
       }
 
@@ -183,12 +207,27 @@ export default function EditTaskModal({
 
   const handleDelete = async () => {
     if (!canDelete) return;
-    if (!confirm("Are you sure you want to delete this task?")) return;
+    const scopeLabelMap: Record<RecurringMutationScope, string> = {
+      this_instance: "this instance",
+      this_and_future: "this and future",
+      entire_series: "the entire series",
+    };
+    const label =
+      isRecurring && task.schedule_id
+        ? ` (${scopeLabelMap[mutationScope]})`
+        : "";
+    if (!confirm(`Are you sure you want to delete this task${label}?`)) return;
 
     setLoading(true);
     try {
       const jwt = await getJWT();
-      const result = await deleteTaskAction(task.id, jwt);
+      const result = await deleteTaskAction(task.id, jwt, {
+        scope: mutationScope,
+        effectiveFromDueAt:
+          formData.due_at && isRecurring
+            ? easternDateInputToIso(formData.due_at)
+            : task.due_at || undefined,
+      });
       if (result.success) {
         toast.success("Task deleted");
         onRefresh();
@@ -375,7 +414,7 @@ export default function EditTaskModal({
                 <input
                   type="date"
                   required
-                  min={new Date().toISOString().split("T")[0]}
+                  min={getTodayEasternDateInput()}
                   className="w-full text-sm text-stone-600 border border-stone-200 rounded-lg p-2 outline-none"
                   value={formData.due_at}
                   onChange={(e) =>
@@ -386,6 +425,25 @@ export default function EditTaskModal({
               </div>
 
               {/* Unlock Date REMOVED per requirements */}
+            </div>
+          )}
+
+          {isRecurring && (
+            <div>
+              <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
+                Apply Changes To
+              </label>
+              <select
+                value={mutationScope}
+                onChange={(e) =>
+                  setMutationScope(e.target.value as RecurringMutationScope)
+                }
+                className="w-full text-sm text-stone-700 border border-stone-200 rounded-lg p-2 focus:border-fiji-purple outline-none"
+              >
+                <option value="this_instance">This instance</option>
+                <option value="this_and_future">This + future</option>
+                <option value="entire_series">Entire series</option>
+              </select>
             </div>
           )}
 

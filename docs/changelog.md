@@ -3,8 +3,8 @@
 ## 2026-03-11: Staging QA Audit Hardening
 
 - **Specs & Documentation**:
-  - Added `docs/archive/specs/qa-audit-and-staging-hardening.md` and updated `spec/staging-environment-setup.md` with runtime-readiness acceptance criteria.
-  - Added `docs/housing-behavior-reference.md` as a durable behavior/edge-case reference.
+  - Added `docs/spec/archive/qa-audit-and-staging-hardening.md` and updated `docs/spec/current/staging-environment-setup.md` with runtime-readiness acceptance criteria.
+  - Added `docs/behavior.md` as a durable behavior/edge-case reference.
   - Expanded deployment docs with environment matrix, diagnostics command, and staging troubleshooting runbook.
 - **Environment Diagnostics**:
   - Added `npm run diagnose:staging` (`scripts/diagnose-staging.ts`) to verify Appwrite and Discord staging dependencies.
@@ -19,7 +19,7 @@
   - Added Playwright smoke tests (`tests/e2e/smoke.spec.ts`) and CI execution steps for browser installation + e2e run.
   - Added Vitest coverage reporting script (`npm run test:coverage`) and excluded e2e specs from Vitest discovery.
 - **Repository Organization Realignment**:
-  - Archived completed specs to `docs/archive/specs/` and updated spec workflow references/indexes.
+  - Archived completed specs to `docs/spec/archive/` and updated spec workflow references/indexes.
   - Moved Playwright smoke coverage from root `e2e/` to `tests/e2e/` and updated related configs/docs.
 - **Lint Quality Drive**:
   - Reduced lint output to zero warnings by replacing legacy `any` usage with stricter unknown/typed contracts and cleaning hook dependency/type-safety issues.

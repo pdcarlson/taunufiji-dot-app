@@ -96,6 +96,27 @@ describe("housing admin actions", () => {
     );
   });
 
+  it("forwards recurring scope options for update action", async () => {
+    await updateTaskAction(
+      "task-1",
+      { description: "updated" },
+      "jwt-token",
+      {
+        scope: "this_and_future",
+        effectiveFromDueAt: "2026-03-10T03:59:00.000Z",
+      },
+    );
+
+    expect(hoisted.mockContainer.adminService.updateTask).toHaveBeenCalledWith(
+      "task-1",
+      { description: "updated" },
+      {
+        scope: "this_and_future",
+        effectiveFromDueAt: "2026-03-10T03:59:00.000Z",
+      },
+    );
+  });
+
   it("passes housing admin roles for delete task action", async () => {
     await deleteTaskAction("task-1", "jwt-token");
 
@@ -106,6 +127,21 @@ describe("housing admin actions", () => {
         allowedRoles: HOUSING_ADMIN_ROLES,
         actionName: "housing.deleteTask",
       }),
+    );
+  });
+
+  it("forwards recurring scope options for delete action", async () => {
+    await deleteTaskAction("task-1", "jwt-token", {
+      scope: "entire_series",
+      effectiveFromDueAt: "2026-03-10T03:59:00.000Z",
+    });
+
+    expect(hoisted.mockContainer.adminService.deleteTask).toHaveBeenCalledWith(
+      "task-1",
+      {
+        scope: "entire_series",
+        effectiveFromDueAt: "2026-03-10T03:59:00.000Z",
+      },
     );
   });
 

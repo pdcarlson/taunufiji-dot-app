@@ -7,31 +7,31 @@ Project documentation for Tau Nu Fiji — The Digital Chapter.
 | Document | Description |
 |---|---|
 | [Product Definition](product.md) | What the product does, who it's for, key modules |
-| [Product Guidelines](product-guidelines.md) | Visual identity, prose style, UX principles |
 | [Tech Stack](tech-stack.md) | Frameworks, services, and tooling |
 | [Architecture](architecture.md) | Clean Architecture layers, patterns, authentication flow |
 | [Deployment](deployment.md) | CI/CD pipeline, staging/production workflow, secret management |
-| [Housing Behavior Reference](housing-behavior-reference.md) | Canonical housing lifecycle, edge-case matrix, and expected runtime behavior |
+| [Housing Behavior Reference](behavior.md) | Canonical housing lifecycle, edge-case matrix, and expected runtime behavior |
 | [Changelog](changelog.md) | Historical log of all major changes |
 
 ## Specs
 
-Spec-driven development workflow and active specifications live in [`spec/`](../spec/README.md). Completed specs are archived in [`docs/archive/specs/`](archive/specs/README.md).
+Spec-driven development workflow and active specifications live in [`docs/spec/current/`](spec/current/). Completed specs are archived in [`docs/spec/archive/`](spec/archive/README.md).
 
 | Active Spec | Status |
 |---|---|
-| [Staging Environment Setup](../spec/staging-environment-setup.md) | In Progress |
+| [Staging Environment Setup](spec/current/staging-environment-setup.md) | In Progress |
+| [Recurring Task Update Scopes](spec/current/recurring-task-update-scopes.md) | In Progress |
 
 | Archived Completed Spec | Location |
 |---|---|
-| Deploy Strategy Update | [docs/archive/specs/deploy-strategy-update.md](archive/specs/deploy-strategy-update.md) |
-| Discord Sync Automation | [docs/archive/specs/discord-sync-automation.md](archive/specs/discord-sync-automation.md) |
-| Centralize Env Config | [docs/archive/specs/centralize-env-config.md](archive/specs/centralize-env-config.md) |
-| Quality Gate Fixes | [docs/archive/specs/quality-gate-fixes.md](archive/specs/quality-gate-fixes.md) |
-| Infrastructure Logic Hardening | [docs/archive/specs/infra-logic-hardening.md](archive/specs/infra-logic-hardening.md) |
-| QA Audit and Staging Hardening | [docs/archive/specs/qa-audit-and-staging-hardening.md](archive/specs/qa-audit-and-staging-hardening.md) |
+| Deploy Strategy Update | [docs/spec/archive/deploy-strategy-update.md](spec/archive/deploy-strategy-update.md) |
+| Discord Sync Automation | [docs/spec/archive/discord-sync-automation.md](spec/archive/discord-sync-automation.md) |
+| Centralize Env Config | [docs/spec/archive/centralize-env-config.md](spec/archive/centralize-env-config.md) |
+| Quality Gate Fixes | [docs/spec/archive/quality-gate-fixes.md](spec/archive/quality-gate-fixes.md) |
+| Infrastructure Logic Hardening | [docs/spec/archive/infra-logic-hardening.md](spec/archive/infra-logic-hardening.md) |
+| QA Audit and Staging Hardening | [docs/spec/archive/qa-audit-and-staging-hardening.md](spec/archive/qa-audit-and-staging-hardening.md) |
 
-> Rule of thumb: `spec/` tracks planned/in-flight implementation work; `docs/` captures durable references and archived completed tracks.
+> Rule of thumb: `docs/spec/current/` tracks planned/in-flight implementation work; `docs/` captures durable references; `docs/spec/archive/` stores completed specs.
 
 ## Style Guides
 
