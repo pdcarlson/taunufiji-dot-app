@@ -94,7 +94,7 @@ export class AuthService {
    */
   async syncUser(authId: string): Promise<User> {
     if (env.NODE_ENV === "development") {
-      console.log(`[AuthService] Starting syncUser for ${authId}`);
+      logger.debug(`[AuthService] Starting syncUser for ${authId}`);
     }
 
     // 1. Get Discord Identity
@@ -121,7 +121,7 @@ export class AuthService {
 
     if (!existingUser) {
       if (env.NODE_ENV === "development") {
-        console.log(
+        logger.debug(
           `[AuthService] User not found (by Discord ID). Creating new profile...`,
         );
       }

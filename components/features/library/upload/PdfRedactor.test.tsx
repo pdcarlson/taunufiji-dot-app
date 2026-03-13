@@ -34,7 +34,7 @@ vi.mock("pdf-lib", () => ({
   },
 }));
 
-describe("PdfRedactor Coordinate Mapping", () => {
+describe("PdfRedactor initialization/rendering", () => {
   it("should initialize correctly with a file", async () => {
     const file = new File(["test"], "test.pdf", { type: "application/pdf" });
     file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(8));
@@ -42,11 +42,14 @@ describe("PdfRedactor Coordinate Mapping", () => {
     render(<PdfRedactor file={file} />);
 
     await waitFor(() => {
+      expect(file.arrayBuffer).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
       expect(document.querySelector("canvas")).not.toBeNull();
     });
   });
 
-  // Since actual canvas interaction is hard to test in JSDOM,
-  // we will focus on verifying that coordinate math logic is consistent.
-  // In a real scenario, we'd test the coordinate conversion functions if they were exported.
+  // Since actual canvas interaction is hard to test in JSDOM, this suite focuses
+  // on the component load/render lifecycle.
 });

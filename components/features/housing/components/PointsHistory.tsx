@@ -19,6 +19,7 @@ export default function PointsHistory() {
   useEffect(() => {
     const loadData = async () => {
       if (!user) {
+        setHistory([]);
         setLoading(false);
         return;
       }

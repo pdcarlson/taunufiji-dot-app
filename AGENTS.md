@@ -84,7 +84,7 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 Examples:
 
-```
+```text
 feat(housing): add ad-hoc point request flow
 fix(auth): resolve infinite redirect loop on login
 docs(spec): add staging environment setup spec
@@ -142,7 +142,7 @@ By default the agent has access to the **staging** Appwrite project and, if prov
 To create a working `.env.local` from the default injected secrets (staging only):
 
 ```bash
-cat > .env.local << 'EOF'
+cat > .env.local << EOF
 NEXT_PUBLIC_APPWRITE_ENDPOINT=$NEXT_PUBLIC_APPWRITE_ENDPOINT
 NEXT_PUBLIC_APPWRITE_PROJECT_ID=$NEXT_PUBLIC_APPWRITE_PROJECT_ID
 APPWRITE_API_KEY=$APPWRITE_STAGING_API_KEY

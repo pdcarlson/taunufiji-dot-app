@@ -61,6 +61,7 @@ export default function HousingDashboardClient({
   }, [currentUser, members]);
 
   const isAdmin = isHousingAdmin;
+  const profileId = profile?.discord_id || currentUser?.$id || "";
 
   // Modals
   const [showOneOffModal, setShowOneOffModal] = useState(false);
@@ -144,7 +145,7 @@ export default function HousingDashboardClient({
             <MyDutiesWidget
               initialTasks={myDuties}
               userId={currentUser?.$id || ""}
-              profileId={profile?.discord_id || currentUser?.$id || ""}
+              profileId={profileId}
               variant="minimal"
             />
           </div>
@@ -176,7 +177,7 @@ export default function HousingDashboardClient({
                       key={t.id}
                       task={t}
                       userId={currentUser?.$id || ""}
-                      profileId={profile?.discord_id || ""}
+                      profileId={profileId}
                       userName={currentUser?.name || "Guest"}
                       isAdmin={isAdmin}
                       getJWT={getToken}
@@ -209,7 +210,7 @@ export default function HousingDashboardClient({
                     key={t.id}
                     task={t}
                     userId={currentUser?.$id || ""}
-                    profileId={profile?.discord_id || ""}
+                    profileId={profileId}
                     userName={currentUser?.name || "Guest"}
                     isAdmin={isAdmin}
                     getJWT={getToken}

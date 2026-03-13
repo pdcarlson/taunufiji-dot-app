@@ -12,14 +12,13 @@ export const TaskExpiredHandler = {
       );
 
       try {
-        const { taskRepository } = getContainer();
+        const { taskRepository, scheduleService } = getContainer();
         const task = await taskRepository.findById(payload.taskId);
 
         if (task && task.schedule_id) {
           logger.log(
             `[TaskExpiredHandler] Triggering next instance for schedule ${task.schedule_id}`,
           );
-          const { scheduleService } = getContainer();
           await scheduleService.triggerNextInstance(task.schedule_id, task);
         }
       } catch (e) {

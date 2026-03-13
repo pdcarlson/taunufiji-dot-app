@@ -1,4 +1,5 @@
 type ActionFailure = {
+  success?: boolean;
   error?: string;
   errorCode?: string;
 };
@@ -17,22 +18,20 @@ const ERROR_MESSAGE_BY_CODE: Record<string, string> = {
 };
 
 export function getHousingActionErrorMessage(failure: ActionFailure): string {
-  if (failure.errorCode && ERROR_MESSAGE_BY_CODE[failure.errorCode]) {
-    return ERROR_MESSAGE_BY_CODE[failure.errorCode];
-  }
-
-  if (failure.error) {
+  if (failure.success === false || !!failure.error) {
     const isDev = process.env.NODE_ENV !== "production";
     if (isDev) {
-      console.error("Unhandled housing action error", {
-        errorCode: failure.errorCode,
-        error: failure.error,
-      });
+      console.error("[HousingAction] action failed", failure);
     } else {
-      console.error("Unhandled housing action error", {
+      console.error("[HousingAction] action failed", {
+        success: failure.success,
         errorCode: failure.errorCode,
       });
     }
+  }
+
+  if (failure.errorCode && ERROR_MESSAGE_BY_CODE[failure.errorCode]) {
+    return ERROR_MESSAGE_BY_CODE[failure.errorCode];
   }
 
   return ERROR_MESSAGE_BY_CODE.UNKNOWN_ERROR;

@@ -8,7 +8,7 @@ interface AppwriteAccountClient {
 
 type ActionContext = {
   container: Container;
-  userId: string; // The authenticated Appwrite Auth ID (not necessarily Profile ID)
+  userId: string; // Auth ID when authenticated; empty string for public actions without JWT.
   account: AppwriteAccountClient | null; // Appwrite account client, not the user model
 };
 
@@ -114,6 +114,10 @@ function classifyActionError(error: unknown): ActionErrorCode {
  * 4. Error Handling
  */
 export async function actionWrapper<T>(
+  /**
+   * `ctx.userId` is an authenticated Appwrite user ID when a JWT is present.
+   * For public actions without JWT, it is an empty string and must be handled.
+   */
   action: (ctx: ActionContext) => Promise<T>,
   options: ActionOptions = {},
 ): Promise<ActionResult<T>> {
@@ -161,7 +165,7 @@ export async function actionWrapper<T>(
 
     // 4. Execution
     const container = getContainer();
-    // Pass userId if available, else empty string or throw if strict
+    // For public actions without JWT, userId is intentionally an empty string.
     const userId = user ? user.$id : "";
     // account here is the Appwrite account client used for account.get()
     const data = await action({ container, userId, account });

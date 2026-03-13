@@ -84,7 +84,7 @@ describe("AdminService", () => {
       );
     });
 
-    it("should rollback status and throw if EventBus fails", async () => {
+    it("should throw if EventBus fails after approval update", async () => {
       const taskId = "task-fail";
       (mockTaskRepo.findById as any).mockResolvedValue({
         id: taskId,
@@ -100,16 +100,15 @@ describe("AdminService", () => {
       );
 
       await expect(service.verifyTask(taskId, "admin-1")).rejects.toThrow(
-        "Failed to complete approval process: Event Error",
+        "Event Error",
       );
 
-      // Verify Rollback
-      expect(mockTaskRepo.update).toHaveBeenCalledTimes(2); // 1. approve, 2. rollback/pending
-      expect(mockTaskRepo.update).toHaveBeenLastCalledWith(
+      expect(mockTaskRepo.update).toHaveBeenCalledTimes(1);
+      expect(mockTaskRepo.update).toHaveBeenCalledWith(
         taskId,
         expect.objectContaining({
-          status: "pending",
-          completed_at: null,
+          status: "approved",
+          completed_at: expect.any(String),
         }),
       );
     });

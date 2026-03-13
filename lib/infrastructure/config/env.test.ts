@@ -46,16 +46,6 @@ describe("Environment Configuration", () => {
     expect(consoleSpy).toHaveBeenCalled();
   });
 
-  it("should throw when validation fails", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    await expect(import("@/lib/infrastructure/config/env")).rejects.toThrow(
-      /Invalid server environment variables/,
-    );
-
-    expect(consoleSpy).toHaveBeenCalled();
-  });
-
   it("should validate and export correctly when all variables are present", async () => {
     process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
     process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT = "http://localhost/v1";

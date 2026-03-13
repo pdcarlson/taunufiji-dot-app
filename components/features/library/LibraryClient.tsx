@@ -13,6 +13,7 @@ import { toast } from "react-hot-toast";
 import {
   searchLibraryAction,
   getLibraryStatsAction,
+  type LibrarySearchResult,
 } from "@/lib/presentation/actions/library/read.actions";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -27,11 +28,6 @@ interface LibraryClientProps {
   initialTotal: number;
   initialUserFiles: number;
   initialResources?: LibraryResource[];
-}
-
-interface LibrarySearchResult {
-  documents: LibraryResource[];
-  total: number;
 }
 
 const INITIAL_FILTERS: LibraryFiltersState = {
@@ -129,10 +125,10 @@ export default function LibraryClient({
 
         const jwt = await getToken();
         // Server Action Call
-        const data = (await searchLibraryAction(
+        const data: LibrarySearchResult = await searchLibraryAction(
           apiFilters,
           jwt,
-        )) as LibrarySearchResult;
+        );
 
         if (requestId === currentRequestId.current) {
           setResults(data.documents);
