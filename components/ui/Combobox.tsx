@@ -37,7 +37,7 @@ export default function Combobox({
 
   // Filter options based on query
   const filtered = options.filter((opt) =>
-    opt.toLowerCase().includes(query.toLowerCase()),
+    normalizeOption(opt).includes(normalizedQuery),
   );
 
   // Close when clicking outside
