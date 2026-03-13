@@ -4,7 +4,6 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
-import { env } from "@/lib/infrastructure/config/env";
 import { APP_NAME, APP_DESCRIPTION, BASE_URL } from "@/lib/constants";
 
 // Font Setup
@@ -18,7 +17,9 @@ const langdon = localFont({
   variable: "--font-langdon",
 });
 
-const ENV_PREFIX = env.NODE_ENV === "production" ? "" : `[${env.NODE_ENV.toUpperCase()}] `;
+const runtimeNodeEnv = process.env.NODE_ENV ?? "development";
+const ENV_PREFIX =
+  runtimeNodeEnv === "production" ? "" : `[${runtimeNodeEnv.toUpperCase()}] `;
 
 export const metadata: Metadata = {
   title: {

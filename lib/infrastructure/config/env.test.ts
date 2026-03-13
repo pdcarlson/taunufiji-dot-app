@@ -13,9 +13,6 @@ const SERVER_ENV_KEYS = [
   "DISCORD_BOT_TOKEN",
   "DISCORD_GUILD_ID",
   "DISCORD_HOUSING_CHANNEL_ID",
-  "DISCORD_ROLE_ID_BROTHER",
-  "DISCORD_ROLE_ID_CABINET",
-  "DISCORD_ROLE_ID_HOUSING_CHAIR",
   "CRON_SECRET",
 ] as const;
 
@@ -63,14 +60,11 @@ describe("Environment Configuration", () => {
     process.env.DISCORD_BOT_TOKEN = "test-token";
     process.env.DISCORD_GUILD_ID = "test-guild";
     process.env.DISCORD_HOUSING_CHANNEL_ID = "test-housing";
-    process.env.DISCORD_ROLE_ID_BROTHER = "test-role-brother";
-    process.env.DISCORD_ROLE_ID_CABINET = "test-role-cabinet";
-    process.env.DISCORD_ROLE_ID_HOUSING_CHAIR = "test-role-housing";
     process.env.CRON_SECRET = "test-secret";
 
     const { env } = await import("@/lib/infrastructure/config/env");
 
     expect(env.NEXT_PUBLIC_APPWRITE_ENDPOINT).toBe("http://localhost/v1");
-    expect(env.DISCORD_ROLE_ID_BROTHER).toBe("test-role-brother");
+    expect(env.DISCORD_HOUSING_CHANNEL_ID).toBe("test-housing");
   });
 });

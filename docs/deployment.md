@@ -16,7 +16,7 @@ Feature Branch → PR (CI Quality Gates) → Merge to staging → Appwrite deplo
 - Lint: `npm run lint`
 - Type check: `npx tsc --noEmit`
 - Tests: `npm run test`
-- Build: `npm run build` (with `SKIP_ENV_VALIDATION=true`)
+- Build: `npm run build` (strict env validation with CI placeholders)
 
 This workflow does **not** handle deployment. It serves strictly as a quality gate.
 
@@ -53,7 +53,31 @@ This workflow does **not** handle deployment. It serves strictly as a quality ga
 | AWS/S3        | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME`          |
 | Cron          | `CRON_SECRET`                                                                          |
 
-`SKIP_ENV_VALIDATION=true` is intended for CI/build fallback scenarios only. Runtime staging validation should be done with real environment values.
+`SKIP_ENV_VALIDATION=true` is intended for local fallback scenarios only when intentionally bypassing strict checks. CI should validate against a complete placeholder matrix, and runtime staging/production should validate with real environment values.
+
+## Appwrite Environment Checklist (Per Site)
+
+Before promoting a merge to `main`, verify the target Appwrite Site has these keys configured:
+
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_APPWRITE_ENDPOINT`
+- `NEXT_PUBLIC_APPWRITE_PROJECT_ID`
+- `APPWRITE_API_KEY`
+- `AWS_REGION`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_BUCKET_NAME`
+- `DISCORD_APP_ID`
+- `DISCORD_PUBLIC_KEY`
+- `DISCORD_BOT_TOKEN`
+- `DISCORD_GUILD_ID`
+- `DISCORD_HOUSING_CHANNEL_ID`
+- `DISCORD_ROLE_ID_BROTHER`
+- `DISCORD_ROLE_ID_CABINET`
+- `DISCORD_ROLE_ID_HOUSING_CHAIR`
+- `CRON_SECRET`
+
+For production specifically, the three `DISCORD_ROLE_ID_*` keys must be present before deployment. Missing role IDs can break role-gated runtime flows even when unrelated routes (such as image proxying) build successfully.
 
 ## Staging Runtime Diagnostics
 
