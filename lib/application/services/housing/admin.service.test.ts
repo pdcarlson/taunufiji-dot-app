@@ -10,6 +10,10 @@ const mockTaskRepo = MockFactory.createTaskRepository();
 // Partial mock for ScheduleService as it's complex
 const mockScheduleService = {
   triggerNextInstance: vi.fn(),
+  updateTaskThisAndFuture: vi.fn(),
+  updateTaskEntireSeries: vi.fn(),
+  deleteTaskThisAndFuture: vi.fn(),
+  deleteTaskEntireSeries: vi.fn(),
 } as any;
 
 // Mock Event Bus
@@ -173,6 +177,66 @@ describe("AdminService", () => {
       expect(mockTaskRepo.update).toHaveBeenCalledWith(
         taskId,
         expect.objectContaining({ status: "rejected" }),
+      );
+      expect(mockTaskRepo.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("recurring scope mutations", () => {
+    it("updates only one task when scope is this_instance", async () => {
+      (mockTaskRepo.findById as any).mockResolvedValue({
+        id: "task-1",
+        schedule_id: "schedule-1",
+      });
+      (mockTaskRepo.update as any).mockResolvedValue({ id: "task-1" });
+
+      await service.updateTask(
+        "task-1",
+        { title: "Updated title" },
+        { scope: "this_instance" },
+      );
+
+      expect(mockTaskRepo.update).toHaveBeenCalledWith("task-1", {
+        title: "Updated title",
+      });
+      expect(mockScheduleService.updateTaskThisAndFuture).not.toHaveBeenCalled();
+    });
+
+    it("routes update to schedule service for this_and_future scope", async () => {
+      const task = {
+        id: "task-2",
+        schedule_id: "schedule-2",
+        due_at: "2026-03-10T03:59:00.000Z",
+      };
+      (mockTaskRepo.findById as any).mockResolvedValue(task);
+      (mockScheduleService.updateTaskThisAndFuture as any).mockResolvedValue(
+        task,
+      );
+
+      await service.updateTask("task-2", { description: "next" }, {
+        scope: "this_and_future",
+      });
+
+      expect(mockScheduleService.updateTaskThisAndFuture).toHaveBeenCalledWith(
+        task,
+        { description: "next" },
+        "2026-03-10T03:59:00.000Z",
+      );
+    });
+
+    it("routes delete to schedule service for entire_series scope", async () => {
+      const task = {
+        id: "task-3",
+        schedule_id: "schedule-3",
+        due_at: "2026-03-10T03:59:00.000Z",
+      };
+      (mockTaskRepo.findById as any).mockResolvedValue(task);
+
+      await service.deleteTask("task-3", { scope: "entire_series" });
+
+      expect(mockScheduleService.deleteTaskEntireSeries).toHaveBeenCalledWith(
+        task,
+        "2026-03-10T03:59:00.000Z",
       );
       expect(mockTaskRepo.delete).not.toHaveBeenCalled();
     });

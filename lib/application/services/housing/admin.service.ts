@@ -10,6 +10,7 @@ import { CreateAssignmentDTO } from "@/lib/domain/types/task";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents } from "@/lib/domain/events";
 import { ScheduleService } from "./schedule.service";
+import { RecurringMutationOptions } from "@/lib/domain/types/recurring";
 
 export class AdminService {
   constructor(
@@ -173,8 +174,45 @@ export class AdminService {
   /**
    * Update task details
    */
-  async updateTask(taskId: string, data: Partial<CreateAssignmentDTO>) {
-    return await this.taskRepository.update(taskId, data);
+  async updateTask(
+    taskId: string,
+    data: Partial<CreateAssignmentDTO>,
+    recurringOptions?: RecurringMutationOptions,
+  ) {
+    const task = await this.taskRepository.findById(taskId);
+    if (!task) {
+      throw new Error("Task not found.");
+    }
+
+    if (
+      !task.schedule_id ||
+      !recurringOptions ||
+      recurringOptions.scope === "this_instance"
+    ) {
+      return await this.taskRepository.update(taskId, data);
+    }
+
+    const effectiveFromDueAt =
+      recurringOptions.effectiveFromDueAt ?? task.due_at ?? undefined;
+    if (!effectiveFromDueAt) {
+      throw new Error(
+        "effectiveFromDueAt or task.due_at required for scoped recurring updates",
+      );
+    }
+
+    if (recurringOptions.scope === "entire_series") {
+      return await this.scheduleService.updateTaskEntireSeries(
+        task,
+        data,
+        effectiveFromDueAt,
+      );
+    }
+
+    return await this.scheduleService.updateTaskThisAndFuture(
+      task,
+      data,
+      effectiveFromDueAt,
+    );
   }
 
   /**
@@ -207,7 +245,43 @@ export class AdminService {
   /**
    * Delete a task
    */
-  async deleteTask(taskId: string) {
-    await this.taskRepository.delete(taskId);
+  async deleteTask(
+    taskId: string,
+    recurringOptions?: RecurringMutationOptions,
+  ) {
+    const task = await this.taskRepository.findById(taskId);
+    if (!task) {
+      throw new Error("Task not found.");
+    }
+
+    if (
+      !task.schedule_id ||
+      !recurringOptions ||
+      recurringOptions.scope === "this_instance"
+    ) {
+      await this.taskRepository.delete(taskId);
+      return;
+    }
+
+    const effectiveFromDueAt =
+      recurringOptions.effectiveFromDueAt ?? task.due_at ?? undefined;
+    if (!effectiveFromDueAt) {
+      throw new Error(
+        "effectiveFromDueAt or task.due_at required for scoped recurring deletes",
+      );
+    }
+
+    if (recurringOptions.scope === "entire_series") {
+      await this.scheduleService.deleteTaskEntireSeries(
+        task,
+        effectiveFromDueAt,
+      );
+      return;
+    }
+
+    await this.scheduleService.deleteTaskThisAndFuture(
+      task,
+      effectiveFromDueAt,
+    );
   }
 }

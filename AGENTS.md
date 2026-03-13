@@ -14,12 +14,12 @@ For full product context, see `docs/product.md`. For architecture details, see `
 
 **When to use**: Before implementing any non-trivial feature, refactor, or infrastructure change.
 
-Read `spec/README.md` for the full guide and template. Key rules:
+Read `docs/spec/README.md` for the full guide and template. Key rules:
 
-1. **Always check for an existing spec** in `spec/` before starting work. If one exists, follow it.
-2. **Create a new spec** if none exists and the change is non-trivial (touches 3+ files or takes more than a few hours). Use the template in `spec/README.md`.
+1. **Always check for an existing spec** in `docs/spec/current/` before starting work. If one exists, follow it.
+2. **Create a new spec** if none exists and the change is non-trivial (touches 3+ files or takes more than a few hours). Use the template in `docs/spec/README.md`.
 3. **Update the spec** if requirements change during implementation.
-4. **Move to `docs/archive/specs/`** when the work ships, with all acceptance criteria checked off.
+4. **Move to `docs/spec/archive/`** when the work ships, with all acceptance criteria checked off.
 5. **Reference the spec** in PR descriptions and commit messages.
 
 ### Skill: Code Style
@@ -40,6 +40,7 @@ Full style guides are in `docs/style-guide/`. Key rules to always follow:
 The codebase follows Clean Architecture (Onion) with strict layer boundaries. See `docs/architecture.md` for details.
 
 **Rules**:
+
 - `lib/domain/` must have **zero imports** from infrastructure, application, or presentation layers.
 - Dependencies flow inwards only: Presentation → Application → Domain ← Infrastructure.
 - All infrastructure adapters must implement a domain port (interface). Never use concrete infrastructure classes directly in application services.
@@ -49,6 +50,8 @@ The codebase follows Clean Architecture (Onion) with strict layer boundaries. Se
 ### Skill: Quality Gates
 
 **When to use**: Before every commit and PR.
+
+**Always run the full quality gate locally before pushing or opening a PR** so CI does not fail. Do not wait for the PR to run CI to discover failures.
 
 Run these checks (matching CI in `.github/workflows/ci.yml`):
 
@@ -80,6 +83,7 @@ Format: `type(scope): description`
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 Examples:
+
 ```
 feat(housing): add ad-hoc point request flow
 fix(auth): resolve infinite redirect loop on login
@@ -94,14 +98,23 @@ chore(deps): update next to 16.1.6
 
 When making changes to the codebase, update documentation as needed:
 
-| What changed | Update |
-|---|---|
-| New feature or module | Create spec in `spec/`, update `docs/product.md` if user-facing |
-| Architecture or patterns | Update `docs/architecture.md` |
-| Tech stack (new dependency, framework upgrade) | Update `docs/tech-stack.md` |
-| Deployment or CI/CD | Update `docs/deployment.md` |
-| Significant completed work | Add entry to `docs/changelog.md` |
-| UI/UX guidelines | Update `docs/product-guidelines.md` |
+| What changed                                   | Update                                                                       |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| New feature or module                          | Create spec in `docs/spec/current/`, update `docs/product.md` if user-facing |
+| Architecture or patterns                       | Update `docs/architecture.md`                                                |
+| Tech stack (new dependency, framework upgrade) | Update `docs/tech-stack.md`                                                  |
+| Deployment or CI/CD                            | Update `docs/deployment.md`                                                  |
+| Significant completed work                     | Add entry to `docs/changelog.md`                                             |
+| UI/UX guidelines                               | Update `docs/product.md`                                                     |
+
+## Branch Workflow
+
+Use `staging` as the integration branch for all active development work.
+
+1. If currently on `staging` and beginning a new task, create a feature branch: `feature/<descriptive-name>`.
+2. If already on a feature branch for the current task, continue working on that branch.
+3. Open pull requests from feature branches to `staging`.
+4. Do not commit directly to `staging` or `main`.
 
 ---
 
@@ -109,28 +122,30 @@ When making changes to the codebase, update documentation as needed:
 
 ### Environment & Secrets
 
-The cloud environment has the following secrets injected (from the developer's `.env.local`):
+The **default** agent profile receives staging and read-only credentials only. Production write access and full-repo GitHub access require explicit elevation (see Elevation below).
 
-| Variable | Available | Notes |
-|---|---|---|
-| `NEXT_PUBLIC_APPWRITE_ENDPOINT` | Yes | Points to the Appwrite instance |
-| `NEXT_PUBLIC_APPWRITE_PROJECT_ID` | Yes | Project ID |
-| `APPWRITE_API_KEY` | Yes | Server-side API key |
-| `APPWRITE_STAGING_API_KEY` | Yes | Staging project API key |
-| `APPWRITE_PRODUCTION_API_KEY` | Yes | Production project API key |
-| `AWS_*` | Yes | S3 credentials for library storage |
-| `DISCORD_*` | Yes | Full Discord bot credentials and role IDs |
-| `CRON_SECRET` | Yes | Cron endpoint auth |
-| `GITHUB_PERSONAL_ACCESS_TOKEN` | Yes | Full repo access PAT |
+| Variable                          | Available by default | Notes                                       |
+| --------------------------------- | -------------------- | ------------------------------------------- |
+| `NEXT_PUBLIC_APPWRITE_ENDPOINT`   | Yes                  | Points to the Appwrite instance             |
+| `NEXT_PUBLIC_APPWRITE_PROJECT_ID` | Yes                  | Project ID                                  |
+| `APPWRITE_API_KEY`                | Yes                  | Server-side API key (staging when used)     |
+| `APPWRITE_STAGING_API_KEY`        | Yes                  | Staging project API key                     |
+| `APPWRITE_PRODUCTION_API_KEY`     | No (elevated)        | Production project API key — elevation only |
+| `AWS_*`                           | Yes                  | S3 credentials for library storage          |
+| `DISCORD_*`                       | Yes                  | Full Discord bot credentials and role IDs   |
+| `CRON_SECRET`                     | Yes                  | Cron endpoint auth                          |
+| `GITHUB_READONLY_TOKEN`           | Yes                  | Read-only GitHub PAT (if configured)        |
+| `GITHUB_PERSONAL_ACCESS_TOKEN`    | No (elevated)        | Full repo access PAT — elevation only       |
 
-The agent has access to both **production** and **staging** Appwrite projects, the full GitHub repo via PAT, and the Discord bot. Use with appropriate guardrails (prefer staging for testing, never delete production data).
+By default the agent has access to the **staging** Appwrite project and, if provided, a read-only GitHub token. Use staging for all testing; never delete production data.
 
-To create a working `.env.local` from injected secrets:
+To create a working `.env.local` from the default injected secrets (staging only):
+
 ```bash
 cat > .env.local << 'EOF'
 NEXT_PUBLIC_APPWRITE_ENDPOINT=$NEXT_PUBLIC_APPWRITE_ENDPOINT
 NEXT_PUBLIC_APPWRITE_PROJECT_ID=$NEXT_PUBLIC_APPWRITE_PROJECT_ID
-APPWRITE_API_KEY=$APPWRITE_API_KEY
+APPWRITE_API_KEY=$APPWRITE_STAGING_API_KEY
 AWS_REGION=$AWS_REGION
 AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
@@ -146,6 +161,14 @@ DISCORD_ROLE_ID_HOUSING_CHAIR=$DISCORD_ROLE_ID_HOUSING_CHAIR
 CRON_SECRET=$CRON_SECRET
 EOF
 ```
+
+#### Elevation
+
+Production write and full-repo GitHub access are **not** in the default profile. To use them:
+
+- **`APPWRITE_PRODUCTION_API_KEY`** and **`GITHUB_PERSONAL_ACCESS_TOKEN`** must be explicitly authorized (e.g. via an elevated profile or manual approval workflow).
+- Only request or apply these variables when the task explicitly requires production writes or full repo access, and after approval.
+- Do not add them to the default `.env.local` snippet above; use a separate, documented elevation path (e.g. one-off injection or elevated Cursor profile) when authorized.
 
 If real credentials are not needed (e.g., for lint/test/build only), set `SKIP_ENV_VALIDATION=true` in `.env.local` with placeholder values.
 

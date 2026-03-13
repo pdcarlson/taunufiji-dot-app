@@ -6,6 +6,7 @@ import { createScheduleAction } from "@/lib/presentation/actions/housing/schedul
 import { useJWT } from "@/hooks/useJWT";
 import toast from "react-hot-toast";
 import { getHousingActionErrorMessage } from "./actionError";
+import { buildWeeklyEasternRecurrenceRule } from "@/lib/utils/eastern-time";
 
 import { Member } from "@/lib/domain/entities";
 
@@ -51,20 +52,7 @@ export default function CreateScheduleModal({
     try {
       const jwt = await getJWT();
 
-      // RRule runs in UTC timezone
-      // For 11:59 PM EST: EST is UTC-5, so 11:59 PM EST = 04:59 AM UTC (next day)
-      // Shift to next day of week since 04:59 crosses midnight
-      const dayShiftMap: Record<string, string> = {
-        MO: "TU", // Monday 11:59 PM EST = Tuesday 04:59 AM UTC
-        TU: "WE",
-        WE: "TH",
-        TH: "FR",
-        FR: "SA",
-        SA: "SU",
-        SU: "MO",
-      };
-      const nextDay = dayShiftMap[data.freq_day];
-      const rrule = `FREQ=WEEKLY;BYDAY=${nextDay};BYHOUR=4;BYMINUTE=59`;
+      const rrule = buildWeeklyEasternRecurrenceRule(data.freq_day);
 
       const payload = {
         title: data.title,

@@ -2,8 +2,8 @@
 
 This document is the durable behavioral reference for the Housing module.
 
-- **Active specs** in `spec/` define in-progress rollout work.
-- **Completed specs** are archived in `docs/archive/specs/`.
+- **Active specs** in `docs/spec/current/` define in-progress rollout work.
+- **Completed specs** are archived in `docs/spec/archive/`.
 - **This document** defines expected runtime behavior, state transitions, and edge-case handling that should remain true across implementations.
 
 ## 1) Core Entities
@@ -215,5 +215,5 @@ Minimum walkthrough before production merge:
 - [Product Definition](product.md)
 - [Architecture](architecture.md)
 - [Deployment Workflow](deployment.md)
-- [Staging Environment Setup Spec](../spec/staging-environment-setup.md)
-- [QA Audit and Staging Hardening Spec (Archived)](archive/specs/qa-audit-and-staging-hardening.md)
+- [Staging Environment Setup Spec](spec/current/staging-environment-setup.md)
+- [QA Audit and Staging Hardening Spec (Archived)](spec/archive/qa-audit-and-staging-hardening.md)

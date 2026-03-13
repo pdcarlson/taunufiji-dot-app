@@ -56,14 +56,14 @@ The current gap is not deployment wiring — it is **runtime confidence**. Stagi
 
 ## Out of Scope
 
-- Automated prod → staging data sync (script removed with deploy strategy update)
+- Automated prod -> staging data sync (script removed with deploy strategy update)
 - Discord command auto-sync on deploy (originally planned, now manual via `npm run discord:register`)
 - Full repository-wide 90% coverage in a single change set (handled as phased rollout)
 
 ## References
 
 - Archived: `staging_setup_20260219` (conductor tree removed)
-- Deployment strategy superseded by: [Deploy Strategy Update](../docs/archive/specs/deploy-strategy-update.md); remaining sections of this spec (environment verification, end-to-end walkthrough) are still in-progress
-- Deployment docs: [docs/deployment.md](../docs/deployment.md)
-- Companion implementation spec: [QA Audit and Staging Hardening](../docs/archive/specs/qa-audit-and-staging-hardening.md)
-- Diagnostics note: see the staging troubleshooting runbook in [docs/deployment.md](../docs/deployment.md) and the dated outcomes tracked in [docs/changelog.md](../docs/changelog.md).
+- Deployment strategy superseded by: [Deploy Strategy Update](../archive/deploy-strategy-update.md); remaining sections of this spec (environment verification, end-to-end walkthrough) are still in-progress
+- Deployment docs: [docs/deployment.md](../../deployment.md)
+- Companion implementation spec: [QA Audit and Staging Hardening](../archive/qa-audit-and-staging-hardening.md)
+- Diagnostics note: see the staging troubleshooting runbook in [docs/deployment.md](../../deployment.md) and the dated outcomes tracked in [docs/changelog.md](../../changelog.md).

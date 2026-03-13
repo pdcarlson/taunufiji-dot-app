@@ -80,6 +80,7 @@ export function calculateNextInstance(
         // No future occurrences (e.g., COUNT reached)
         return null;
       }
+      // When TZID=America/New_York is present, rrule returns correct UTC Dates; use as-is.
       dueAt = nextDate;
     }
 

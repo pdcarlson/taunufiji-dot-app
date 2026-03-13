@@ -31,7 +31,7 @@ Before promoting staging to production, we need a stronger quality system and cl
 
 - [x] Diagnostics must not leak secret values
 - [x] New tests should be deterministic and runnable in CI
-- [x] Keep architecture boundaries intact (presentation → application → domain)
+- [x] Keep architecture boundaries intact (presentation -> application -> domain)
 - [x] Coverage thresholds should start strict on touched critical modules and ratchet toward global 90%
 
 ## Acceptance Criteria
@@ -42,7 +42,7 @@ Before promoting staging to production, we need a stronger quality system and cl
 - [x] `npm run test -- --run --coverage` succeeds and generates a report
 - [x] Integration tests validate RBAC and action wrapper behavior in mutation paths
 - [x] E2E smoke tests run in CI for critical route/auth checks
-- [x] Documentation clearly separates living implementation specs (`spec/`) from durable behavior/runbooks (`docs/`)
+- [x] Documentation clearly separates living implementation specs (`docs/spec/current/`) from durable behavior/runbooks (`docs/`)
 
 ## Technical Approach
 
@@ -74,7 +74,7 @@ Before promoting staging to production, we need a stronger quality system and cl
 
 ## Dependencies
 
-- Existing staging setup work: [staging-environment-setup.md](../../../spec/staging-environment-setup.md)
+- Existing staging setup work: [staging-environment-setup.md](../current/staging-environment-setup.md)
 - Deployment pipeline reference: [docs/deployment.md](../../deployment.md)
 - Architecture constraints: [docs/architecture.md](../../architecture.md)
 

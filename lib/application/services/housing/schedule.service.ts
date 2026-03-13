@@ -6,14 +6,43 @@
  */
 
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
-import { HousingTask } from "@/lib/domain/types/task";
+import { CreateAssignmentDTO, HousingTask } from "@/lib/domain/types/task";
 import { CreateScheduleDTO } from "@/lib/domain/types/schedule";
 import { calculateNextInstance } from "@/lib/utils/scheduler";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents } from "@/lib/domain/events";
+import { RecurringMutationOptions } from "@/lib/domain/types/recurring";
+
+const NON_FINAL_STATUSES: HousingTask["status"][] = [
+  "open",
+  "pending",
+  "locked",
+  "rejected",
+];
+
+const BATCH_SIZE = 500;
 
 export class ScheduleService {
   constructor(private readonly taskRepository: ITaskRepository) {}
+
+  private async findAllNonFinalByScheduleId(
+    scheduleId: string,
+  ): Promise<HousingTask[]> {
+    const all: HousingTask[] = [];
+    let offset = 0;
+    let batch: HousingTask[];
+    do {
+      batch = await this.taskRepository.findMany({
+        scheduleId,
+        status: NON_FINAL_STATUSES,
+        limit: BATCH_SIZE,
+        offset,
+      });
+      all.push(...batch);
+      offset += BATCH_SIZE;
+    } while (batch.length === BATCH_SIZE);
+    return all;
+  }
 
   /**
    * Create a new recurring schedule
@@ -127,7 +156,258 @@ export class ScheduleService {
   /**
    * Update schedule
    */
-  async updateSchedule(scheduleId: string, data: Partial<CreateScheduleDTO>) {
-    return await this.taskRepository.updateSchedule(scheduleId, data);
+  async updateSchedule(
+    scheduleId: string,
+    data: Partial<CreateScheduleDTO>,
+    recurringOptions?: RecurringMutationOptions,
+  ) {
+    const updatedSchedule = await this.taskRepository.updateSchedule(
+      scheduleId,
+      data,
+    );
+
+    if (
+      recurringOptions &&
+      recurringOptions.scope !== "this_instance" &&
+      recurringOptions.effectiveFromDueAt &&
+      data.lead_time_hours !== undefined
+    ) {
+      const seriesTasks = await this.findAllNonFinalByScheduleId(scheduleId);
+
+      const now = new Date();
+      const effectiveFrom = new Date(recurringOptions.effectiveFromDueAt);
+      const scope = recurringOptions.scope;
+
+      const toUpdate = seriesTasks.filter((task) => {
+        if (task.id === undefined || !task.due_at) {
+          return false;
+        }
+        if (scope === "entire_series") {
+          return true;
+        }
+        return new Date(task.due_at) >= effectiveFrom;
+      });
+
+      await Promise.all(
+        toUpdate.map((task) => {
+          if (!task.due_at) {
+            return Promise.resolve();
+          }
+
+          const dueAt = new Date(task.due_at);
+          const unlockAt = new Date(
+            dueAt.getTime() - data.lead_time_hours! * 60 * 60 * 1000,
+          );
+          const shouldBeLocked = unlockAt > now;
+          const shouldUpdateStatus =
+            task.status === "locked" || task.status === "open";
+
+          return this.taskRepository.update(task.id, {
+            unlock_at: unlockAt.toISOString(),
+            status: shouldUpdateStatus
+              ? shouldBeLocked
+                ? "locked"
+                : "open"
+              : task.status,
+            notification_level: shouldUpdateStatus
+              ? shouldBeLocked
+                ? "none"
+                : "unlocked"
+              : task.notification_level,
+          });
+        }),
+      );
+    }
+
+    return updatedSchedule;
+  }
+
+  async updateTaskThisAndFuture(
+    task: HousingTask,
+    data: Partial<CreateAssignmentDTO>,
+    effectiveFromDueAt: string,
+  ) {
+    if (!task.schedule_id) {
+      return await this.taskRepository.update(task.id, data);
+    }
+
+    await this.taskRepository.update(task.id, data);
+
+    const futureTaskPatch = this.toFutureTaskPatch(data);
+    if (Object.keys(futureTaskPatch).length > 0) {
+      const effectiveFrom = new Date(effectiveFromDueAt);
+      const seriesTasks = await this.findAllNonFinalByScheduleId(
+        task.schedule_id,
+      );
+
+      await Promise.all(
+        seriesTasks
+          .filter((seriesTask) => {
+            if (seriesTask.id === task.id || !seriesTask.due_at) {
+              return false;
+            }
+            return new Date(seriesTask.due_at) >= effectiveFrom;
+          })
+          .map((seriesTask) =>
+            this.taskRepository.update(seriesTask.id, futureTaskPatch),
+          ),
+      );
+    }
+
+    const schedulePatch = this.toSchedulePatch(data);
+    if (Object.keys(schedulePatch).length > 0) {
+      await this.taskRepository.updateSchedule(task.schedule_id, {
+        ...schedulePatch,
+        last_generated_at: new Date().toISOString(),
+      });
+    }
+
+    return await this.taskRepository.findById(task.id);
+  }
+
+  /**
+   * Updates the task and all other instances in the series (entire series).
+   * @param effectiveFromDueAt Kept for interface consistency with this_and_future variants; unused for entire_series.
+   */
+  async updateTaskEntireSeries(
+    task: HousingTask,
+    data: Partial<CreateAssignmentDTO>,
+    effectiveFromDueAt: string,
+  ) {
+    void effectiveFromDueAt;
+    if (!task.schedule_id) {
+      return await this.taskRepository.update(task.id, data);
+    }
+
+    const seriesTasks = await this.findAllNonFinalByScheduleId(
+      task.schedule_id,
+    );
+
+    await this.taskRepository.update(task.id, data);
+
+    const futureTaskPatch = this.toFutureTaskPatch(data);
+    if (Object.keys(futureTaskPatch).length > 0) {
+      await Promise.all(
+        seriesTasks
+          .filter((seriesTask) => seriesTask.id !== task.id)
+          .map((seriesTask) =>
+            this.taskRepository.update(seriesTask.id, futureTaskPatch),
+          ),
+      );
+    }
+
+    const schedulePatch = this.toSchedulePatch(data);
+    if (Object.keys(schedulePatch).length > 0) {
+      await this.taskRepository.updateSchedule(task.schedule_id, {
+        ...schedulePatch,
+        last_generated_at: new Date().toISOString(),
+      });
+    }
+
+    return await this.taskRepository.findById(task.id);
+  }
+
+  async deleteTaskThisAndFuture(task: HousingTask, effectiveFromDueAt: string) {
+    if (!task.schedule_id) {
+      await this.taskRepository.delete(task.id);
+      return;
+    }
+
+    await this.taskRepository.updateSchedule(task.schedule_id, {
+      active: false,
+      last_generated_at: new Date().toISOString(),
+    });
+
+    await this.taskRepository.delete(task.id);
+
+    const effectiveFrom = new Date(effectiveFromDueAt);
+    const seriesTasks = await this.findAllNonFinalByScheduleId(
+      task.schedule_id,
+    );
+
+    await Promise.all(
+      seriesTasks
+        .filter((seriesTask) => {
+          if (seriesTask.id === task.id) {
+            return false;
+          }
+          if (!seriesTask.due_at) {
+            return false;
+          }
+          return new Date(seriesTask.due_at) >= effectiveFrom;
+        })
+        .map((seriesTask) => this.taskRepository.delete(seriesTask.id)),
+    );
+  }
+
+  /**
+   * Deletes the task and all instances in the series (entire series).
+   * @param effectiveFromDueAt Kept for interface consistency with this_and_future variants; unused for entire_series.
+   */
+  async deleteTaskEntireSeries(task: HousingTask, effectiveFromDueAt: string) {
+    void effectiveFromDueAt;
+    if (!task.schedule_id) {
+      await this.taskRepository.delete(task.id);
+      return;
+    }
+
+    await this.taskRepository.updateSchedule(task.schedule_id, {
+      active: false,
+      last_generated_at: new Date().toISOString(),
+    });
+
+    const seriesTasks = await this.findAllNonFinalByScheduleId(
+      task.schedule_id,
+    );
+
+    await this.taskRepository.delete(task.id);
+
+    await Promise.all(
+      seriesTasks
+        .filter((seriesTask) => seriesTask.id !== task.id)
+        .map((seriesTask) => this.taskRepository.delete(seriesTask.id)),
+    );
+  }
+
+  private toSchedulePatch(
+    data: Partial<CreateAssignmentDTO>,
+  ): Partial<CreateScheduleDTO> {
+    const patch: Partial<CreateScheduleDTO> = {};
+
+    if (data.title !== undefined) {
+      patch.title = data.title;
+    }
+    if (data.description !== undefined) {
+      patch.description = data.description;
+    }
+    if (data.assigned_to !== undefined) {
+      patch.assigned_to = data.assigned_to;
+    }
+    if (data.points_value !== undefined) {
+      patch.points_value = data.points_value;
+    }
+
+    return patch;
+  }
+
+  private toFutureTaskPatch(
+    data: Partial<CreateAssignmentDTO>,
+  ): Partial<CreateAssignmentDTO> {
+    const patch: Partial<CreateAssignmentDTO> = {};
+
+    if (data.title !== undefined) {
+      patch.title = data.title;
+    }
+    if (data.description !== undefined) {
+      patch.description = data.description;
+    }
+    if (data.assigned_to !== undefined) {
+      patch.assigned_to = data.assigned_to;
+    }
+    if (data.points_value !== undefined) {
+      patch.points_value = data.points_value;
+    }
+
+    return patch;
   }
 }

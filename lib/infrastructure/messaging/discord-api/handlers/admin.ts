@@ -2,6 +2,7 @@ import { createEphemeralResponse } from "../utils";
 import { getContainer } from "@/lib/infrastructure/container";
 import { CommandHandler } from "../types";
 import { rrulestr } from "rrule";
+import { buildWeeklyEasternRecurrenceRule } from "@/lib/utils/eastern-time";
 
 const DAY_NAME_MAP = {
   MO: "Monday",
@@ -14,7 +15,6 @@ const DAY_NAME_MAP = {
 } as const;
 
 const EASTERN_TIME_ZONE = "America/New_York";
-const SCHEDULE_REFERENCE_START = "20240101T235900";
 
 type DayKey = keyof typeof DAY_NAME_MAP;
 
@@ -178,7 +178,7 @@ export const schedule: CommandHandler = async (interaction, options) => {
     return createEphemeralResponse("❌ Lead time must be at least 1 hour.");
   }
 
-  const rrule = `DTSTART;TZID=${EASTERN_TIME_ZONE}:${SCHEDULE_REFERENCE_START}\nRRULE:FREQ=WEEKLY;BYDAY=${day};BYHOUR=23;BYMINUTE=59;BYSECOND=0`;
+  const rrule = buildWeeklyEasternRecurrenceRule(day);
 
   try {
     const { scheduleService } = getContainer();
