@@ -19,7 +19,7 @@ type ActionOptions = {
   actionName?: string;
 };
 
-type ActionErrorCode =
+export type ActionErrorCode =
   | "AUTHENTICATION_REQUIRED"
   | "INSUFFICIENT_ROLE"
   | "VALIDATION_ERROR"
@@ -27,9 +27,11 @@ type ActionErrorCode =
   | "EXTERNAL_SERVICE_ERROR"
   | "UNKNOWN_ERROR";
 
-type ActionResult<T> =
+export type ActionResult<T> =
   | { success: true; data: T; error?: never; errorCode?: never }
   | { success: false; data?: never; error: string; errorCode: ActionErrorCode };
+
+export type ActionFailure = Extract<ActionResult<unknown>, { success: false }>;
 
 /**
  * Maps thrown/returned errors to ActionErrorCode.
@@ -133,7 +135,8 @@ export async function actionWrapper<T>(
       throw new Error("Authentication Required: No JWT provided.");
     }
 
-    // If public and no JWT, we skip user fetching?
+    // When options.jwt is absent (public action), we intentionally skip account.get()
+    // and keep `user` as null; auth-dependent checks below are gated by options.public.
     let user: Models.User<Models.Preferences> | null = null;
     if (options.jwt && account) {
       user = await account.get();

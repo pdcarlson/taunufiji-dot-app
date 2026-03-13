@@ -31,6 +31,11 @@ describe("Environment Configuration", () => {
   });
 
   afterEach(() => {
+    for (const key of Object.keys(process.env)) {
+      if (!(key in originalEnv)) {
+        delete process.env[key];
+      }
+    }
     Object.assign(process.env, originalEnv);
     vi.resetModules();
     vi.restoreAllMocks();

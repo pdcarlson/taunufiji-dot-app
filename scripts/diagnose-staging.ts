@@ -15,6 +15,7 @@ type DiagnosticResult = {
 
 const DISCORD_API = "https://discord.com/api/v10";
 const REQUEST_TIMEOUT_MS = 8_000;
+const RESPONSE_BODY_SNIPPET_MAX_LENGTH = 300;
 
 function safeErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -45,39 +46,39 @@ async function runAppwriteChecks(
     });
   }
 
-  try {
-    await withTimeout(
-      client.listDocuments(DB_ID, COLLECTIONS.USERS, [Query.limit(1)]),
-    );
-    checks.push({
-      check: "Appwrite users collection read",
-      passed: true,
-      detail: `${DB_ID}.${COLLECTIONS.USERS} is readable`,
-    });
-  } catch (error) {
-    checks.push({
-      check: "Appwrite users collection read",
-      passed: false,
-      detail: safeErrorMessage(error),
-    });
+  async function recordCheck(
+    check: string,
+    action: () => Promise<unknown>,
+    successDetail: string | (() => string),
+  ): Promise<void> {
+    try {
+      await withTimeout(action());
+      checks.push({
+        check,
+        passed: true,
+        detail:
+          typeof successDetail === "function" ? successDetail() : successDetail,
+      });
+    } catch (error) {
+      checks.push({
+        check,
+        passed: false,
+        detail: safeErrorMessage(error),
+      });
+    }
   }
 
-  try {
-    await withTimeout(
+  await recordCheck(
+    "Appwrite users collection read",
+    () => client.listDocuments(DB_ID, COLLECTIONS.USERS, [Query.limit(1)]),
+    `${DB_ID}.${COLLECTIONS.USERS} is readable`,
+  );
+  await recordCheck(
+    "Appwrite assignments collection read",
+    () =>
       client.listDocuments(DB_ID, COLLECTIONS.ASSIGNMENTS, [Query.limit(1)]),
-    );
-    checks.push({
-      check: "Appwrite assignments collection read",
-      passed: true,
-      detail: `${DB_ID}.${COLLECTIONS.ASSIGNMENTS} is readable`,
-    });
-  } catch (error) {
-    checks.push({
-      check: "Appwrite assignments collection read",
-      passed: false,
-      detail: safeErrorMessage(error),
-    });
-  }
+    `${DB_ID}.${COLLECTIONS.ASSIGNMENTS} is readable`,
+  );
 
   return checks;
 }
@@ -121,15 +122,39 @@ async function runDiscordChecks(
     return safeErrorMessage(error);
   }
 
+  async function buildDiscordHttpErrorDetail(
+    response: Response,
+    context: string,
+  ): Promise<string> {
+    let bodySnippet = "";
+    try {
+      bodySnippet = (await response.text())
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, RESPONSE_BODY_SNIPPET_MAX_LENGTH);
+    } catch {
+      bodySnippet = "";
+    }
+
+    const statusText = response.statusText || "unknown-status";
+    return bodySnippet.length > 0
+      ? `HTTP ${response.status} ${statusText} while ${context}; body: ${bodySnippet}`
+      : `HTTP ${response.status} ${statusText} while ${context}`;
+  }
+
   try {
     const guildRes = await fetchWithTimeout(
       `${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}`,
     );
     if (!guildRes.ok) {
+      const detail = await buildDiscordHttpErrorDetail(
+        guildRes,
+        "reading guild",
+      );
       checks.push({
         check: "Discord guild access",
         passed: false,
-        detail: `HTTP ${guildRes.status} while reading guild`,
+        detail,
       });
     } else {
       checks.push({
@@ -151,10 +176,14 @@ async function runDiscordChecks(
       `${DISCORD_API}/channels/${env.DISCORD_HOUSING_CHANNEL_ID}`,
     );
     if (!channelRes.ok) {
+      const detail = await buildDiscordHttpErrorDetail(
+        channelRes,
+        "reading channel",
+      );
       checks.push({
         check: "Discord housing channel access",
         passed: false,
-        detail: `HTTP ${channelRes.status} while reading channel`,
+        detail,
       });
     } else {
       checks.push({
@@ -176,10 +205,14 @@ async function runDiscordChecks(
       `${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}/roles`,
     );
     if (!rolesRes.ok) {
+      const detail = await buildDiscordHttpErrorDetail(
+        rolesRes,
+        "reading guild roles",
+      );
       checks.push({
         check: "Discord role mapping",
         passed: false,
-        detail: `HTTP ${rolesRes.status} while reading guild roles`,
+        detail,
       });
     } else {
       const rolesPayload: unknown = await rolesRes.json();

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import toast from "react-hot-toast";
 import { getHousingActionErrorMessage } from "./actionError";
+import { easternDateInputToIso } from "@/lib/utils/eastern-time";
 
 import { Member } from "@/lib/domain/entities";
 
@@ -29,14 +30,18 @@ export default function CreateOneOffModal({
     setLoading(true);
     try {
       const jwt = await getJWT();
+      const dueDateInput =
+        typeof data.due_at === "string"
+          ? data.due_at
+          : String(data.due_at ?? "");
+      const dueAtIso = easternDateInputToIso(dueDateInput);
 
       const payload = {
         title: data.title,
         description: data.description,
         points_value: 0, // Default 0 for Duties
         assigned_to: data.assigned_to || undefined,
-        // Force Noon Logic
-        due_at: new Date(`${data.due_at}T23:59:00`).toISOString(),
+        due_at: dueAtIso,
         type: "one_off" as const,
       };
 

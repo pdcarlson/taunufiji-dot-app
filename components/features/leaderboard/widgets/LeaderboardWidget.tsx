@@ -108,20 +108,9 @@ export default function LeaderboardWidget({
   }, [user, getToken, prefetched, getLeadersMyRank]);
 
   useEffect(() => {
-    // If we have initial data, we only need to fetch user rank if user is present
     if (user) {
       fetchLeaders();
-    } else if (prefetched && (initialLeaderboard?.length ?? 0) === 0) {
-      setLoading(false);
-      setError(null);
-    } else if (propProvided && (initialLeaderboard?.length ?? 0) > 0) {
-      setLoading(false);
-      setError(null);
-    } else if (
-      !user &&
-      !prefetched &&
-      (initialLeaderboard?.length ?? 0) === 0
-    ) {
+    } else {
       setLoading(false);
       setError(null);
     }

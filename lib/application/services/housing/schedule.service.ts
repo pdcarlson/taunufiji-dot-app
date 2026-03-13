@@ -210,7 +210,7 @@ export class ScheduleService {
         data,
       );
 
-      await Promise.all(
+      const updateResults = await Promise.allSettled(
         toUpdate.map((task) => {
           if (!task.due_at) {
             return Promise.resolve();
@@ -239,6 +239,12 @@ export class ScheduleService {
           });
         }),
       );
+      const updateFailure = updateResults.find(
+        (result) => result.status === "rejected",
+      );
+      if (updateFailure && updateFailure.status === "rejected") {
+        throw updateFailure.reason;
+      }
 
       return updatedSchedule;
     } catch (error) {
@@ -300,39 +306,152 @@ export class ScheduleService {
     if (!task.schedule_id) {
       return await this.taskRepository.update(task.id, data);
     }
-
-    await this.taskRepository.update(task.id, data);
-
     const futureTaskPatch = this.toFutureTaskPatch(data);
-    if (Object.keys(futureTaskPatch).length > 0) {
-      const effectiveFrom = new Date(effectiveFromDueAt);
-      const seriesTasks = await this.findAllNonFinalByScheduleId(
-        task.schedule_id,
-      );
+    const schedulePatch = this.toSchedulePatch(data);
+    const effectiveFrom = new Date(effectiveFromDueAt);
+    const seriesTasks =
+      Object.keys(futureTaskPatch).length > 0
+        ? await this.findAllNonFinalByScheduleId(task.schedule_id)
+        : [];
+    const futureTargets = seriesTasks.filter((seriesTask) => {
+      if (seriesTask.id === task.id || !seriesTask.due_at) {
+        return false;
+      }
+      return new Date(seriesTask.due_at) >= effectiveFrom;
+    });
+    const previousSchedule =
+      Object.keys(schedulePatch).length > 0
+        ? await this.taskRepository.findScheduleById(task.schedule_id)
+        : null;
 
-      await Promise.all(
-        seriesTasks
-          .filter((seriesTask) => {
-            if (seriesTask.id === task.id || !seriesTask.due_at) {
-              return false;
-            }
-            return new Date(seriesTask.due_at) >= effectiveFrom;
-          })
-          .map((seriesTask) =>
+    try {
+      await this.taskRepository.update(task.id, data);
+
+      if (Object.keys(futureTaskPatch).length > 0) {
+        const updateResults = await Promise.allSettled(
+          futureTargets.map((seriesTask) =>
             this.taskRepository.update(seriesTask.id, futureTaskPatch),
           ),
-      );
-    }
+        );
+        const updateFailure = updateResults.find(
+          (result) => result.status === "rejected",
+        );
+        if (updateFailure && updateFailure.status === "rejected") {
+          throw updateFailure.reason;
+        }
+      }
 
-    const schedulePatch = this.toSchedulePatch(data);
-    if (Object.keys(schedulePatch).length > 0) {
-      await this.taskRepository.updateSchedule(task.schedule_id, {
-        ...schedulePatch,
-        last_generated_at: new Date().toISOString(),
-      });
-    }
+      if (Object.keys(schedulePatch).length > 0) {
+        await this.taskRepository.updateSchedule(task.schedule_id, {
+          ...schedulePatch,
+          last_generated_at: new Date().toISOString(),
+        });
+      }
 
-    return await this.taskRepository.findById(task.id);
+      return await this.taskRepository.findById(task.id);
+    } catch (error) {
+      if (Object.keys(futureTaskPatch).length > 0) {
+        await Promise.allSettled(
+          futureTargets.map((seriesTask) => {
+            const rollbackPatch: Partial<CreateAssignmentDTO> = {};
+            if (futureTaskPatch.title !== undefined) {
+              rollbackPatch.title = seriesTask.title;
+            }
+            if (futureTaskPatch.description !== undefined) {
+              rollbackPatch.description = seriesTask.description;
+            }
+            if (futureTaskPatch.assigned_to !== undefined) {
+              rollbackPatch.assigned_to = seriesTask.assigned_to;
+            }
+            if (futureTaskPatch.points_value !== undefined) {
+              rollbackPatch.points_value = seriesTask.points_value;
+            }
+            return Object.keys(rollbackPatch).length > 0
+              ? this.taskRepository.update(seriesTask.id, rollbackPatch)
+              : Promise.resolve();
+          }),
+        );
+      }
+
+      const currentRollbackPatch: Partial<CreateAssignmentDTO> = {};
+      if (data.title !== undefined) {
+        currentRollbackPatch.title = task.title;
+      }
+      if (data.description !== undefined) {
+        currentRollbackPatch.description = task.description;
+      }
+      if (data.status !== undefined) {
+        currentRollbackPatch.status = task.status;
+      }
+      if (data.type !== undefined) {
+        currentRollbackPatch.type = task.type;
+      }
+      if (data.points_value !== undefined) {
+        currentRollbackPatch.points_value = task.points_value;
+      }
+      if (data.schedule_id !== undefined) {
+        currentRollbackPatch.schedule_id = task.schedule_id;
+      }
+      if (data.initial_image_s3_key !== undefined) {
+        currentRollbackPatch.initial_image_s3_key = task.initial_image_s3_key;
+      }
+      if (data.proof_s3_key !== undefined) {
+        currentRollbackPatch.proof_s3_key = task.proof_s3_key;
+      }
+      if (data.assigned_to !== undefined) {
+        currentRollbackPatch.assigned_to = task.assigned_to;
+      }
+      if (data.due_at !== undefined) {
+        currentRollbackPatch.due_at = task.due_at;
+      }
+      if (data.expires_at !== undefined) {
+        currentRollbackPatch.expires_at = task.expires_at;
+      }
+      if (data.unlock_at !== undefined) {
+        currentRollbackPatch.unlock_at = task.unlock_at;
+      }
+      if (data.is_fine !== undefined) {
+        currentRollbackPatch.is_fine = task.is_fine;
+      }
+      if (data.notification_level !== undefined) {
+        currentRollbackPatch.notification_level = task.notification_level;
+      }
+      if (data.execution_limit !== undefined) {
+        currentRollbackPatch.execution_limit = task.execution_limit;
+      }
+      if (data.completed_at !== undefined) {
+        currentRollbackPatch.completed_at = task.completed_at;
+      }
+      if (Object.keys(currentRollbackPatch).length > 0) {
+        await this.taskRepository
+          .update(task.id, currentRollbackPatch)
+          .catch(() => undefined);
+      }
+
+      if (previousSchedule && Object.keys(schedulePatch).length > 0) {
+        const scheduleRollbackPatch: Partial<CreateScheduleDTO> = {};
+        if (schedulePatch.title !== undefined) {
+          scheduleRollbackPatch.title = previousSchedule.title;
+        }
+        if (schedulePatch.description !== undefined) {
+          scheduleRollbackPatch.description = previousSchedule.description;
+        }
+        if (schedulePatch.assigned_to !== undefined) {
+          scheduleRollbackPatch.assigned_to = previousSchedule.assigned_to;
+        }
+        if (schedulePatch.points_value !== undefined) {
+          scheduleRollbackPatch.points_value = previousSchedule.points_value;
+        }
+        scheduleRollbackPatch.last_generated_at =
+          previousSchedule.last_generated_at;
+
+        await this.taskRepository
+          .updateSchedule(task.schedule_id, scheduleRollbackPatch)
+          .catch(() => undefined);
+      }
+
+      throw error;
+    }
   }
 
   /**
@@ -352,29 +471,144 @@ export class ScheduleService {
     const seriesTasks = await this.findAllNonFinalByScheduleId(
       task.schedule_id,
     );
-
-    await this.taskRepository.update(task.id, data);
-
     const futureTaskPatch = this.toFutureTaskPatch(data);
-    if (Object.keys(futureTaskPatch).length > 0) {
-      await Promise.all(
-        seriesTasks
-          .filter((seriesTask) => seriesTask.id !== task.id)
-          .map((seriesTask) =>
+    const schedulePatch = this.toSchedulePatch(data);
+    const futureTargets = seriesTasks.filter(
+      (seriesTask) => seriesTask.id !== task.id,
+    );
+    const previousSchedule =
+      Object.keys(schedulePatch).length > 0
+        ? await this.taskRepository.findScheduleById(task.schedule_id)
+        : null;
+
+    try {
+      await this.taskRepository.update(task.id, data);
+
+      if (Object.keys(futureTaskPatch).length > 0) {
+        const updateResults = await Promise.allSettled(
+          futureTargets.map((seriesTask) =>
             this.taskRepository.update(seriesTask.id, futureTaskPatch),
           ),
-      );
-    }
+        );
+        const updateFailure = updateResults.find(
+          (result) => result.status === "rejected",
+        );
+        if (updateFailure && updateFailure.status === "rejected") {
+          throw updateFailure.reason;
+        }
+      }
 
-    const schedulePatch = this.toSchedulePatch(data);
-    if (Object.keys(schedulePatch).length > 0) {
-      await this.taskRepository.updateSchedule(task.schedule_id, {
-        ...schedulePatch,
-        last_generated_at: new Date().toISOString(),
-      });
-    }
+      if (Object.keys(schedulePatch).length > 0) {
+        await this.taskRepository.updateSchedule(task.schedule_id, {
+          ...schedulePatch,
+          last_generated_at: new Date().toISOString(),
+        });
+      }
 
-    return await this.taskRepository.findById(task.id);
+      return await this.taskRepository.findById(task.id);
+    } catch (error) {
+      if (Object.keys(futureTaskPatch).length > 0) {
+        await Promise.allSettled(
+          futureTargets.map((seriesTask) => {
+            const rollbackPatch: Partial<CreateAssignmentDTO> = {};
+            if (futureTaskPatch.title !== undefined) {
+              rollbackPatch.title = seriesTask.title;
+            }
+            if (futureTaskPatch.description !== undefined) {
+              rollbackPatch.description = seriesTask.description;
+            }
+            if (futureTaskPatch.assigned_to !== undefined) {
+              rollbackPatch.assigned_to = seriesTask.assigned_to;
+            }
+            if (futureTaskPatch.points_value !== undefined) {
+              rollbackPatch.points_value = seriesTask.points_value;
+            }
+            return Object.keys(rollbackPatch).length > 0
+              ? this.taskRepository.update(seriesTask.id, rollbackPatch)
+              : Promise.resolve();
+          }),
+        );
+      }
+
+      const currentRollbackPatch: Partial<CreateAssignmentDTO> = {};
+      if (data.title !== undefined) {
+        currentRollbackPatch.title = task.title;
+      }
+      if (data.description !== undefined) {
+        currentRollbackPatch.description = task.description;
+      }
+      if (data.status !== undefined) {
+        currentRollbackPatch.status = task.status;
+      }
+      if (data.type !== undefined) {
+        currentRollbackPatch.type = task.type;
+      }
+      if (data.points_value !== undefined) {
+        currentRollbackPatch.points_value = task.points_value;
+      }
+      if (data.schedule_id !== undefined) {
+        currentRollbackPatch.schedule_id = task.schedule_id;
+      }
+      if (data.initial_image_s3_key !== undefined) {
+        currentRollbackPatch.initial_image_s3_key = task.initial_image_s3_key;
+      }
+      if (data.proof_s3_key !== undefined) {
+        currentRollbackPatch.proof_s3_key = task.proof_s3_key;
+      }
+      if (data.assigned_to !== undefined) {
+        currentRollbackPatch.assigned_to = task.assigned_to;
+      }
+      if (data.due_at !== undefined) {
+        currentRollbackPatch.due_at = task.due_at;
+      }
+      if (data.expires_at !== undefined) {
+        currentRollbackPatch.expires_at = task.expires_at;
+      }
+      if (data.unlock_at !== undefined) {
+        currentRollbackPatch.unlock_at = task.unlock_at;
+      }
+      if (data.is_fine !== undefined) {
+        currentRollbackPatch.is_fine = task.is_fine;
+      }
+      if (data.notification_level !== undefined) {
+        currentRollbackPatch.notification_level = task.notification_level;
+      }
+      if (data.execution_limit !== undefined) {
+        currentRollbackPatch.execution_limit = task.execution_limit;
+      }
+      if (data.completed_at !== undefined) {
+        currentRollbackPatch.completed_at = task.completed_at;
+      }
+      if (Object.keys(currentRollbackPatch).length > 0) {
+        await this.taskRepository
+          .update(task.id, currentRollbackPatch)
+          .catch(() => undefined);
+      }
+
+      if (previousSchedule && Object.keys(schedulePatch).length > 0) {
+        const scheduleRollbackPatch: Partial<CreateScheduleDTO> = {};
+        if (schedulePatch.title !== undefined) {
+          scheduleRollbackPatch.title = previousSchedule.title;
+        }
+        if (schedulePatch.description !== undefined) {
+          scheduleRollbackPatch.description = previousSchedule.description;
+        }
+        if (schedulePatch.assigned_to !== undefined) {
+          scheduleRollbackPatch.assigned_to = previousSchedule.assigned_to;
+        }
+        if (schedulePatch.points_value !== undefined) {
+          scheduleRollbackPatch.points_value = previousSchedule.points_value;
+        }
+        scheduleRollbackPatch.last_generated_at =
+          previousSchedule.last_generated_at;
+
+        await this.taskRepository
+          .updateSchedule(task.schedule_id, scheduleRollbackPatch)
+          .catch(() => undefined);
+      }
+
+      throw error;
+    }
   }
 
   async deleteTaskThisAndFuture(task: HousingTask, effectiveFromDueAt: string) {

@@ -84,7 +84,7 @@ describe("AdminService", () => {
       );
     });
 
-    it("should throw if EventBus fails after approval update", async () => {
+    it("should rollback status and throw if EventBus fails", async () => {
       const taskId = "task-fail";
       (mockTaskRepo.findById as any).mockResolvedValue({
         id: taskId,
@@ -100,15 +100,15 @@ describe("AdminService", () => {
       );
 
       await expect(service.verifyTask(taskId, "admin-1")).rejects.toThrow(
-        "Event Error",
+        "Failed to complete approval process: Event Error",
       );
 
-      expect(mockTaskRepo.update).toHaveBeenCalledTimes(1);
-      expect(mockTaskRepo.update).toHaveBeenCalledWith(
+      expect(mockTaskRepo.update).toHaveBeenCalledTimes(2);
+      expect(mockTaskRepo.update).toHaveBeenLastCalledWith(
         taskId,
         expect.objectContaining({
-          status: "approved",
-          completed_at: expect.any(String),
+          status: "pending",
+          completed_at: null,
         }),
       );
     });
@@ -198,7 +198,9 @@ describe("AdminService", () => {
       expect(mockTaskRepo.update).toHaveBeenCalledWith("task-1", {
         title: "Updated title",
       });
-      expect(mockScheduleService.updateTaskThisAndFuture).not.toHaveBeenCalled();
+      expect(
+        mockScheduleService.updateTaskThisAndFuture,
+      ).not.toHaveBeenCalled();
     });
 
     it("routes update to schedule service for this_and_future scope", async () => {
@@ -212,9 +214,13 @@ describe("AdminService", () => {
         task,
       );
 
-      await service.updateTask("task-2", { description: "next" }, {
-        scope: "this_and_future",
-      });
+      await service.updateTask(
+        "task-2",
+        { description: "next" },
+        {
+          scope: "this_and_future",
+        },
+      );
 
       expect(mockScheduleService.updateTaskThisAndFuture).toHaveBeenCalledWith(
         task,

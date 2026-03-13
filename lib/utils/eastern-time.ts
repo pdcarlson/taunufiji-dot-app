@@ -6,6 +6,10 @@ function pad(value: number): string {
   return value.toString().padStart(2, "0");
 }
 
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
 function getDatePartsInEastern(date: Date): {
   year: number;
   month: number;
@@ -36,11 +40,20 @@ export function easternDateInputToIso(dateInput: string): string {
     throw new Error(`Invalid date input: ${dateInput}`);
   }
 
-  const [, year, month, day] = match;
+  const [, yearString, monthString, dayString] = match;
+  const year = Number(yearString);
+  const month = Number(monthString);
+  const day = Number(dayString);
+  const maxDay = getDaysInMonth(year, month);
+
+  if (month < 1 || month > 12 || day < 1 || day > maxDay) {
+    throw new Error(`Invalid calendar date input: ${dateInput}`);
+  }
+
   const occurrence = zonedTimeToUtc(
-    Number(year),
-    Number(month),
-    Number(day),
+    year,
+    month,
+    day,
     23,
     59,
     0,

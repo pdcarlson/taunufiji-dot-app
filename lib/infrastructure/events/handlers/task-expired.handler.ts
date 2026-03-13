@@ -11,9 +11,11 @@ export const TaskExpiredHandler = {
         `[TaskExpiredHandler] Task expired: ${payload.title} (${payload.taskId})`,
       );
 
+      let scheduleId: string | null = null;
       try {
         const { taskRepository, scheduleService } = getContainer();
         const task = await taskRepository.findById(payload.taskId);
+        scheduleId = task?.schedule_id ?? null;
 
         if (task && task.schedule_id) {
           logger.log(
@@ -22,7 +24,10 @@ export const TaskExpiredHandler = {
           await scheduleService.triggerNextInstance(task.schedule_id, task);
         }
       } catch (e) {
-        logger.error("[TaskExpiredHandler] Failed to handle expiry", e);
+        logger.error(
+          `[TaskExpiredHandler] Failed to handle expiry for taskId=${payload.taskId}${scheduleId ? ` scheduleId=${scheduleId}` : ""}`,
+          e,
+        );
       }
     });
   },

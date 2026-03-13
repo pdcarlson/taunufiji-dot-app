@@ -24,12 +24,12 @@ vi.mock("pdfjs-dist", () => ({
 
 vi.mock("pdf-lib", () => ({
   PDFDocument: {
-    create: vi.fn(() => ({
+    create: vi.fn(async () => ({
       numPages: 1,
       getPage: vi.fn(),
       addPage: vi.fn(() => ({ drawImage: vi.fn() })),
-      save: vi.fn(() => new Uint8Array()),
-      embedPng: vi.fn(),
+      save: vi.fn(async () => new Uint8Array()),
+      embedPng: vi.fn(async () => ({})),
     })),
   },
 }));

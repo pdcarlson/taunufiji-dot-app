@@ -50,6 +50,19 @@ const FILTER_KEYS: (keyof LibraryFiltersState)[] = [
   "version",
 ];
 
+function areResourcesEquivalent(
+  left: LibraryResource[] | null,
+  right: LibraryResource[],
+): boolean {
+  if (!left) {
+    return right.length === 0;
+  }
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((resource, index) => resource.id === right[index]?.id);
+}
+
 export default function LibraryClient({
   initialTotal,
   initialUserFiles,
@@ -90,12 +103,26 @@ export default function LibraryClient({
   const [loading, setLoading] = useState(initialResources.length === 0);
   const isFirstLoad = useRef(true);
   const currentRequestId = useRef(0);
+  const hasActiveFilters = FILTER_KEYS.some(
+    (key) => filters[key] !== INITIAL_FILTERS[key],
+  );
 
   useEffect(() => {
-    setResults(initialResources);
-    setSearchTotal(initialTotal);
-    if (initialResources.length > 0) setLoading(false);
-  }, [initialResources, initialTotal]);
+    const resourcesChanged = !areResourcesEquivalent(results, initialResources);
+    const totalChanged = searchTotal !== initialTotal;
+
+    if (!hasActiveFilters || resourcesChanged) {
+      if (resourcesChanged) {
+        setResults(initialResources);
+      }
+      if (totalChanged) {
+        setSearchTotal(initialTotal);
+      }
+      if (initialResources.length > 0) {
+        setLoading(false);
+      }
+    }
+  }, [hasActiveFilters, initialResources, initialTotal, results, searchTotal]);
 
   useEffect(() => {
     const isDefaultFilters = FILTER_KEYS.every(

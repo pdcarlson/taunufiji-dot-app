@@ -18,6 +18,7 @@ export default function LeaderboardList() {
         setLoading(false);
         return;
       }
+      setLoading(true);
       try {
         const token = await getToken();
         const data = await getLeaderboardAction(token);

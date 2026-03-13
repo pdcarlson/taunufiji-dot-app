@@ -1,10 +1,9 @@
-type ActionFailure = {
-  success?: boolean;
-  error?: string;
-  errorCode?: string;
-};
+import type {
+  ActionErrorCode,
+  ActionFailure,
+} from "@/lib/presentation/utils/action-handler";
 
-const ERROR_MESSAGE_BY_CODE: Record<string, string> = {
+const ERROR_MESSAGE_BY_CODE: Record<ActionErrorCode, string> = {
   AUTHENTICATION_REQUIRED:
     "Your session expired. Please log in again and retry.",
   INSUFFICIENT_ROLE:

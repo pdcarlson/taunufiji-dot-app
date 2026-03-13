@@ -37,18 +37,6 @@ export default function HousingDashboardClient({
   const [tasks, setTasks] = useState<HousingTask[]>(initialTasks);
   const [members, setMembers] = useState<Member[]>(initialMembers);
 
-  // Derived state for My Duties (avoids extra API call and sync issues)
-  // We filter the main task list for tasks assigned to the current user
-  const myDuties = tasks.filter((task) => {
-    if (!currentUser) return false;
-    // Check against both ID and Discord ID (Member profile)
-    // We need to match against the Member's discord_id usually
-    const myProfile = members.find((m) => m.auth_id === currentUser.$id);
-    const targetId = myProfile?.discord_id || currentUser.$id;
-
-    return task.assigned_to === targetId;
-  });
-
   // Derived Profile
   const profile = useMemo(() => {
     if (!currentUser || members.length === 0) return null;
@@ -62,6 +50,12 @@ export default function HousingDashboardClient({
 
   const isAdmin = isHousingAdmin;
   const profileId = profile?.discord_id || currentUser?.$id || "";
+  const myDuties = useMemo(() => {
+    if (!profileId) {
+      return [];
+    }
+    return tasks.filter((task) => task.assigned_to === profileId);
+  }, [tasks, profileId]);
 
   // Modals
   const [showOneOffModal, setShowOneOffModal] = useState(false);

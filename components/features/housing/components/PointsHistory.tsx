@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getTransactionHistoryAction } from "@/lib/presentation/actions/ledger.actions";
 
@@ -15,28 +15,47 @@ export default function PointsHistory() {
   const { user, getToken } = useAuth();
   const [history, setHistory] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
+    const activeRequestId = ++requestIdRef.current;
+    let cancelled = false;
+
     const loadData = async () => {
       if (!user) {
-        setHistory([]);
-        setLoading(false);
+        if (!cancelled && activeRequestId === requestIdRef.current) {
+          setHistory([]);
+          setLoading(false);
+        }
         return;
       }
-      setLoading(true);
+      if (!cancelled && activeRequestId === requestIdRef.current) {
+        setLoading(true);
+      }
       try {
         const jwt = await getToken();
         // Action now only requires JWT (userId derived for security)
         const data = await getTransactionHistoryAction(jwt);
-        // Verify data shape or cast if action returns generic Document[]
-        setHistory(data as unknown as LedgerEntry[]);
+        if (!cancelled && activeRequestId === requestIdRef.current) {
+          // Verify data shape or cast if action returns generic Document[]
+          setHistory(data as unknown as LedgerEntry[]);
+        }
       } catch (e) {
-        console.error("Failed to load history", e);
+        if (!cancelled && activeRequestId === requestIdRef.current) {
+          console.error("Failed to load history", e);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled && activeRequestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
     loadData();
+
+    return () => {
+      cancelled = true;
+      requestIdRef.current = activeRequestId + 1;
+    };
   }, [user, getToken]);
 
   return (
