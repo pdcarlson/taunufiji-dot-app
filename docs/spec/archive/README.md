@@ -12,3 +12,4 @@ Use `docs/spec/current/` for in-progress specs and this archive for shipped work
 - [Quality Gate Fixes](quality-gate-fixes.md)
 - [Infrastructure Logic Hardening](infra-logic-hardening.md)
 - [QA Audit and Staging Hardening](qa-audit-and-staging-hardening.md)
+- [Recurring Task Update Scopes](recurring-task-update-scopes.md)

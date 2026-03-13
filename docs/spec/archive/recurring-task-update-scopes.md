@@ -2,7 +2,7 @@
 
 ## Status
 
-in-progress
+complete
 
 ## Problem
 
@@ -12,29 +12,29 @@ Editing or deleting a recurring duty from the master task roster currently appli
 
 ### Functional
 
-- [ ] Editing/deleting recurring duties from the roster must always prompt for scope:
+- [x] Editing/deleting recurring duties from the roster must always prompt for scope:
   - `This instance`
   - `This + future` (default)
   - `Entire series`
-- [ ] `This instance` affects only the selected task row.
-- [ ] `This + future` affects the selected row and all future generated instances from that due date forward, leaving historical rows untouched.
-- [ ] `Entire series` affects schedule metadata and all non-finalized generated rows in the series.
-- [ ] Explicit cancellation intent must not be resurrected by cron jobs.
-- [ ] Schedule mutations for recurring edits must use a single-schedule, effective-from strategy.
+- [x] `This instance` affects only the selected task row.
+- [x] `This + future` affects the selected row and all future generated instances from that due date forward, leaving historical rows untouched.
+- [x] `Entire series` affects schedule metadata and all non-finalized generated rows in the series.
+- [x] Explicit cancellation intent must not be resurrected by cron jobs.
+- [x] Schedule mutations for recurring edits must use a single-schedule, effective-from strategy.
 
 ### Non-Functional
 
-- [ ] Time semantics use chapter-local behavior (`America/New_York`) as source of truth.
-- [ ] Stored date-time values remain ISO timestamps for persistence compatibility.
-- [ ] Existing clean architecture boundaries remain intact (presentation -> application -> domain <- infrastructure).
+- [x] Time semantics use chapter-local behavior (`America/New_York`) as source of truth.
+- [x] Stored date-time values remain ISO timestamps for persistence compatibility.
+- [x] Existing clean architecture boundaries remain intact (presentation -> application -> domain <- infrastructure).
 
 ## Acceptance Criteria
 
-- [ ] Deleting with `This + future` prevents the same recurring task from reappearing in later cron cycles.
-- [ ] Editing with `This + future` updates schedule-derived future tasks while preserving past completed/expired history.
-- [ ] Editing with `This instance` does not mutate schedule recurrence.
-- [ ] Recurring schedules created from web UI and Discord resolve to equivalent ET due moments.
-- [ ] ET boundary and DST transitions produce expected due/unlock values in tests.
+- [x] Deleting with `This + future` prevents the same recurring task from reappearing in later cron cycles.
+- [x] Editing with `This + future` updates schedule-derived future tasks while preserving past completed/expired history.
+- [x] Editing with `This instance` does not mutate schedule recurrence.
+- [x] Recurring schedules created from web UI and Discord resolve to equivalent ET due moments.
+- [x] ET boundary and DST transitions produce expected due/unlock values in tests.
 
 ## Technical Approach
 
@@ -53,7 +53,7 @@ Editing or deleting a recurring duty from the master task roster currently appli
 
 ## Dependencies
 
-- [Staging Environment Setup](staging-environment-setup.md)
+- [Staging Environment Setup](../current/staging-environment-setup.md)
 - [Behavior Reference](../../behavior.md)
 - [Architecture](../../architecture.md)
 
