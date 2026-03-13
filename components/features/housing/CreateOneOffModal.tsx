@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
 import toast from "react-hot-toast";
+import { getHousingActionErrorMessage } from "./actionError";
 
 import { Member } from "@/lib/domain/entities";
 
@@ -40,13 +41,17 @@ export default function CreateOneOffModal({
       };
 
       const res = await createTaskAction(payload, jwt);
-      if (!res.success) throw new Error(res.error);
+      if (!res.success) {
+        console.error("[CreateOneOffModal] createTaskAction failed", res);
+        toast.error(getHousingActionErrorMessage(res));
+        return;
+      }
       toast.success("Duty Assigned");
       onSuccess();
       onClose();
     } catch (e) {
       console.error(e);
-      toast.error("Failed to assign duty");
+      toast.error("Failed to assign duty. Please retry.");
     } finally {
       setLoading(false);
     }

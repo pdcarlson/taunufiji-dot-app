@@ -53,7 +53,7 @@ export class ScheduleService {
           taskId: task.id,
           title: task.title,
           type: "duty" as const,
-          assignedTo: task.assigned_to,
+          assignedTo: task.assigned_to ?? undefined,
         });
       }
     }

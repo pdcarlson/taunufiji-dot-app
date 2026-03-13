@@ -18,23 +18,31 @@ export interface LeaderboardEntry {
   points: number;
 }
 
+export interface LeaderboardPrefetchResult {
+  leaderboard: LeaderboardEntry[];
+  prefetched: boolean;
+}
+
 /**
  * Fetch Leaderboard (Server Side)
  * Returns plain JSON objects
  */
-export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
+export async function fetchLeaderboard(): Promise<LeaderboardPrefetchResult> {
   try {
     const leaderboard = await pointsService.getLeaderboard(5);
 
     // Map to View Model & Serialize
-    return leaderboard.map((entry) => ({
-      id: entry.id,
-      userId: entry.discord_id,
-      name: entry.name,
-      points: entry.points,
-    }));
+    return {
+      leaderboard: leaderboard.map((entry) => ({
+        id: entry.id,
+        userId: entry.discord_id,
+        name: entry.name,
+        points: entry.points,
+      })),
+      prefetched: true,
+    };
   } catch (error) {
     console.error("Failed to prefetch leaderboard:", error);
-    return [];
+    return { leaderboard: [], prefetched: false };
   }
 }

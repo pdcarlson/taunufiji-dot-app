@@ -39,21 +39,32 @@ export function calculateNextInstance(
       // We need to find the next occurrence AFTER the last completion.
       // Note: rrule.after(dt) returns the first recurrence > dt.
       let rule: RRule | RRuleSet;
-      try {
-        // Force the rule to start "at the reference date" (or create a rule that effectively allows calculating from there)
-        // If we don't provide dtstart, rrule uses 'now', which breaks if we are calculating for a past date
-        // or if we want the cycle to be relative to the last completion.
-        // using lastCompletedAt as start ensures 'after' finds the immediately next slot.
-        const options = RRule.parseString(recurrenceRule);
-        options.dtstart = lastCompletedAt;
-        rule = new RRule(options);
-      } catch (e) {
-        // Fallback or try rrulestr directly if manual parse fails (though parseString is the lower level)
+      const hasExplicitDtstart = recurrenceRule.includes("DTSTART");
+
+      if (hasExplicitDtstart) {
         try {
-          rule = rrulestr(recurrenceRule, { dtstart: lastCompletedAt });
+          rule = rrulestr(recurrenceRule);
         } catch {
           console.error("Invalid RRule string:", recurrenceRule);
           return null;
+        }
+      } else {
+        try {
+          // Force the rule to start "at the reference date" (or create a rule that effectively allows calculating from there)
+          // If we don't provide dtstart, rrule uses 'now', which breaks if we are calculating for a past date
+          // or if we want the cycle to be relative to the last completion.
+          // using lastCompletedAt as start ensures 'after' finds the immediately next slot.
+          const options = RRule.parseString(recurrenceRule);
+          options.dtstart = lastCompletedAt;
+          rule = new RRule(options);
+        } catch {
+          // Fallback or try rrulestr directly if manual parse fails (though parseString is the lower level)
+          try {
+            rule = rrulestr(recurrenceRule, { dtstart: lastCompletedAt });
+          } catch {
+            console.error("Invalid RRule string:", recurrenceRule);
+            return null;
+          }
         }
       }
 

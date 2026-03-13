@@ -47,6 +47,7 @@ export async function fetchInitialLibraryTotal() {
     const result = await libraryService.search({});
     return result.total;
   } catch (error) {
+    console.error("Failed to prefetch library count:", error);
     return 0;
   }
 }

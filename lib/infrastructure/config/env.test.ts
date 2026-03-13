@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("Environment Configuration", () => {
   let originalEnv: NodeJS.ProcessEnv;
@@ -6,7 +6,7 @@ describe("Environment Configuration", () => {
   beforeEach(() => {
     originalEnv = { ...process.env };
     vi.resetModules();
-    process.env = {} as NodeJS.ProcessEnv; // clear out the environment
+    process.env = {} as NodeJS.ProcessEnv;
   });
 
   afterEach(() => {
@@ -16,28 +16,27 @@ describe("Environment Configuration", () => {
   });
 
   it("should fail validation if required Appwrite variables are missing", async () => {
-    // missing variables
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(import("@/lib/infrastructure/config/env")).rejects.toThrow(
-      "Invalid server environment variables"
+      /Invalid server environment variables/,
     );
 
     expect(consoleSpy).toHaveBeenCalled();
   });
 
   it("should throw an error in production if validation fails", async () => {
-    (process.env as any).NODE_ENV = "production";
+    process.env = { ...process.env, NODE_ENV: "production" };
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(import("@/lib/infrastructure/config/env")).rejects.toThrow(
-      "Invalid server environment variables"
+      /Invalid server environment variables/,
     );
 
     expect(consoleSpy).toHaveBeenCalled();
   });
-  
+
   it("should validate and export correctly when all variables are present", async () => {
     process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
     process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT = "http://localhost/v1";
@@ -56,9 +55,9 @@ describe("Environment Configuration", () => {
     process.env.DISCORD_ROLE_ID_CABINET = "test-role-cabinet";
     process.env.DISCORD_ROLE_ID_HOUSING_CHAIR = "test-role-housing";
     process.env.CRON_SECRET = "test-secret";
-    
+
     const { env } = await import("@/lib/infrastructure/config/env");
-    
+
     expect(env.NEXT_PUBLIC_APPWRITE_ENDPOINT).toBe("http://localhost/v1");
     expect(env.DISCORD_ROLE_ID_BROTHER).toBe("test-role-brother");
   });

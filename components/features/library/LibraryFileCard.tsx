@@ -33,9 +33,11 @@ export default function LibraryFileCard({ file }: { file: LibraryResource }) {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Download failed");
+      const errorMessage =
+        err instanceof Error ? err.message : "Download failed";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -130,7 +132,7 @@ export default function LibraryFileCard({ file }: { file: LibraryResource }) {
           <div className="flex items-center gap-4 w-full md:w-auto">
             {error && (
               <span className="text-xs text-red-500 font-bold flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> Error
+                <AlertCircle className="w-3 h-3" /> {error}
               </span>
             )}
 

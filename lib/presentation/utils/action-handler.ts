@@ -1,19 +1,97 @@
 import { getContainer, Container } from "@/lib/infrastructure/container";
 import { createJWTClient } from "@/lib/presentation/server/appwrite";
-import { getAdminClient } from "@/lib/infrastructure/persistence/client";
-import { Account } from "node-appwrite";
+import { Models } from "node-appwrite";
+
+interface AppwriteAccountClient {
+  get: () => Promise<Models.User<Models.Preferences>>;
+}
 
 type ActionContext = {
   container: Container;
   userId: string; // The authenticated Appwrite Auth ID (not necessarily Profile ID)
-  account: any;
+  account: AppwriteAccountClient | null; // Appwrite account client, not the user model
 };
 
 type ActionOptions = {
   jwt?: string;
   allowedRoles?: string[]; // If provided, strictly enforces one of these roles
   public?: boolean; // If true, skip Brother verification
+  actionName?: string;
 };
+
+type ActionErrorCode =
+  | "AUTHENTICATION_REQUIRED"
+  | "INSUFFICIENT_ROLE"
+  | "VALIDATION_ERROR"
+  | "DATABASE_ERROR"
+  | "EXTERNAL_SERVICE_ERROR"
+  | "UNKNOWN_ERROR";
+
+type ActionResult<T> =
+  | { success: true; data: T; error?: never; errorCode?: never }
+  | { success: false; data?: never; error: string; errorCode: ActionErrorCode };
+
+function classifyActionError(error: unknown): ActionErrorCode {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as { code?: unknown }).code === "string"
+  ) {
+    const code = (error as { code: string }).code;
+    if (code === "UNAUTHENTICATED") return "AUTHENTICATION_REQUIRED";
+    if (code === "UNAUTHORIZED") return "INSUFFICIENT_ROLE";
+    if (code === "VALIDATION_ERROR" || code === "NOT_FOUND") {
+      return "VALIDATION_ERROR";
+    }
+    if (code === "DATABASE_ERROR") return "DATABASE_ERROR";
+    if (code === "EXTERNAL_SERVICE_ERROR") return "EXTERNAL_SERVICE_ERROR";
+  }
+
+  const message =
+    error instanceof Error
+      ? error.message.toLowerCase()
+      : String(error).toLowerCase();
+
+  if (
+    message.includes("authentication required") ||
+    message.includes("no jwt") ||
+    message.includes("unauthenticated")
+  ) {
+    return "AUTHENTICATION_REQUIRED";
+  }
+
+  if (
+    message.includes("unauthorized") ||
+    message.includes("insufficient permissions") ||
+    message.includes("verified brother")
+  ) {
+    return "INSUFFICIENT_ROLE";
+  }
+
+  if (
+    message.includes("invalid") ||
+    message.includes("missing") ||
+    message.includes("not found")
+  ) {
+    return "VALIDATION_ERROR";
+  }
+
+  if (message.includes("database operation failed")) {
+    return "DATABASE_ERROR";
+  }
+
+  if (
+    message.includes("discord") ||
+    message.includes("s3") ||
+    message.includes("fetch failed") ||
+    message.includes("external service")
+  ) {
+    return "EXTERNAL_SERVICE_ERROR";
+  }
+
+  return "UNKNOWN_ERROR";
+}
 
 /**
  * Standardized Wrapper for Server Actions
@@ -26,25 +104,13 @@ type ActionOptions = {
 export async function actionWrapper<T>(
   action: (ctx: ActionContext) => Promise<T>,
   options: ActionOptions = {},
-): Promise<{ success: boolean; data?: T; error?: string }> {
+): Promise<ActionResult<T>> {
   try {
     // 1. Authentication
-    let account;
+    let account: AppwriteAccountClient | null = null;
     if (options.jwt) {
       const client = createJWTClient(options.jwt);
       account = client.account;
-    } else if (options.public) {
-      // For public actions, we might not have a user
-      const client = getAdminClient();
-      account = new Account(client); // This might be wrong if we need session, but public usually implies no session or admin.
-      // Actually, if it's public, do we even need an account?
-      // The action might need 'account' context.
-      // Let's look at how public actions are used.
-      // For now, if NO JWT and NO Public -> Error.
-      // If Public and NO JWT -> proceed with null/undefined?
-      // The original code tried createSessionClient() which uses cookies.
-      // The user explicitly said NO COOKIES.
-      // So we strictly require JWT for authenticated actions.
     }
 
     if (!options.jwt && !options.public) {
@@ -52,7 +118,7 @@ export async function actionWrapper<T>(
     }
 
     // If public and no JWT, we skip user fetching?
-    let user = null;
+    let user: Models.User<Models.Preferences> | null = null;
     if (options.jwt && account) {
       user = await account.get();
     }
@@ -85,13 +151,16 @@ export async function actionWrapper<T>(
     const container = getContainer();
     // Pass userId if available, else empty string or throw if strict
     const userId = user ? user.$id : "";
+    // account here is the Appwrite account client used for account.get()
     const data = await action({ container, userId, account });
 
     return { success: true, data };
   } catch (error) {
-    console.error("Action Failed:", error);
+    const actionLabel = options.actionName || "unknown-action";
+    console.error(`Action Failed [${actionLabel}]`, error);
+    const errorCode = classifyActionError(error);
     const msg =
       error instanceof Error ? error.message : "An unexpected error occurred.";
-    return { success: false, error: msg };
+    return { success: false, error: msg, errorCode };
   }
 }

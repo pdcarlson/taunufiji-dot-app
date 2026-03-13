@@ -33,7 +33,7 @@
 ## Tooling & Quality
 
 - **Language**: TypeScript (Strict Mode)
-- **Testing**: Vitest (Unit & Integration) with jsdom
+- **Testing**: Vitest (Unit & Integration) with jsdom, Playwright (E2E smoke)
 - **Linting**: ESLint (flat config, `eslint.config.mjs`)
 - **CI**: GitHub Actions (`ci.yml` — quality gates)
 - **CD**: Direct Appwrite/GitHub Integration (branch-based: `staging` and `main`)

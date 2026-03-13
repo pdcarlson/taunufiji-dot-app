@@ -2,7 +2,12 @@ import DashboardView from "@/components/features/dashboard/DashboardView";
 import { fetchLeaderboard } from "@/lib/presentation/queries/dashboard.queries";
 
 export default async function DashboardPage() {
-  const leaderboard = await fetchLeaderboard();
+  const { leaderboard, prefetched } = await fetchLeaderboard();
 
-  return <DashboardView initialLeaderboard={leaderboard} />;
+  return (
+    <DashboardView
+      initialLeaderboard={leaderboard}
+      initialLeaderboardPrefetched={prefetched}
+    />
+  );
 }

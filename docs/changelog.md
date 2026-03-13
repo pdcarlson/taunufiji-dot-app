@@ -1,5 +1,32 @@
 # Project Log
 
+## 2026-03-11: Staging QA Audit Hardening
+
+- **Specs & Documentation**:
+  - Added `docs/archive/specs/qa-audit-and-staging-hardening.md` and updated `spec/staging-environment-setup.md` with runtime-readiness acceptance criteria.
+  - Added `docs/housing-behavior-reference.md` as a durable behavior/edge-case reference.
+  - Expanded deployment docs with environment matrix, diagnostics command, and staging troubleshooting runbook.
+- **Environment Diagnostics**:
+  - Added `npm run diagnose:staging` (`scripts/diagnose-staging.ts`) to verify Appwrite and Discord staging dependencies.
+  - Refactored server environment schema into reusable `server-env-schema.ts` for safer validation in both app runtime and diagnostics tooling.
+- **Housing Security & UX**:
+  - Enforced `HOUSING_ADMIN_ROLES` on housing mutation actions (`create/update/delete/review/schedule`).
+  - Improved task-creation UX with categorized failure messaging (auth, role, validation, database, external service).
+  - Added action-level error classification and contextual logging in `actionWrapper`.
+- **Testing System Upgrade**:
+  - Added coverage tooling (`@vitest/coverage-v8`) and critical-module coverage gate (`npm run test:coverage:critical`) with 90%+ thresholds.
+  - Added integration suites for `actionWrapper`, housing admin actions, and schedule actions.
+  - Added Playwright smoke tests (`tests/e2e/smoke.spec.ts`) and CI execution steps for browser installation + e2e run.
+  - Added Vitest coverage reporting script (`npm run test:coverage`) and excluded e2e specs from Vitest discovery.
+- **Repository Organization Realignment**:
+  - Archived completed specs to `docs/archive/specs/` and updated spec workflow references/indexes.
+  - Moved Playwright smoke coverage from root `e2e/` to `tests/e2e/` and updated related configs/docs.
+- **Lint Quality Drive**:
+  - Reduced lint output to zero warnings by replacing legacy `any` usage with stricter unknown/typed contracts and cleaning hook dependency/type-safety issues.
+- **Observed Staging Diagnostic Outcome**:
+  - Staging diagnostics now pass end-to-end after correcting `DISCORD_HOUSING_CHANNEL_ID`.
+  - The exact channel ID is tracked in environment configuration and the staging runbook, not in changelog history.
+
 ## 2026-01-12: Housing V2 - Scheduels & Bounties
 
 - **Feature Completion**: Implemented full UI for Creating Recurring Schedules and Posting Bounties.

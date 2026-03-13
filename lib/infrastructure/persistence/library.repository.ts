@@ -32,8 +32,21 @@ export class AppwriteLibraryRepository implements ILibraryRepository {
     try {
       const doc = await this.db.getDocument(DB_ID, COLLECTIONS.LIBRARY, id);
       return this.toDomain(doc);
-    } catch (error: any) {
-      if (error.code === 404) return null;
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        "type" in error
+      ) {
+        const typedError = error as { code?: number; type?: string };
+        if (
+          typedError.code === 404 &&
+          typedError.type === "document_not_found"
+        ) {
+          return null;
+        }
+      }
       throw error;
     }
   }
@@ -52,6 +65,15 @@ export class AppwriteLibraryRepository implements ILibraryRepository {
     }
     if (filters.year) {
       queries.push(Query.equal("year", filters.year));
+    }
+    if (filters.semester && filters.semester !== "All") {
+      queries.push(Query.equal("semester", filters.semester));
+    }
+    if (filters.type && filters.type !== "All") {
+      queries.push(Query.equal("type", filters.type));
+    }
+    if (filters.version && filters.version !== "All") {
+      queries.push(Query.equal("version", filters.version));
     }
 
     const res = await this.db.listDocuments(

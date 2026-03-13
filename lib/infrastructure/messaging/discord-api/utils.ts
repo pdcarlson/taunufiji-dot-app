@@ -1,5 +1,9 @@
 import nacl from "tweetnacl";
-import { InteractionResponseType, InteractionResponseFlags } from "./types";
+import {
+  InteractionResponseType,
+  InteractionResponseFlags,
+  DiscordInteractionDataOption,
+} from "./types";
 import { env } from "@/lib/infrastructure/config/env";
 
 /**
@@ -34,7 +38,7 @@ export function createResponse(data: {
   type?: number;
   content?: string;
   flags?: number;
-  embeds?: any[];
+  embeds?: unknown[];
 }) {
   return {
     type: data.type ?? InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -59,7 +63,10 @@ export function createEphemeralResponse(content: string) {
 /**
  * Extract an option value from the interaction options array.
  */
-export function getOptionValue(options: any[] | undefined, name: string): any {
+export function getOptionValue(
+  options: DiscordInteractionDataOption[] | undefined,
+  name: string,
+): string | number | boolean | undefined {
   if (!options) return undefined;
   const option = options.find((o) => o.name === name);
   return option?.value;

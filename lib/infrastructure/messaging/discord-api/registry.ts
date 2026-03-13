@@ -1,4 +1,9 @@
-import { SlashCommand, DiscordInteraction } from "./types";
+import {
+  SlashCommand,
+  DiscordInteraction,
+  CommandHandler,
+  DiscordInteractionDataOption,
+} from "./types";
 import { COMMANDS } from "./commands";
 import * as core from "./handlers/core";
 import * as admin from "./handlers/admin";
@@ -6,7 +11,7 @@ import { HOUSING_ADMIN_ROLES } from "../../config/roles";
 import { createEphemeralResponse } from "./utils";
 
 // map handler functions to command names
-const HANDLERS: Record<string, Function> = {
+const HANDLERS: Record<string, CommandHandler> = {
   leaderboard: core.leaderboard,
   // admin commands
   duty: admin.duty,
@@ -26,7 +31,7 @@ COMMANDS.forEach((def) => {
     REGISTRY[def.name] = {
       name: def.name,
       description: def.description,
-      execute: handler as any,
+      execute: handler,
       requiresAdmin: ADMIN_COMMANDS.has(def.name),
     };
   } else {
@@ -49,7 +54,7 @@ export async function dispatchCommand(interaction: DiscordInteraction) {
   if (command.requiresAdmin) {
     const roles = interaction.member?.roles || [];
     const isAdmin = roles.some((r) =>
-      (HOUSING_ADMIN_ROLES as unknown as string[]).includes(r),
+      HOUSING_ADMIN_ROLES.includes(r),
     );
 
     if (!isAdmin) {
@@ -60,10 +65,10 @@ export async function dispatchCommand(interaction: DiscordInteraction) {
   }
 
   // parse options into key-value map for easier handling
-  const args: Record<string, any> = {};
+  const args: Record<string, unknown> = {};
   if (options) {
-    options.forEach((o) => {
-      args[o.name] = o.value;
+    options.forEach((option: DiscordInteractionDataOption) => {
+      args[option.name] = option.value;
     });
   }
 

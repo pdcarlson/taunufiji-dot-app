@@ -16,10 +16,12 @@ import { Loader2 } from "lucide-react";
 
 interface DashboardViewProps {
   initialLeaderboard: LeaderboardEntry[];
+  initialLeaderboardPrefetched: boolean;
 }
 
 export default function DashboardView({
   initialLeaderboard,
+  initialLeaderboardPrefetched,
 }: DashboardViewProps) {
   const { getToken, user, profile } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -84,7 +86,10 @@ export default function DashboardView({
 
         {/* RIGHT COLUMN (Rankings) */}
         <div className="flex flex-col">
-          <LeaderboardWidget initialLeaderboard={initialLeaderboard} />
+          <LeaderboardWidget
+            initialLeaderboard={initialLeaderboard}
+            initialLeaderboardPrefetched={initialLeaderboardPrefetched}
+          />
         </div>
       </div>
 

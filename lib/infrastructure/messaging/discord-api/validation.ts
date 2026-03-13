@@ -1,7 +1,15 @@
 import { z } from "zod";
 
+interface DiscordInteractionOption {
+  name: string;
+  type: number;
+  value?: string | number | boolean;
+  options?: DiscordInteractionOption[];
+  focused?: boolean;
+}
+
 // Basic recursive schema for options
-const optionSchema: z.ZodType<any> = z.lazy(() =>
+const optionSchema: z.ZodType<DiscordInteractionOption> = z.lazy(() =>
   z.object({
     name: z.string(),
     type: z.number(),

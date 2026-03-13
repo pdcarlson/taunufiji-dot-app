@@ -14,10 +14,10 @@ All non-trivial changes to this project must begin with a specification. Specs a
 ```
 spec/
 ├── README.md              ← This file (guidelines + template)
-├── <feature-name>.md      ← Active specs
-└── completed/             ← Specs for shipped work
-    └── <feature-name>.md
+└── <feature-name>.md      ← Active specs
 ```
+
+Archived completed specs live in `docs/archive/specs/`.
 
 ## Workflow
 
@@ -25,7 +25,7 @@ spec/
 2. **Review**: Discuss the spec before implementation begins (can be async or in PR).
 3. **Implement**: Reference the spec in your PR description.
 4. **Update**: If requirements change during implementation, update the spec.
-5. **Complete**: When shipped, move the spec to `spec/completed/` and check off the acceptance criteria.
+5. **Complete**: When shipped, archive the spec in `docs/archive/specs/` and check off the acceptance criteria.
 
 ## Spec Template
 

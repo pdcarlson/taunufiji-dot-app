@@ -5,6 +5,7 @@ import { X, Calendar, User, FileText, Check, Clock } from "lucide-react";
 import { createScheduleAction } from "@/lib/presentation/actions/housing/schedule.actions";
 import { useJWT } from "@/hooks/useJWT";
 import toast from "react-hot-toast";
+import { getHousingActionErrorMessage } from "./actionError";
 
 import { Member } from "@/lib/domain/entities";
 
@@ -81,7 +82,8 @@ export default function CreateScheduleModal({
         onSuccess();
         onClose();
       } else {
-        toast.error(res.error || "Failed to create schedule");
+        console.error("[CreateScheduleModal] createScheduleAction failed", res);
+        toast.error(getHousingActionErrorMessage(res));
       }
     } catch (e) {
       console.error(e);

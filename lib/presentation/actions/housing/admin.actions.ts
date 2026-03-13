@@ -2,13 +2,18 @@
 
 import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 import { CreateAssignmentDTO } from "@/lib/domain/types/task";
+import { HOUSING_ADMIN_ROLES } from "@/lib/infrastructure/config/roles";
 
 export async function createTaskAction(data: CreateAssignmentDTO, jwt: string) {
   return await actionWrapper(
     async ({ container }) => {
       return await container.adminService.createTask(data);
     },
-    { jwt },
+    {
+      jwt,
+      allowedRoles: HOUSING_ADMIN_ROLES,
+      actionName: "housing.createTask",
+    },
   );
 }
 
@@ -21,7 +26,11 @@ export async function updateTaskAction(
     async ({ container }) => {
       return await container.adminService.updateTask(taskId, data);
     },
-    { jwt },
+    {
+      jwt,
+      allowedRoles: HOUSING_ADMIN_ROLES,
+      actionName: "housing.updateTask",
+    },
   );
 }
 
@@ -31,7 +40,11 @@ export async function deleteTaskAction(taskId: string, jwt: string) {
       await container.adminService.deleteTask(taskId);
       return true;
     },
-    { jwt },
+    {
+      jwt,
+      allowedRoles: HOUSING_ADMIN_ROLES,
+      actionName: "housing.deleteTask",
+    },
   );
 }
 
@@ -49,7 +62,11 @@ export async function approveTaskAction(
         pointsOverride,
       );
     },
-    { jwt },
+    {
+      jwt,
+      allowedRoles: HOUSING_ADMIN_ROLES,
+      actionName: "housing.approveTask",
+    },
   );
 }
 
@@ -62,6 +79,10 @@ export async function rejectTaskAction(
     async ({ container }) => {
       return await container.adminService.rejectTask(taskId, reason);
     },
-    { jwt },
+    {
+      jwt,
+      allowedRoles: HOUSING_ADMIN_ROLES,
+      actionName: "housing.rejectTask",
+    },
   );
 }

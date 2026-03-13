@@ -19,7 +19,7 @@ Read `spec/README.md` for the full guide and template. Key rules:
 1. **Always check for an existing spec** in `spec/` before starting work. If one exists, follow it.
 2. **Create a new spec** if none exists and the change is non-trivial (touches 3+ files or takes more than a few hours). Use the template in `spec/README.md`.
 3. **Update the spec** if requirements change during implementation.
-4. **Move to `spec/completed/`** when the work ships, with all acceptance criteria checked off.
+4. **Move to `docs/archive/specs/`** when the work ships, with all acceptance criteria checked off.
 5. **Reference the spec** in PR descriptions and commit messages.
 
 ### Skill: Code Style
