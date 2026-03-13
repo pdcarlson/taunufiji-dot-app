@@ -164,32 +164,51 @@ export class ScheduleService {
     data: Partial<CreateScheduleDTO>,
     recurringOptions?: RecurringMutationOptions,
   ) {
-    const updatedSchedule = await this.taskRepository.updateSchedule(
-      scheduleId,
-      data,
-    );
+    const scope = recurringOptions?.scope;
+    const shouldRecalculateExistingTasks =
+      data.lead_time_hours !== undefined &&
+      recurringOptions !== undefined &&
+      scope !== "this_instance" &&
+      (scope === "entire_series" ||
+        (scope === "this_and_future" && !!recurringOptions.effectiveFromDueAt));
 
-    if (
-      recurringOptions &&
-      recurringOptions.scope !== "this_instance" &&
-      recurringOptions.effectiveFromDueAt &&
-      data.lead_time_hours !== undefined
-    ) {
-      const seriesTasks = await this.findAllNonFinalByScheduleId(scheduleId);
+    if (!shouldRecalculateExistingTasks) {
+      return await this.taskRepository.updateSchedule(scheduleId, data);
+    }
 
-      const now = new Date();
-      const effectiveFrom = new Date(recurringOptions.effectiveFromDueAt);
-      const scope = recurringOptions.scope;
+    const previousSchedule =
+      await this.taskRepository.findScheduleById(scheduleId);
+    const seriesTasks = await this.findAllNonFinalByScheduleId(scheduleId);
+    const now = new Date();
+    const effectiveFrom = recurringOptions.effectiveFromDueAt
+      ? new Date(recurringOptions.effectiveFromDueAt)
+      : null;
 
-      const toUpdate = seriesTasks.filter((task) => {
-        if (task.id === undefined || !task.due_at) {
-          return false;
-        }
-        if (scope === "entire_series") {
-          return true;
-        }
-        return new Date(task.due_at) >= effectiveFrom;
-      });
+    const toUpdate = seriesTasks.filter((task) => {
+      if (task.id === undefined || !task.due_at) {
+        return false;
+      }
+      if (scope === "entire_series") {
+        return true;
+      }
+      if (!effectiveFrom) {
+        return false;
+      }
+      return new Date(task.due_at) >= effectiveFrom;
+    });
+
+    const taskRollbackSnapshots = toUpdate.map((task) => ({
+      id: task.id,
+      unlock_at: task.unlock_at,
+      status: task.status,
+      notification_level: task.notification_level,
+    }));
+
+    try {
+      const updatedSchedule = await this.taskRepository.updateSchedule(
+        scheduleId,
+        data,
+      );
 
       await Promise.all(
         toUpdate.map((task) => {
@@ -220,9 +239,57 @@ export class ScheduleService {
           });
         }),
       );
-    }
 
-    return updatedSchedule;
+      return updatedSchedule;
+    } catch (error) {
+      await Promise.all(
+        taskRollbackSnapshots.map((task) =>
+          this.taskRepository.update(task.id, {
+            unlock_at: task.unlock_at,
+            status: task.status,
+            notification_level: task.notification_level,
+          }),
+        ),
+      ).catch(() => undefined);
+
+      if (previousSchedule) {
+        const scheduleRollbackPatch: Partial<CreateScheduleDTO> = {};
+        if (data.title !== undefined) {
+          scheduleRollbackPatch.title = previousSchedule.title;
+        }
+        if (data.description !== undefined) {
+          scheduleRollbackPatch.description = previousSchedule.description;
+        }
+        if (data.recurrence_rule !== undefined) {
+          scheduleRollbackPatch.recurrence_rule =
+            previousSchedule.recurrence_rule;
+        }
+        if (data.assigned_to !== undefined) {
+          scheduleRollbackPatch.assigned_to = previousSchedule.assigned_to;
+        }
+        if (data.points_value !== undefined) {
+          scheduleRollbackPatch.points_value = previousSchedule.points_value;
+        }
+        if (data.active !== undefined) {
+          scheduleRollbackPatch.active = previousSchedule.active;
+        }
+        if (data.last_generated_at !== undefined) {
+          scheduleRollbackPatch.last_generated_at =
+            previousSchedule.last_generated_at;
+        }
+        if (data.lead_time_hours !== undefined) {
+          scheduleRollbackPatch.lead_time_hours =
+            previousSchedule.lead_time_hours;
+        }
+        if (Object.keys(scheduleRollbackPatch).length > 0) {
+          await this.taskRepository
+            .updateSchedule(scheduleId, scheduleRollbackPatch)
+            .catch(() => undefined);
+        }
+      }
+
+      throw error;
+    }
   }
 
   async updateTaskThisAndFuture(

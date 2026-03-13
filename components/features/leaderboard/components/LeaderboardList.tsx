@@ -14,6 +14,7 @@ export default function LeaderboardList() {
   useEffect(() => {
     const fetchUsers = async () => {
       if (!user) {
+        setUsers([]);
         setLoading(false);
         return;
       }

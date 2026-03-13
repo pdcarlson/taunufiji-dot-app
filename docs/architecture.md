@@ -66,4 +66,4 @@ Concrete implementations of domain ports.
 - **Staging**: Appwrite watches `staging` branch → auto-deploys to Staging Site
 - **Production**: Appwrite watches `main` branch → auto-deploys to Production Site
 - **CI**: GitHub Actions runs quality gates (lint, type check, test, build) on PRs
-- **Cron**: GitHub Actions triggers `/api/cron?key=<secret>&job=HOURLY` every 12 minutes
+- **Cron**: GitHub Actions triggers `/api/cron?job=HOURLY` every 12 minutes and must send `Authorization: Bearer <CRON_SECRET>` in headers

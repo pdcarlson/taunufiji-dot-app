@@ -222,6 +222,7 @@ export default function DutyRoster({
                     <td className="p-4">
                       {onEdit && task.status !== "approved" && (
                         <button
+                          type="button"
                           onClick={() => onEdit(task)}
                           className="text-stone-300 hover:text-fiji-purple transition-colors opacity-0 group-hover:opacity-100"
                           title="Edit Task"

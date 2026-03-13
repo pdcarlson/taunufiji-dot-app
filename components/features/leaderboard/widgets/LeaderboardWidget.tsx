@@ -60,7 +60,7 @@ export default function LeaderboardWidget({
       // The action handles internal logic.
       return await getMyRankAction(token);
     },
-    [getMyRankAction],
+    [],
   );
 
   const fetchLeaders = useCallback(async () => {

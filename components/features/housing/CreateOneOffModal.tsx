@@ -42,15 +42,6 @@ export default function CreateOneOffModal({
 
       const res = await createTaskAction(payload, jwt);
       if (!res.success) {
-        const isDev = process.env.NODE_ENV === "development";
-        if (isDev) {
-          console.error("[CreateOneOffModal] createTaskAction failed", res);
-        } else {
-          console.error("[CreateOneOffModal] createTaskAction failed", {
-            success: res.success,
-            errorCode: res.errorCode,
-          });
-        }
         toast.error(getHousingActionErrorMessage(res));
         return;
       }

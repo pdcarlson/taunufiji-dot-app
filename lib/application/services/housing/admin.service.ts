@@ -62,7 +62,10 @@ export class AdminService {
     if (task.status !== "pending") {
       throw new Error("Task is not pending approval.");
     }
-    const originalPointsValue = task.points_value;
+    const assignedUserId = task.assigned_to;
+    if (!assignedUserId) {
+      throw new Error("Cannot approve task without an assignee.");
+    }
 
     // Update Task Status & potentially Points
     const updates: Partial<CreateAssignmentDTO> = {
@@ -82,29 +85,12 @@ export class AdminService {
     // Use override if provided, otherwise original
     const awardAmount =
       overridePoints !== undefined ? overridePoints : task.points_value;
-    const assignedUserId = task.assigned_to;
-
-    try {
-      if (!assignedUserId) {
-        throw new Error("Cannot approve task without an assignee.");
-      }
-
-      await DomainEventBus.publish(TaskEvents.TASK_APPROVED, {
-        taskId: task.id,
-        title: task.title,
-        userId: assignedUserId,
-        points: awardAmount,
-      });
-    } catch (error) {
-      await this.taskRepository.update(taskId, {
-        status: "pending",
-        completed_at: null,
-        points_value: originalPointsValue,
-      });
-      throw new Error(
-        `Failed to complete approval process: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    }
+    await DomainEventBus.publish(TaskEvents.TASK_APPROVED, {
+      taskId: task.id,
+      title: task.title,
+      userId: assignedUserId,
+      points: awardAmount,
+    });
 
     // Trigger Recurrence (pass updated task so scheduler sees completed_at)
     if (task.schedule_id) {

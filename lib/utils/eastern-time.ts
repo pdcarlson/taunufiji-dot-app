@@ -69,6 +69,18 @@ export function buildWeeklyEasternRecurrenceRule(dayCode: string): string {
   return `DTSTART;TZID=${EASTERN_TIME_ZONE}:${EASTERN_REFERENCE_START}\nRRULE:FREQ=WEEKLY;BYDAY=${dayCode};BYHOUR=23;BYMINUTE=59;BYSECOND=0`;
 }
 
+/**
+ * Interprets a Date's UTC components as Eastern wall-clock values and converts
+ * that local Eastern timestamp into the corresponding UTC Date.
+ *
+ * Expected input: a Date where `getUTCFullYear/Month/Date/Hours/Minutes/Seconds`
+ * represent the intended Eastern local time (not an actual UTC instant).
+ * Returns: the true UTC Date for that Eastern local timestamp via
+ * `zonedTimeToUtc(..., EASTERN_TIME_ZONE)`.
+ *
+ * DST note: ambiguous/non-existent local times near DST transitions resolve
+ * according to `zonedTimeToUtc` offset calculations.
+ */
 export function easternWallClockToUtcDate(date: Date): Date {
   return zonedTimeToUtc(
     date.getUTCFullYear(),

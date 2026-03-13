@@ -102,10 +102,7 @@ async function runDiscordChecks(
 
   async function fetchWithTimeout(url: string): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      DISCORD_REQUEST_TIMEOUT_MS,
-    );
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
       return await fetch(url, {
@@ -119,7 +116,7 @@ async function runDiscordChecks(
 
   function toDiscordErrorDetail(error: unknown): string {
     if (error instanceof Error && error.name === "AbortError") {
-      return `Request timed out after ${DISCORD_REQUEST_TIMEOUT_MS}ms`;
+      return `Request timed out after ${REQUEST_TIMEOUT_MS}ms`;
     }
     return safeErrorMessage(error);
   }
