@@ -1,5 +1,4 @@
 import { RRule, RRuleSet, rrulestr } from "rrule";
-import { easternWallClockToUtcDate } from "@/lib/utils/eastern-time";
 
 export interface ScheduleCalculation {
   dueAt: Date;
@@ -81,11 +80,8 @@ export function calculateNextInstance(
         // No future occurrences (e.g., COUNT reached)
         return null;
       }
-      const isEasternTimeZoneRule =
-        recurrenceRule.includes("TZID=America/New_York");
-      dueAt = isEasternTimeZoneRule
-        ? normalizeEasternTzidOccurrence(nextDate, recurrenceRule)
-        : nextDate;
+      // When TZID=America/New_York is present, rrule returns correct UTC Dates; use as-is.
+      dueAt = nextDate;
     }
 
     // --- UNLOCK CALCULATION ---
@@ -101,72 +97,6 @@ export function calculateNextInstance(
     console.error("Scheduler Error:", e);
     return null;
   }
-}
-
-function normalizeEasternTzidOccurrence(
-  nextDate: Date,
-  recurrenceRule: string,
-): Date {
-  const expectedClock = getExpectedEasternClock(recurrenceRule);
-  if (!expectedClock) {
-    return easternWallClockToUtcDate(nextDate);
-  }
-
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  const parts = formatter.formatToParts(nextDate);
-  const easternHour = Number(parts.find((part) => part.type === "hour")?.value);
-  const easternMinute = Number(
-    parts.find((part) => part.type === "minute")?.value,
-  );
-  const easternSecond = Number(
-    parts.find((part) => part.type === "second")?.value,
-  );
-
-  const matchesExpectedClock =
-    easternHour === expectedClock.hour &&
-    easternMinute === expectedClock.minute &&
-    easternSecond === expectedClock.second;
-
-  if (matchesExpectedClock) {
-    return nextDate;
-  }
-
-  // Some environments return TZID recurrences as floating local times.
-  // Reinterpret that wall clock as ET and convert to a UTC instant.
-  return easternWallClockToUtcDate(nextDate);
-}
-
-function getExpectedEasternClock(
-  recurrenceRule: string,
-): { hour: number; minute: number; second: number } | null {
-  const byHour = recurrenceRule.match(/BYHOUR=(\d{1,2})/);
-  const byMinute = recurrenceRule.match(/BYMINUTE=(\d{1,2})/);
-  const bySecond = recurrenceRule.match(/BYSECOND=(\d{1,2})/);
-
-  if (byHour && byMinute) {
-    return {
-      hour: Number(byHour[1]),
-      minute: Number(byMinute[1]),
-      second: bySecond ? Number(bySecond[1]) : 0,
-    };
-  }
-
-  const dtstart = recurrenceRule.match(/DTSTART(?:;TZID=[^:]+)?:\d{8}T(\d{2})(\d{2})(\d{2})/);
-  if (dtstart) {
-    return {
-      hour: Number(dtstart[1]),
-      minute: Number(dtstart[2]),
-      second: Number(dtstart[3]),
-    };
-  }
-
-  return null;
 }
 
 /**

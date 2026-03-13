@@ -147,7 +147,7 @@ export default function EditTaskModal({
         }
       }
 
-      const effectiveFromDueAt = payload.due_at || task.due_at || undefined;
+      const effectiveFromDueAt = task.due_at ?? undefined;
       const recurringOptions =
         isRecurring && task.schedule_id
           ? {
@@ -156,17 +156,22 @@ export default function EditTaskModal({
             }
           : undefined;
 
-      // Parallel Actions
-      const taskPromise = updateTaskAction(task.id, payload, jwt, recurringOptions);
-      let schedulePromise = null;
+      const taskRes = await updateTaskAction(
+        task.id,
+        payload,
+        jwt,
+        recurringOptions,
+      );
+      if (!taskRes.success) {
+        throw new Error(taskRes.error || "Task update failed");
+      }
 
-      // If Recurring & Lead Time Changed, update Schedule
       if (
         isRecurring &&
         task.schedule_id &&
         mutationScope !== "this_instance"
       ) {
-        schedulePromise = updateScheduleLeadTimeAction(
+        const scheduleRes = await updateScheduleLeadTimeAction(
           task.schedule_id,
           Number(formData.lead_time_hours),
           jwt,
@@ -175,22 +180,9 @@ export default function EditTaskModal({
             effectiveFromDueAt,
           },
         );
-      }
-
-      const [taskRes, scheduleRes] = await Promise.all([
-        taskPromise,
-        schedulePromise,
-      ]);
-
-      // Check Task Update
-      if (!taskRes.success) {
-        throw new Error(taskRes.error || "Task update failed");
-      }
-
-      // Check Schedule Update (if strict? or just warn?)
-      // Let's be strict per "Search and Destroy"
-      if (scheduleRes && !scheduleRes.success) {
-        throw new Error(scheduleRes.error || "Schedule update failed");
+        if (scheduleRes && !scheduleRes.success) {
+          throw new Error(scheduleRes.error || "Schedule update failed");
+        }
       }
 
       toast.success("Task updated");
@@ -430,10 +422,14 @@ export default function EditTaskModal({
 
           {isRecurring && (
             <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
+              <label
+                htmlFor="mutationScopeSelect"
+                className="block text-xs font-bold uppercase text-stone-500 mb-1"
+              >
                 Apply Changes To
               </label>
               <select
+                id="mutationScopeSelect"
                 value={mutationScope}
                 onChange={(e) =>
                   setMutationScope(e.target.value as RecurringMutationScope)

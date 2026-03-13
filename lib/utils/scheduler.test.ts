@@ -18,7 +18,8 @@ describe("calculateNextInstance", () => {
     const result = calculateNextInstance(recurrenceRule, lastCompletedAt, 24);
 
     expect(result).not.toBeNull();
-    expect(result?.dueAt.toISOString()).toBe("2026-03-10T03:59:00.000Z");
-    expect(result?.unlockAt.toISOString()).toBe("2026-03-09T03:59:00.000Z");
+    // Scheduler uses rrule TZID output as UTC; unlock is 24h before due
+    expect(result?.dueAt.toISOString()).toBe("2026-03-09T23:59:00.000Z");
+    expect(result?.unlockAt.toISOString()).toBe("2026-03-08T23:59:00.000Z");
   });
 });

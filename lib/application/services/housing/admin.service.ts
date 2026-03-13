@@ -193,9 +193,12 @@ export class AdminService {
     }
 
     const effectiveFromDueAt =
-      recurringOptions.effectiveFromDueAt ||
-      task.due_at ||
-      new Date().toISOString();
+      recurringOptions.effectiveFromDueAt ?? task.due_at ?? undefined;
+    if (!effectiveFromDueAt) {
+      throw new Error(
+        "effectiveFromDueAt or task.due_at required for scoped recurring updates",
+      );
+    }
 
     if (recurringOptions.scope === "entire_series") {
       return await this.scheduleService.updateTaskEntireSeries(
@@ -242,7 +245,10 @@ export class AdminService {
   /**
    * Delete a task
    */
-  async deleteTask(taskId: string, recurringOptions?: RecurringMutationOptions) {
+  async deleteTask(
+    taskId: string,
+    recurringOptions?: RecurringMutationOptions,
+  ) {
     const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Task not found.");
@@ -263,10 +269,16 @@ export class AdminService {
       new Date().toISOString();
 
     if (recurringOptions.scope === "entire_series") {
-      await this.scheduleService.deleteTaskEntireSeries(task, effectiveFromDueAt);
+      await this.scheduleService.deleteTaskEntireSeries(
+        task,
+        effectiveFromDueAt,
+      );
       return;
     }
 
-    await this.scheduleService.deleteTaskThisAndFuture(task, effectiveFromDueAt);
+    await this.scheduleService.deleteTaskThisAndFuture(
+      task,
+      effectiveFromDueAt,
+    );
   }
 }

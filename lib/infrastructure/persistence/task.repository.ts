@@ -294,6 +294,10 @@ export class AppwriteTaskRepository implements ITaskRepository {
     // Limit
     queries.push(Query.limit(options.limit ?? 100));
 
+    if (options.offset !== undefined && options.offset > 0) {
+      queries.push(Query.offset(options.offset));
+    }
+
     return queries;
   }
 

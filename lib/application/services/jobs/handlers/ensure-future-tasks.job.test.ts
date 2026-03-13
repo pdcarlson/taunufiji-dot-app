@@ -12,10 +12,8 @@ const hoisted = vi.hoisted(() => {
 });
 
 vi.mock("@/lib/infrastructure/persistence/task.repository", () => ({
-  AppwriteTaskRepository: class {
-    constructor() {
-      return hoisted.repository;
-    }
+  AppwriteTaskRepository: function () {
+    return hoisted.repository;
   },
 }));
 

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { HousingTask, Member } from "@/lib/domain/entities";
 import { HOUSING_CONSTANTS } from "@/lib/constants";
+import { EASTERN_TIME_ZONE } from "@/lib/utils/eastern-time";
 
 interface DutyRosterProps {
   tasks: HousingTask[];
@@ -29,7 +30,9 @@ export default function DutyRoster({
 }: DutyRosterProps) {
   // Filter: All tasks, exclude approved/expired older than X days
   const recentThreshold = new Date();
-  recentThreshold.setDate(recentThreshold.getDate() - HOUSING_CONSTANTS.RECENT_TASK_THRESHOLD_DAYS);
+  recentThreshold.setDate(
+    recentThreshold.getDate() - HOUSING_CONSTANTS.RECENT_TASK_THRESHOLD_DAYS,
+  );
 
   const filteredTasks = tasks.filter((t) => {
     // Always show open, pending, rejected, locked
@@ -209,7 +212,7 @@ export default function DutyRoster({
                           dateStyle: "short",
                           timeStyle: "short",
                           hour12: true,
-                          timeZone: "America/New_York",
+                          timeZone: EASTERN_TIME_ZONE,
                         })
                       : "-"}
                   </td>
