@@ -1,29 +1,53 @@
 name: Scheduled Cron Job
 
 on:
-    schedule:
-        # Runs every 12 minutes (production only)
-        - cron: "*/12 * * * *"
-    workflow_dispatch:
-        inputs:
-            environment:
-                description: "Target environment"
-                required: true
-                default: "production"
-                type: choice
-                options:
-                    - production
-                    - staging
+  schedule:
+    # Runs every 12 minutes (production only)
+    - cron: "*/12 * * * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
 
 jobs:
-    cron:
-        runs-on: ubuntu-latest
-        timeout-minutes: 5
-        environment: ${{ github.event.inputs.environment || 'production' }}
+  cron:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    concurrency:
+      group: cron-${{ github.event.inputs.environment || 'production' }}
+      cancel-in-progress: false
 
-        steps:
-            - name: Trigger cron endpoint
-              run: |
-                  echo "Environment: ${{ github.event.inputs.environment || 'production' }}"
-                  curl -f -X GET \
-                    "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/cron?key=${{ secrets.CRON_SECRET }}&job=HOURLY"
+    steps:
+      - name: Validate required secrets
+        env:
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$NEXT_PUBLIC_APP_URL" ]; then
+            echo "NEXT_PUBLIC_APP_URL is missing in GitHub Secrets."
+            exit 1
+          fi
+
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is missing in GitHub Secrets."
+            exit 1
+          fi
+
+      - name: Trigger cron endpoint
+        run: |
+          echo "Environment: ${{ github.event.inputs.environment || 'production' }}"
+          BASE_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}"
+          NORMALIZED_BASE_URL="${BASE_URL%/}"
+          ENDPOINT_URL="${NORMALIZED_BASE_URL}/api/cron?job=HOURLY"
+          curl --fail-with-body --silent --show-error -X GET \
+            --retry 3 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 10 --max-time 60 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$ENDPOINT_URL"
