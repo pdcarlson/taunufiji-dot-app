@@ -115,6 +115,20 @@ If this command fails, do not promote staging to production until the failing ch
 2. Ensure the user has a housing-admin role for housing mutations.
 3. Check that staging role IDs point to the correct guild roles (not production roles).
 
+### Symptom: Cron workflow fails with `curl (22)` and HTTP `500`
+
+1. Open the failed Actions log and inspect the response body:
+   - If body includes `Server Configuration Error`, the app runtime is missing required cron config.
+2. In Appwrite Console for the target site (staging or production), verify:
+   - `CRON_SECRET` is present and non-empty.
+   - `NEXT_PUBLIC_APP_URL` matches the deployed site URL for that environment.
+3. Re-deploy the site after updating environment variables (Appwrite does not always apply env edits to already-running builds).
+4. Re-run manual cron dispatch:
+   - `gh workflow run cron.yml --ref staging -f environment=staging`
+5. If still failing after redeploy:
+   - Confirm GitHub Environment secrets `CRON_SECRET` and `NEXT_PUBLIC_APP_URL` match Appwrite site values.
+   - Confirm endpoint auth contract is Bearer header (`Authorization: Bearer <CRON_SECRET>`), not query-string `key`.
+
 ## Cron Jobs
 
 - GitHub Actions workflow (`cron.yml`) runs on a `*/12 * * * *` schedule (every 12 minutes). The endpoint call uses `job=HOURLY` as a logical job name — it refers to the batch of hourly-cadence tasks (unlock, notify, expire) that are safe to run more frequently than once per hour.
