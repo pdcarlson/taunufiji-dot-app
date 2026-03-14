@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  quality-gate:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,14 +29,78 @@ jobs:
       - name: Lint
         run: npm run lint
 
+  typecheck:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Type check
         run: npx tsc --noEmit
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Test
         run: npm run test -- --run
 
+  coverage-critical:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Coverage (Critical Modules)
         run: npm run test:coverage:critical
+
+  e2e-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
@@ -44,6 +108,10 @@ jobs:
       - name: E2E Smoke Tests
         run: npm run test:e2e
 
+  validate-secrets:
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Validate GitHub Secrets
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
@@ -52,6 +120,22 @@ jobs:
             echo "CRON_SECRET is missing in GitHub Secrets!"
             exit 1
           fi
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build
         env:
@@ -73,3 +157,17 @@ jobs:
           DISCORD_ROLE_ID_HOUSING_CHAIR: "mock-role-housing-chair"
           CRON_SECRET: "mock-cron-secret"
         run: npm run build
+
+  quality-gate:
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - typecheck
+      - test
+      - coverage-critical
+      - e2e-smoke
+      - validate-secrets
+      - build
+    steps:
+      - name: Quality gate passed
+        run: echo "All CI checks passed."

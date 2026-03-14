@@ -120,3 +120,5 @@ If this command fails, do not promote staging to production until the failing ch
 - GitHub Actions workflow (`cron.yml`) runs on a `*/12 * * * *` schedule (every 12 minutes). The endpoint call uses `job=HOURLY` as a logical job name — it refers to the batch of hourly-cadence tasks (unlock, notify, expire) that are safe to run more frequently than once per hour.
 - **Scheduled runs** always target the `production` environment (the schedule trigger has no environment input).
 - **Manual runs** (`workflow_dispatch`) allow selecting `production` or `staging` via the `environment` input, which controls which GitHub Environment secrets (and therefore which `NEXT_PUBLIC_APP_URL` and `CRON_SECRET`) are used.
+- The cron endpoint authenticates with `Authorization: Bearer <CRON_SECRET>`. Do not pass the secret as a query parameter.
+- The workflow uses retry and timeout safeguards (`--retry`, `--connect-timeout`, `--max-time`) and a concurrency group so overlapping cron runs are prevented.

@@ -1,5 +1,19 @@
 # Project Log
 
+## 2026-03-14: Cron Reliability Hardening
+
+- **Cron contract fix**:
+  - Updated `.github/workflows/cron.yml` to call `/api/cron?job=HOURLY` with `Authorization: Bearer <CRON_SECRET>` (matching API route auth).
+  - Added URL normalization, `curl` retries/timeouts, and explicit secret preflight checks.
+  - Added workflow concurrency grouping to avoid overlapping scheduled runs.
+- **API diagnostics**:
+  - Improved `app/api/cron/route.ts` error responses with stable error codes (`UNAUTHORIZED`, `INVALID_JOB`, `SERVER_CONFIG_ERROR`, `JOB_EXECUTION_FAILED`) and structured logging by job.
+- **Regression protection**:
+  - Added `app/api/cron/route.test.ts` covering auth failures, invalid job, missing server secret, success dispatch, and execution exceptions.
+  - Refactored `.github/workflows/ci.yml` into explicit gate jobs (lint, typecheck, tests, coverage, e2e, secret validation, build) plus aggregate `quality-gate`.
+- **Validation snapshot**:
+  - Manual `workflow_dispatch` runs confirmed current remote `staging` and `main` cron workflows still fail with `curl` exit `22` and HTTP `500` while using the legacy query-key call path.
+
 ## 2026-03-13: Library Upload Auth + Metadata Stability Fix
 
 - **Upload auth correctness**:
