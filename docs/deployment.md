@@ -117,17 +117,31 @@ If this command fails, do not promote staging to production until the failing ch
 
 ### Symptom: Cron workflow fails with `curl (22)` and HTTP `500`
 
-1. Open the failed Actions log and inspect the response body:
-   - If body includes `Server Configuration Error`, the app runtime is missing required cron config.
-2. In Appwrite Console for the target site (staging or production), verify:
+1. Run a no-redeploy preflight request against the currently deployed URL (from local shell):
+
+   ```bash
+   BASE_URL="<staging-app-url>"
+   CRON_SECRET="<staging-cron-secret>"
+   curl --silent --show-error \
+     -H "Authorization: Bearer ${CRON_SECRET}" \
+     "${BASE_URL%/}/api/cron"
+   ```
+
+2. Interpret preflight status before running `job=HOURLY`:
+   - `400` with `INVALID_JOB`: auth and runtime cron config are aligned (safe to run HOURLY).
+   - `401` with `UNAUTHORIZED`: GitHub/CLI secret does not match deployed runtime `CRON_SECRET`.
+   - `500` with `SERVER_CONFIG_ERROR`: deployed runtime is missing `CRON_SECRET` (Appwrite env issue).
+   - `500` with `JOB_EXECUTION_FAILED`: runtime dependencies failed during execution path; inspect app logs.
+3. In Appwrite Console for the target site (staging or production), verify:
    - `CRON_SECRET` is present and non-empty.
    - `NEXT_PUBLIC_APP_URL` matches the deployed site URL for that environment.
-3. Re-deploy the site after updating environment variables (Appwrite does not always apply env edits to already-running builds).
-4. Re-run manual cron dispatch:
+4. Confirm GitHub Environment secrets (`staging` or `production`) match Appwrite runtime values for:
+   - `NEXT_PUBLIC_APP_URL`
+   - `CRON_SECRET`
+5. Re-deploy only if Appwrite environment values changed (Appwrite does not always apply env edits to already-running builds).
+6. Re-run manual cron dispatch after preflight passes:
    - `gh workflow run cron.yml --ref staging -f environment=staging`
-5. If still failing after redeploy:
-   - Confirm GitHub Environment secrets `CRON_SECRET` and `NEXT_PUBLIC_APP_URL` match Appwrite site values.
-   - Confirm endpoint auth contract is Bearer header (`Authorization: Bearer <CRON_SECRET>`), not query-string `key`.
+7. Confirm endpoint auth contract is Bearer header (`Authorization: Bearer <CRON_SECRET>`), not query-string `key`.
 
 ## Cron Jobs
 

@@ -63,6 +63,10 @@ describe("GET /api/cron", () => {
       success: false,
       error: {
         code: "UNAUTHORIZED",
+        details: {
+          category: "AUTH",
+          reason: "AUTH_TOKEN_INVALID",
+        },
       },
     });
   }, 15000);
@@ -78,6 +82,10 @@ describe("GET /api/cron", () => {
       success: false,
       error: {
         code: "UNAUTHORIZED",
+        details: {
+          category: "AUTH",
+          reason: "AUTH_TOKEN_INVALID",
+        },
       },
     });
   }, 15000);
@@ -93,6 +101,29 @@ describe("GET /api/cron", () => {
       success: false,
       error: {
         code: "INVALID_JOB",
+        details: {
+          category: "VALIDATION",
+          reason: "INVALID_JOB_PARAMETER",
+        },
+      },
+    });
+  }, 15000);
+
+  it("returns 400 when job parameter is invalid", async () => {
+    const { GET } = await loadRouteFixture();
+
+    const response = await GET(createRequest("NOT_A_REAL_JOB", "test-secret"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toMatchObject({
+      success: false,
+      error: {
+        code: "INVALID_JOB",
+        details: {
+          category: "VALIDATION",
+          reason: "INVALID_JOB_PARAMETER",
+        },
       },
     });
   }, 15000);
@@ -108,6 +139,10 @@ describe("GET /api/cron", () => {
       success: false,
       error: {
         code: "SERVER_CONFIG_ERROR",
+        details: {
+          category: "CONFIGURATION",
+          reason: "CRON_SECRET_MISSING",
+        },
       },
     });
   }, 15000);
@@ -145,6 +180,10 @@ describe("GET /api/cron", () => {
       error: {
         code: "JOB_EXECUTION_FAILED",
         message: "explode",
+        details: {
+          category: "EXECUTION",
+          reason: "JOB_THROWN_ERROR",
+        },
       },
     });
   }, 15000);
