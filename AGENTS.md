@@ -185,3 +185,4 @@ If real credentials are not needed (e.g., for lint/test/build only), set `SKIP_E
 - Tests mock `server-only` in `vitest.setup.ts` so they run without any external services.
 - ESLint uses flat config (`eslint.config.mjs`). All rules are warnings — lint passes with 0 errors.
 - The `scripts/` directory is excluded from both ESLint and TypeScript compilation.
+- Ad-hoc debug outputs (API dumps, probe JSON, temporary logs) must be written outside the repository root (prefer Cursor workspace/temp paths). Do not commit debug artifacts.
