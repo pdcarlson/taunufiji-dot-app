@@ -27,7 +27,11 @@ export const CronService = {
    * Orchestrates the execution of all hourly tasks.
    */
   async runHourly() {
-    console.log("🚀 Starting Cron Job...");
+    console.log("[CronService]", {
+      job: "HOURLY",
+      phase: "start",
+      startedAt: new Date().toISOString(),
+    });
     const { taskRepository } = getContainer();
 
     // Aggregated Stats
@@ -41,39 +45,73 @@ export const CronService = {
     const unlockResult = await UnlockTasksJob.run(taskRepository);
     unlocked += unlockResult.unlocked;
     errors.push(...unlockResult.errors);
+    console.log("[CronService]", {
+      job: "HOURLY",
+      phase: "unlock_complete",
+      unlocked: unlockResult.unlocked,
+      errors: unlockResult.errors.length,
+    });
 
     // 2. Notify Recurring
     const recurringResult = await NotifyRecurringJob.run(taskRepository);
     unlocked += recurringResult.notified;
     errors.push(...recurringResult.errors);
+    console.log("[CronService]", {
+      job: "HOURLY",
+      phase: "notify_recurring_complete",
+      notified: recurringResult.notified,
+      errors: recurringResult.errors.length,
+    });
 
     // 3. Notify Urgent
     const urgentResult = await NotifyUrgentJob.run(taskRepository);
     urgent += urgentResult.urgent;
     errors.push(...urgentResult.errors);
+    console.log("[CronService]", {
+      job: "HOURLY",
+      phase: "notify_urgent_complete",
+      urgent: urgentResult.urgent,
+      errors: urgentResult.errors.length,
+    });
 
     // 4. Expire Duties (Self-Contained)
     const expireResult = await expireDutiesJob();
     errors.push(...expireResult.errors);
+    console.log("[CronService]", {
+      job: "HOURLY",
+      phase: "expire_duties_complete",
+      errors: expireResult.errors.length,
+    });
 
     // 5. Notify Expired
     const notifyExpiredResult = await NotifyExpiredJob.run(taskRepository);
     expired_notified += notifyExpiredResult.expired_notified;
     skipped_unassigned += notifyExpiredResult.skipped_unassigned;
     errors.push(...notifyExpiredResult.errors);
+    console.log("[CronService]", {
+      job: "HOURLY",
+      phase: "notify_expired_complete",
+      expiredNotified: notifyExpiredResult.expired_notified,
+      skippedUnassigned: notifyExpiredResult.skipped_unassigned,
+      errors: notifyExpiredResult.errors.length,
+    });
 
     // 6. Ensure Future Tasks (Self-Healing)
     await ensureFutureTasksJob();
 
     // Summary
-    const stats = {
+    const stats: CronResult = {
       unlocked,
       urgent,
       expired_notified,
       skipped_unassigned,
       errors,
     };
-    console.log("📊 Cron Summary:", stats);
+    console.log("[CronService]", {
+      job: "HOURLY",
+      phase: "completed",
+      ...stats,
+    });
     if (errors.length > 0) {
       console.error("⚠️ Cron Errors:", errors);
     }

@@ -61,6 +61,9 @@ This document is the durable behavioral reference for the Housing module.
 5. Admin approves -> `approved`.
 6. Next recurring instance is generated.
 7. If missed deadline, task transitions to `expired` and fine behavior is triggered.
+8. Overdue transition is canonicalized through shared expiry logic and may run from:
+   - cron (`ExpireDutiesJob`) as the primary scheduled path, and
+   - dashboard maintenance as a fallback path for assigned-user views.
 
 ## 3.2 One-Off Duty Flow
 
@@ -111,6 +114,7 @@ This document is the durable behavioral reference for the Housing module.
 - Allowed only for housing admins.
 - Should fail clearly if task is not found.
 - Historical audit concerns should be considered for already-approved records.
+- For recurring deletions using `this_and_future` or `entire_series`, the schedule is soft-deactivated (`active: false`) before future-row cleanup to prevent cron resurrection races.
 
 ### Claim / Unclaim
 
@@ -167,11 +171,15 @@ This document is the durable behavioral reference for the Housing module.
 - Recurrence generation should avoid creating overdue instances on recovery paths.
 - Expiry check must use consistent timezone assumptions.
 - Cron runs should be idempotent enough to avoid repeated destructive side effects.
+- `open` tasks whose due time has passed should not remain user-actionable in dashboard views; they must be transitioned to `expired` by canonical expiry logic or hidden until transition completes.
 
 ## 5.5 Notification Edge Cases
 
 - Notification delivery failure should not silently mark notification stage complete when retry is desired.
-- Critical dual-notification paths (admin channel + user DM) should only mark complete after required deliveries succeed.
+- Critical dual-notification paths (admin channel + user DM) should only mark complete after all required deliveries succeed.
+- Expired notifications require both channel and DM success before `notification_level` advances to `expired`.
+- Unlock and recurring notification stages should persist completion only after successful delivery.
+- Urgent reminder threshold is `12` hours before `due_at`.
 
 ## 6) Error Surface Expectations
 

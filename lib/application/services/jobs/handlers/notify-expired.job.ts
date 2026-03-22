@@ -2,9 +2,7 @@ import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
 
 export const NotifyExpiredJob = {
-  async run(
-    taskRepository: ITaskRepository,
-  ): Promise<{
+  async run(taskRepository: ITaskRepository): Promise<{
     expired_notified: number;
     skipped_unassigned: number;
     errors: string[];
@@ -24,9 +22,10 @@ export const NotifyExpiredJob = {
         (task) => task.notification_level !== "expired",
       );
 
-      console.log(
-        `📢 Found ${tasksToNotify.length} expired tasks needing notification`,
-      );
+      console.log("[NotifyExpiredJob]", {
+        phase: "expired_scan_complete",
+        expiredToNotify: tasksToNotify.length,
+      });
 
       for (const task of tasksToNotify) {
         try {
@@ -53,6 +52,9 @@ export const NotifyExpiredJob = {
             const errMsg = `Channel notification failed for task ${task.id}: ${channelResult.error}`;
             console.error(`[NotifyExpiredJob] ${errMsg}`);
             errors.push(errMsg);
+            // Dual-delivery behavior: do not notify user or advance stage
+            // until the channel path succeeds.
+            continue;
           }
 
           // 2. Notify User (DM) - Critical
@@ -72,11 +74,16 @@ export const NotifyExpiredJob = {
             continue; // Skip DB update — retry next run
           }
 
-          // 3. Mark as Notified only if DM succeeded
+          // 3. Mark as Notified only if BOTH channel and DM succeeded
           await taskRepository.update(task.id, {
             notification_level: "expired",
           });
 
+          console.log("[NotifyExpiredJob]", {
+            phase: "expired_notified",
+            taskId: task.id,
+            assignee: task.assigned_to,
+          });
           expired_notified++;
         } catch (error: unknown) {
           const errMsg = `Failed to notify expired task ${task.id}: ${error instanceof Error ? error.message : String(error)}`;

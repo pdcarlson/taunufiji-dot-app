@@ -1,31 +1,18 @@
-import { AppwriteTaskRepository } from "@/lib/infrastructure/persistence/task.repository";
-import { PointsService } from "@/lib/application/services/ledger/points.service";
-import { ScheduleService } from "@/lib/application/services/housing/schedule.service";
-import { AppwriteLedgerRepository } from "@/lib/infrastructure/persistence/ledger.repository";
-import { AppwriteUserRepository } from "@/lib/infrastructure/persistence/user.repository";
-import { HOUSING_CONSTANTS } from "@/lib/constants";
-
-// Helper to construct services (DI Container Lite)
-function getServices() {
-  const taskRepo = new AppwriteTaskRepository();
-  const ledgerRepo = new AppwriteLedgerRepository();
-  const userRepo = new AppwriteUserRepository();
-
-  const pointsService = new PointsService(userRepo, ledgerRepo);
-  const scheduleService = new ScheduleService(taskRepo);
-
-  return { taskRepo, pointsService, scheduleService };
-}
+import { getContainer } from "@/lib/infrastructure/container";
+import { expireOverdueDutyTask } from "@/lib/application/services/housing/overdue-duty.service";
 
 export const expireDutiesJob = async (): Promise<{ errors: string[] }> => {
-  const { taskRepo, pointsService, scheduleService } = getServices();
+  const { taskRepository, pointsService, scheduleService } = getContainer();
   const errors: string[] = [];
   const now = new Date();
 
-  console.log("⏰ Running ExpireDutiesJob...");
+  console.log("[ExpireDutiesJob]", {
+    phase: "start",
+    now: now.toISOString(),
+  });
 
   try {
-    const allOpenTasks = await taskRepo.findMany({
+    const allOpenTasks = await taskRepository.findMany({
       status: "open",
       limit: 100,
     });
@@ -36,46 +23,28 @@ export const expireDutiesJob = async (): Promise<{ errors: string[] }> => {
       return new Date(task.due_at) <= now;
     });
 
-    console.log(`   Found ${overdueTasks.length} overdue tasks.`);
+    console.log("[ExpireDutiesJob]", {
+      phase: "overdue_scan_complete",
+      overdueCount: overdueTasks.length,
+    });
 
     for (const task of overdueTasks) {
       try {
-        if (task.type === "bounty" || task.type === "project") continue;
-
-        console.log(`   Expiring task: "${task.title}" (ID: ${task.id})`);
-
-        await taskRepo.update(task.id, {
-          status: "expired",
+        const result = await expireOverdueDutyTask(task, {
+          taskRepository,
+          pointsService,
+          scheduleService,
         });
-
-        if (task.assigned_to) {
-          try {
-            await pointsService.awardPoints(task.assigned_to, {
-              amount: -Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY),
-              reason: `Missed Duty: ${task.title}`,
-              category: "fine",
-            });
-          } catch (e) {
-            console.error(`   Failed to fine user for ${task.id}`, e);
-          }
-        }
-
-        if (task.schedule_id) {
-          try {
-            await scheduleService.triggerNextInstance(task.schedule_id, task);
-            console.log(
-              `   Triggered next instance for schedule ${task.schedule_id}`,
-            );
-          } catch (e) {
-            // CRITICAL: If this fails, the recurrence chain breaks.
-            console.error(
-              `🚨 CRITICAL SCHEDULER ERROR: Failed to trigger next instance for expired task ${task.id} (Schedule: ${task.schedule_id})`,
-              e,
-            );
-            errors.push(
-              `Scheduler Failed for ${task.id}: ${e instanceof Error ? e.message : String(e)}`,
-            );
-          }
+        errors.push(...result.errors);
+        if (result.expired) {
+          console.log("[ExpireDutiesJob]", {
+            phase: "task_expired",
+            taskId: task.id,
+            scheduleId: task.schedule_id ?? null,
+            fined: result.fined,
+            triggeredNextInstance: result.triggeredNextInstance,
+            errorCount: result.errors.length,
+          });
         }
       } catch (error: unknown) {
         const errMsg = `Failed to expire task ${task.id}: ${error instanceof Error ? error.message : String(error)}`;

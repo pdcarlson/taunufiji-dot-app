@@ -225,14 +225,24 @@ export default function EditTaskModal({
           : undefined,
       });
       if (result.success) {
-        toast.success("Task deleted");
+        const successMessage =
+          isRecurring && task.schedule_id
+            ? mutationScope === "entire_series"
+              ? "Recurring series deleted and schedule deactivated"
+              : mutationScope === "this_and_future"
+                ? "Task and future recurring instances deleted"
+                : "Recurring task instance deleted"
+            : "Task deleted";
+        toast.success(successMessage);
         onRefresh();
         onClose();
       } else {
         toast.error(result.error || "Delete failed");
       }
-    } catch {
-      toast.error("Failed to delete");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

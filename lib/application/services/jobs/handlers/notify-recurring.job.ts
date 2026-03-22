@@ -19,19 +19,16 @@ export const NotifyRecurringJob = {
         (task) => task.notification_level === "none" && task.schedule_id,
       );
 
-      console.log(
-        `📬 Found ${uninformedRecurring.length} uninformed recurring tasks`,
-      );
+      console.log("[NotifyRecurringJob]", {
+        phase: "recurring_scan_complete",
+        uninformedRecurring: uninformedRecurring.length,
+      });
 
       for (const task of uninformedRecurring) {
         try {
           if (!task.assigned_to) continue;
 
-          await taskRepository.update(task.id, {
-            notification_level: "unlocked",
-          });
-
-          await NotificationService.sendNotification(
+          const notificationResult = await NotificationService.sendNotification(
             task.assigned_to,
             "unlocked",
             {
@@ -39,6 +36,25 @@ export const NotifyRecurringJob = {
               taskId: task.id,
             },
           );
+          if (!notificationResult.success) {
+            const errMsg = `Recurring notification failed for task ${task.id}: ${notificationResult.error}`;
+            errors.push(errMsg);
+            console.error("[NotifyRecurringJob]", {
+              phase: "recurring_notification_failed",
+              taskId: task.id,
+              error: notificationResult.error,
+            });
+            continue;
+          }
+          await taskRepository.update(task.id, {
+            notification_level: "unlocked",
+          });
+
+          console.log("[NotifyRecurringJob]", {
+            phase: "recurring_notified",
+            taskId: task.id,
+            assignee: task.assigned_to,
+          });
           notified++;
         } catch (error: unknown) {
           const errMsg = `Failed to notify recurring task ${task.id}: ${error instanceof Error ? error.message : String(error)}`;

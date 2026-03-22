@@ -20,25 +20,48 @@ export const UnlockTasksJob = {
         (task) => task.unlock_at && new Date(task.unlock_at) <= now,
       );
 
-      console.log(`🔓 Found ${tasksToUnlock.length} locked tasks to unlock`);
+      console.log("[UnlockTasksJob]", {
+        phase: "unlock_scan_complete",
+        toUnlock: tasksToUnlock.length,
+      });
 
       for (const task of tasksToUnlock) {
         try {
           await taskRepository.update(task.id, {
             status: "open",
-            notification_level: "unlocked",
+            notification_level: "none",
           });
 
           if (task.assigned_to) {
-            await NotificationService.sendNotification(
-              task.assigned_to,
-              "unlocked",
-              {
-                title: task.title,
+            const notificationResult =
+              await NotificationService.sendNotification(
+                task.assigned_to,
+                "unlocked",
+                {
+                  title: task.title,
+                  taskId: task.id,
+                },
+              );
+            if (!notificationResult.success) {
+              const errMsg = `Unlock notification failed for task ${task.id}: ${notificationResult.error}`;
+              errors.push(errMsg);
+              console.error("[UnlockTasksJob]", {
+                phase: "unlock_notification_failed",
                 taskId: task.id,
-              },
-            );
+                error: notificationResult.error,
+              });
+              continue;
+            }
+            await taskRepository.update(task.id, {
+              notification_level: "unlocked",
+            });
           }
+
+          console.log("[UnlockTasksJob]", {
+            phase: "task_unlocked",
+            taskId: task.id,
+            assignedTo: task.assigned_to ?? null,
+          });
           unlocked++;
         } catch (error: unknown) {
           const errMsg = `Failed to unlock task ${task.id}: ${error instanceof Error ? error.message : String(error)}`;
