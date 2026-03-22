@@ -62,20 +62,32 @@ async function main(): Promise<void> {
   });
 
   const type = (attr as { type?: string }).type;
+  const format = (attr as any).format;
 
-  if (type === "string") {
+  // Handle string attributes with format === "enum" (they are enums)
+  if (type === "string" && format === "enum") {
+    console.log(
+      `Detected enum attribute "${ATTRIBUTE_KEY}" (type=string, format=enum). Checking for "${NEW_ELEMENT}"...`,
+    );
+    // Fall through to enum handling logic below
+  } else if (type === "string") {
+    // Non-enum strings accept any value
     console.log(
       `OK: "${ATTRIBUTE_KEY}" is a string attribute — "${NEW_ELEMENT}" is already allowed at runtime. No schema update.`,
     );
     return;
-  }
-
-  if (type !== "enum") {
+  } else if (type !== "enum") {
+    // Not a string, not an enum - unexpected type
     console.error(
       `Attribute "${ATTRIBUTE_KEY}" has unexpected type "${type ?? "unknown"}". Update Appwrite manually or extend this script.`,
     );
     process.exitCode = 1;
     return;
+  } else {
+    // type === "enum"
+    console.log(
+      `Detected enum attribute "${ATTRIBUTE_KEY}" (type=enum). Checking for "${NEW_ELEMENT}"...`,
+    );
   }
 
   const enumAttr = attr as Models.AttributeEnum;
