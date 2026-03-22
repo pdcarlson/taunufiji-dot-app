@@ -79,6 +79,21 @@ Before promoting a merge to `main`, verify the target Appwrite Site has these ke
 
 For production specifically, the three `DISCORD_ROLE_ID_*` keys must be present before deployment. Missing role IDs can break role-gated runtime flows even when unrelated routes (such as image proxying) build successfully.
 
+## Appwrite: extending `notification_level` (housing)
+
+The app may introduce new persisted values for `assignments.notification_level` (for example `expired_admin`).
+
+1. **If the attribute is a string** in Appwrite (common): no schema migration is required; any new value the code writes is accepted.
+2. **If the attribute is an enum**: add the new value to the enum in the Appwrite Console, or run:
+
+   ```bash
+   APPWRITE_TARGET_PROJECT_ID="<project id>" \
+   APPWRITE_TARGET_API_KEY="<server API key with databases.write>" \
+   npx tsx scripts/add-expired-admin-notification-enum.ts
+   ```
+
+   With no `APPWRITE_TARGET_*` overrides, the script uses `NEXT_PUBLIC_APPWRITE_PROJECT_ID` and `APPWRITE_STAGING_API_KEY` / `APPWRITE_API_KEY`. It reads the attribute type first; string attributes are a no-op.
+
 ## Staging Runtime Diagnostics
 
 Use the diagnostics script from the repo root:
