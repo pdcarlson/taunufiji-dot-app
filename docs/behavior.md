@@ -95,6 +95,26 @@ This document is the durable behavioral reference for the Housing module.
 
 ## 4) Mutation Behavior Rules
 
+### Housing admin: recurring scope → collections written
+
+UI scope labels map to `RecurringMutationScope` on server actions. Cron reads **`housing_schedules`** for `ensureFutureTasksJob` / `triggerNextInstance`; if the schedule row is wrong, new instances can ignore an edit that only touched **`housing_assignments`**.
+
+| UI / scope | Entry point | `housing_schedules` | `housing_assignments` | Cron can ignore edit if schedule wrong? |
+| --- | --- | --- | --- | --- |
+| **This instance** | `updateTaskAction` / `deleteTaskAction` → `AdminService` | No | Yes (single row) | No (next instance uses unchanged schedule) |
+| **This + future** (edit) | `updateTaskAction` → `ScheduleService.updateTaskThisAndFuture` | Yes — **first** (`title`, `description`, `points_value`, `assigned_to`, optional `lead_time_hours` via `scheduleLeadTimeHours`, `last_generated_at`) | Yes — current row + non-final rows with `due_at >= effectiveFrom` | **Would** — schedule is updated in the same flow before rows |
+| **Entire series** (edit) | `updateTaskAction` → `ScheduleService.updateTaskEntireSeries` | Same fields as this + future (entire non-final set) | Yes — current + all other non-final rows | **Would** — schedule updated first |
+| **This + future** (delete) | `deleteTaskAction` → `ScheduleService.deleteTaskThisAndFuture` | Yes — `active: false` **before** deletes | Yes — current + matching future rows | N/A (schedule deactivated; no new instances) |
+| **Entire series** (delete) | `deleteTaskAction` → `ScheduleService.deleteTaskEntireSeries` | Yes — `active: false` **before** deletes | Yes — peers then current row; throws if any delete fails | N/A |
+| **Lead time only** (recurring edit modal) | Same `updateTaskAction` with `scheduleLeadTimeHours` in options (no separate second action) | Yes | Yes — unlock/status on open/locked rows when lead time changes | **Would** if only assignments changed |
+
+**Already correct (audit, no code change needed for behavior):**
+
+- `createScheduleAction` → `ScheduleService.createSchedule`: writes schedule then first assignment.
+- `approveTaskAction` → `verifyTask` + `triggerNextInstance`: reads schedule for next instance (schedule must already match series intent).
+- `adminReassign` / `rejectTask` / non-recurring paths: assignment-only by design.
+- `updateScheduleLeadTimeAction` → `ScheduleService.updateSchedule`: direct schedule + scoped row recalculation when lead time changes without a task edit (still valid).
+
 ### Create Task
 
 - Allowed only for housing admins.

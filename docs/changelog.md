@@ -1,5 +1,11 @@
 # Project Log
 
+## 2026-03-22: Housing recurring admin — schedule vs assignment consistency
+
+- **Recurring edits**: `ScheduleService` updates `housing_schedules` **before** `housing_assignments` for this-and-future and entire-series task edits so hourly cron cannot emit a new instance from stale schedule metadata mid-mutation.
+- **Lead time**: Edit-task flow passes `scheduleLeadTimeHours` through `RecurringMutationOptions` so schedule lead time and row unlock windows update in one service transaction (no separate success toast after a failed task update).
+- **Entire-series delete**: Deletes peer assignment rows first with `Promise.allSettled`; throws if any fail after `active: false`, so the UI does not imply the series is gone when rows remain.
+
 ## 2026-03-22: Housing time-driven pipeline unification
 
 - **Appwrite note**: `scripts/add-expired-admin-notification-enum.ts` documents how to add `expired_admin` when `notification_level` is an enum; staging uses a **string** attribute so no enum migration was required there.
