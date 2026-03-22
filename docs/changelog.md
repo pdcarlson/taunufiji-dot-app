@@ -1,5 +1,13 @@
 # Project Log
 
+## 2026-03-22: Housing time-driven pipeline unification
+
+- **Appwrite note**: `scripts/add-expired-admin-notification-enum.ts` documents how to add `expired_admin` when `notification_level` is an enum; staging uses a **string** attribute so no enum migration was required there.
+- **Single pipeline**: `HousingTimeDrivenPipeline` defines the ordered hourly sequence (unlock → recurring notify → urgent → expire duties → notify expired → ensure future); `CronService.runHourly` delegates to it.
+- **Maintenance alignment**: Per-user maintenance reuses shared `processUnlockForTask` and `expireOverdueDutyTask`; does not duplicate Discord stages or ensure-future healing.
+- **Cron query correctness**: Jobs page through `findMany` with targeted filters (`due_at`, `unlock_at`, notification filters) so backlogs beyond 100 rows are not skipped; `expireDutiesJob` includes overdue `pending` (no proof) as well as `open`.
+- **Expired notifications**: Added `expired_admin` stage when housing channel succeeds but assignee DM fails; documented primary/secondary behavior in `docs/behavior.md`.
+
 ## 2026-03-14: Cron Reliability Hardening
 
 - **Cron contract fix**:

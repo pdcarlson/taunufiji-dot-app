@@ -30,6 +30,7 @@ This document is the durable behavioral reference for the Housing module.
 - `none`: no delivery stage completed
 - `unlocked`: initial availability notification sent
 - `urgent`: urgent warning sent
+- `expired_admin`: housing admin channel was alerted for an expired task; assignee DM not yet confirmed (retry DM only on the next run)
 - `expired`: expiry path notifications completed
 
 ## 2) Identity and Authorization Model
@@ -176,8 +177,13 @@ This document is the durable behavioral reference for the Housing module.
 ## 5.5 Notification Edge Cases
 
 - Notification delivery failure should not silently mark notification stage complete when retry is desired.
-- Critical dual-notification paths (admin channel + user DM) should only mark complete after all required deliveries succeed.
-- Expired notifications require both channel and DM success before `notification_level` advances to `expired`.
+- **Expired task alerts (duty / one-off / project; not bounties)** use a **primary** path and a **secondary** path:
+  - **Primary — housing admin channel**: Treat as the critical path for admins. The system must not advance to the final `notification_level: expired` until this step has succeeded at least once for the task.
+  - **Secondary — assignee DM**: Less critical for admin awareness but still required before the flow is considered complete.
+- **Partial failure rules**:
+  - Channel fails: do not send the assignee DM yet; leave `notification_level` below `expired_admin`; retry both channel and DM on a later run.
+  - Channel succeeds, DM fails: set `notification_level` to `expired_admin` so the next cron pass skips repeating the channel alert and only retries the DM; after DM succeeds, set `notification_level` to `expired`.
+  - Unassigned expired tasks: mark `expired` without DMs (no assignee); admins still see the task in data if needed.
 - Unlock and recurring notification stages should persist completion only after successful delivery.
 - Urgent reminder threshold is `12` hours before `due_at`.
 

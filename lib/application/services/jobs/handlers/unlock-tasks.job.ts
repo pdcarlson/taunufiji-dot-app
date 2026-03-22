@@ -1,5 +1,12 @@
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
-import { NotificationService } from "@/lib/application/services/shared/notification.service";
+import { processUnlockForTask } from "@/lib/application/services/housing/task-unlock";
+import {
+  fetchAllTaskPages,
+  HOUSING_CRON_TASK_PAGE_SIZE,
+} from "../task-query-pagination";
+
+export { processUnlockForTask } from "@/lib/application/services/housing/task-unlock";
+export type { UnlockSingleTaskResult } from "@/lib/application/services/housing/task-unlock";
 
 export const UnlockTasksJob = {
   async run(
@@ -10,14 +17,15 @@ export const UnlockTasksJob = {
     const now = new Date();
 
     try {
-      const lockedTasks = await taskRepository.findMany({
-        status: "locked",
-        limit: 100,
-      });
-
-      // Filter to only those with unlock_at <= now
-      const tasksToUnlock = lockedTasks.filter(
-        (task) => task.unlock_at && new Date(task.unlock_at) <= now,
+      const tasksToUnlock = await fetchAllTaskPages(
+        taskRepository,
+        {
+          status: "locked",
+          unlockBefore: now,
+          orderBy: "unlock_at",
+          orderDirection: "asc",
+        },
+        HOUSING_CRON_TASK_PAGE_SIZE,
       );
 
       console.log("[UnlockTasksJob]", {
@@ -26,47 +34,10 @@ export const UnlockTasksJob = {
       });
 
       for (const task of tasksToUnlock) {
-        try {
-          await taskRepository.update(task.id, {
-            status: "open",
-            notification_level: "none",
-          });
-
-          if (task.assigned_to) {
-            const notificationResult =
-              await NotificationService.sendNotification(
-                task.assigned_to,
-                "unlocked",
-                {
-                  title: task.title,
-                  taskId: task.id,
-                },
-              );
-            if (!notificationResult.success) {
-              const errMsg = `Unlock notification failed for task ${task.id}: ${notificationResult.error}`;
-              errors.push(errMsg);
-              console.error("[UnlockTasksJob]", {
-                phase: "unlock_notification_failed",
-                taskId: task.id,
-                error: notificationResult.error,
-              });
-              continue;
-            }
-            await taskRepository.update(task.id, {
-              notification_level: "unlocked",
-            });
-          }
-
-          console.log("[UnlockTasksJob]", {
-            phase: "task_unlocked",
-            taskId: task.id,
-            assignedTo: task.assigned_to ?? null,
-          });
+        const result = await processUnlockForTask(taskRepository, task, now);
+        errors.push(...result.errors);
+        if (result.unlocked) {
           unlocked++;
-        } catch (error: unknown) {
-          const errMsg = `Failed to unlock task ${task.id}: ${error instanceof Error ? error.message : String(error)}`;
-          console.error(errMsg);
-          errors.push(errMsg);
         }
       }
     } catch (error: unknown) {

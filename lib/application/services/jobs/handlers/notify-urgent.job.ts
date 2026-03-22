@@ -1,6 +1,10 @@
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
 import { HOUSING_CONSTANTS } from "@/lib/constants";
+import {
+  fetchAllTaskPages,
+  HOUSING_CRON_TASK_PAGE_SIZE,
+} from "../task-query-pagination";
 
 export const NotifyUrgentJob = {
   async run(
@@ -9,20 +13,35 @@ export const NotifyUrgentJob = {
     const errors: string[] = [];
     let urgent = 0;
     const now = new Date();
-    const thresholdMs = HOUSING_CONSTANTS.URGENT_THRESHOLD_HOURS * 60 * 60 * 1000;
+    const thresholdMs =
+      HOUSING_CONSTANTS.URGENT_THRESHOLD_HOURS * 60 * 60 * 1000;
     const urgentThreshold = new Date(now.getTime() + thresholdMs);
 
     try {
-      const allOpenTasks = await taskRepository.findMany({
-        status: "open",
-        limit: 100,
-      });
+      const openDueSoon = await fetchAllTaskPages(
+        taskRepository,
+        {
+          status: "open",
+          dueBefore: urgentThreshold,
+          assignedToPresent: true,
+          orderBy: "due_at",
+          orderDirection: "asc",
+        },
+        HOUSING_CRON_TASK_PAGE_SIZE,
+      );
 
-      // Filter for urgent candidates
-      const urgentCandidates = allOpenTasks.filter((task) => {
+      const urgentCandidates = openDueSoon.filter((task) => {
         if (!task.due_at || !task.assigned_to) return false;
-        const dueTime = new Date(task.due_at).getTime();
-        return dueTime <= urgentThreshold.getTime();
+        if (task.type === "bounty") return false;
+        const level = task.notification_level;
+        if (
+          level !== undefined &&
+          level !== "none" &&
+          level !== "unlocked"
+        ) {
+          return false;
+        }
+        return true;
       });
 
       console.log(
@@ -31,15 +50,6 @@ export const NotifyUrgentJob = {
 
       for (const task of urgentCandidates) {
         try {
-          if (task.type === "bounty") continue;
-          if (
-            task.notification_level !== "none" &&
-            task.notification_level !== "unlocked"
-          ) {
-            continue;
-          }
-
-          // Send notification FIRST, update DB only on success
           const result = await NotificationService.sendNotification(
             task.assigned_to!,
             "urgent",
@@ -53,7 +63,7 @@ export const NotifyUrgentJob = {
             const errMsg = `Urgent DM failed for task ${task.id}: ${result.error}`;
             console.error(`[NotifyUrgentJob] ${errMsg}`);
             errors.push(errMsg);
-            continue; // Don't update DB — retry next run
+            continue;
           }
 
           await taskRepository.update(task.id, {

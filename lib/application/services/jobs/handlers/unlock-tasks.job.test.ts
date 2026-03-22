@@ -11,15 +11,19 @@ describe("UnlockTasksJob", () => {
   });
 
   it("opens task and marks unlocked when DM succeeds", async () => {
-    taskRepository.findMany = vi.fn().mockResolvedValue([
-      {
-        id: "task-1",
-        title: "Kitchen",
-        status: "locked",
-        unlock_at: new Date(Date.now() - 60_000).toISOString(),
-        assigned_to: "user-1",
-      },
-    ] as any);
+    taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
+      const offset = opts.offset ?? 0;
+      if (offset > 0) return [];
+      return [
+        {
+          id: "task-1",
+          title: "Kitchen",
+          status: "locked",
+          unlock_at: new Date(Date.now() - 60_000).toISOString(),
+          assigned_to: "user-1",
+        },
+      ] as any;
+    });
     taskRepository.update = vi.fn().mockResolvedValue({} as any);
     vi.spyOn(NotificationService, "sendNotification").mockResolvedValue({
       success: true,
@@ -39,15 +43,19 @@ describe("UnlockTasksJob", () => {
   });
 
   it("keeps notification level retryable when DM fails", async () => {
-    taskRepository.findMany = vi.fn().mockResolvedValue([
-      {
-        id: "task-2",
-        title: "Bathroom",
-        status: "locked",
-        unlock_at: new Date(Date.now() - 60_000).toISOString(),
-        assigned_to: "user-2",
-      },
-    ] as any);
+    taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
+      const offset = opts.offset ?? 0;
+      if (offset > 0) return [];
+      return [
+        {
+          id: "task-2",
+          title: "Bathroom",
+          status: "locked",
+          unlock_at: new Date(Date.now() - 60_000).toISOString(),
+          assigned_to: "user-2",
+        },
+      ] as any;
+    });
     taskRepository.update = vi.fn().mockResolvedValue({} as any);
     vi.spyOn(NotificationService, "sendNotification").mockResolvedValue({
       success: false,
