@@ -1,8 +1,17 @@
-import { getContainer } from "@/lib/infrastructure/container";
+import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { expireOverdueDutyTask } from "@/lib/application/services/housing/overdue-duty.service";
+import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
+import { ScheduleService } from "@/lib/application/services/housing/schedule.service";
+import {
+  fetchAllTaskPages,
+  HOUSING_CRON_TASK_PAGE_SIZE,
+} from "../task-query-pagination";
 
-export const expireDutiesJob = async (): Promise<{ errors: string[] }> => {
-  const { taskRepository, pointsService, scheduleService } = getContainer();
+export const expireDutiesJob = async (
+  taskRepository: ITaskRepository,
+  pointsService: IPointsService,
+  scheduleService: ScheduleService,
+): Promise<{ errors: string[] }> => {
   const errors: string[] = [];
   const now = new Date();
 
@@ -12,15 +21,41 @@ export const expireDutiesJob = async (): Promise<{ errors: string[] }> => {
   });
 
   try {
-    const allOpenTasks = await taskRepository.findMany({
-      status: "open",
-      limit: 100,
-    });
+    const openOverdue = await fetchAllTaskPages(
+      taskRepository,
+      {
+        status: "open",
+        dueBefore: now,
+        proofS3KeyAbsent: true,
+        orderBy: "due_at",
+        orderDirection: "asc",
+      },
+      HOUSING_CRON_TASK_PAGE_SIZE,
+    );
 
-    // Filter for overdue tasks
-    const overdueTasks = allOpenTasks.filter((task) => {
-      if (!task.due_at) return false;
-      return new Date(task.due_at) <= now;
+    const pendingOverdue = await fetchAllTaskPages(
+      taskRepository,
+      {
+        status: "pending",
+        dueBefore: now,
+        proofS3KeyAbsent: true,
+        orderBy: "due_at",
+        orderDirection: "asc",
+      },
+      HOUSING_CRON_TASK_PAGE_SIZE,
+    );
+
+    const byId = new Map<string, (typeof openOverdue)[0]>();
+    for (const task of openOverdue) {
+      byId.set(task.id, task);
+    }
+    for (const task of pendingOverdue) {
+      byId.set(task.id, task);
+    }
+    const overdueTasks = [...byId.values()].sort((a, b) => {
+      const aDue = a.due_at ? new Date(a.due_at).getTime() : 0;
+      const bDue = b.due_at ? new Date(b.due_at).getTime() : 0;
+      return aDue - bDue;
     });
 
     console.log("[ExpireDutiesJob]", {

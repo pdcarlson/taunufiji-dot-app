@@ -1,5 +1,9 @@
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
+import {
+  fetchAllTaskPages,
+  HOUSING_CRON_TASK_PAGE_SIZE,
+} from "../task-query-pagination";
 
 export const NotifyRecurringJob = {
   async run(
@@ -9,27 +13,30 @@ export const NotifyRecurringJob = {
     let notified = 0;
 
     try {
-      const allOpenTasks = await taskRepository.findMany({
-        status: "open",
-        limit: 100,
-      });
-
-      // Filter to recurring tasks with no notification yet
-      const uninformedRecurring = allOpenTasks.filter(
-        (task) => task.notification_level === "none" && task.schedule_id,
+      const candidates = await fetchAllTaskPages(
+        taskRepository,
+        {
+          status: "open",
+          notificationLevelOrNull: "none",
+          scheduleIdPresent: true,
+          assignedToPresent: true,
+          orderBy: "due_at",
+          orderDirection: "asc",
+        },
+        HOUSING_CRON_TASK_PAGE_SIZE,
       );
 
       console.log("[NotifyRecurringJob]", {
         phase: "recurring_scan_complete",
-        uninformedRecurring: uninformedRecurring.length,
+        uninformedRecurring: candidates.length,
       });
 
-      for (const task of uninformedRecurring) {
+      for (const task of candidates) {
         try {
-          if (!task.assigned_to) continue;
+          if (task.type === "bounty") continue;
 
           const notificationResult = await NotificationService.sendNotification(
-            task.assigned_to,
+            task.assigned_to!,
             "unlocked",
             {
               title: task.title,

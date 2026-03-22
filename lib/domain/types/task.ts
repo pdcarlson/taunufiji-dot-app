@@ -20,7 +20,14 @@ export const TaskTypeSchema = z.enum([
   "ad_hoc",
 ]);
 export const NotificationLevelSchema = z
-  .enum(["none", "unlocked", "urgent", "expired"])
+  .enum([
+    "none",
+    "unlocked",
+    "urgent",
+    /** Housing admin channel received the expired alert; assignee DM still pending or failed. */
+    "expired_admin",
+    "expired",
+  ])
   .optional();
 
 export const HousingTaskSchema = BaseEntitySchema.extend({

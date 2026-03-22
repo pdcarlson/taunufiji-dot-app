@@ -11,16 +11,21 @@ describe("NotifyRecurringJob", () => {
   });
 
   it("updates notification level only after successful DM", async () => {
-    taskRepository.findMany = vi.fn().mockResolvedValue([
-      {
-        id: "task-1",
-        title: "Kitchen",
-        status: "open",
-        schedule_id: "schedule-1",
-        notification_level: "none",
-        assigned_to: "user-1",
-      },
-    ] as any);
+    taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
+      const offset = opts.offset ?? 0;
+      if (offset > 0) return [];
+      return [
+        {
+          id: "task-1",
+          title: "Kitchen",
+          status: "open",
+          type: "duty",
+          schedule_id: "schedule-1",
+          notification_level: "none",
+          assigned_to: "user-1",
+        },
+      ] as any;
+    });
     taskRepository.update = vi.fn().mockResolvedValue({} as any);
     vi.spyOn(NotificationService, "sendNotification").mockResolvedValue({
       success: true,
@@ -36,16 +41,21 @@ describe("NotifyRecurringJob", () => {
   });
 
   it("does not advance stage when DM fails", async () => {
-    taskRepository.findMany = vi.fn().mockResolvedValue([
-      {
-        id: "task-2",
-        title: "Hallway",
-        status: "open",
-        schedule_id: "schedule-2",
-        notification_level: "none",
-        assigned_to: "user-2",
-      },
-    ] as any);
+    taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
+      const offset = opts.offset ?? 0;
+      if (offset > 0) return [];
+      return [
+        {
+          id: "task-2",
+          title: "Hallway",
+          status: "open",
+          type: "duty",
+          schedule_id: "schedule-2",
+          notification_level: "none",
+          assigned_to: "user-2",
+        },
+      ] as any;
+    });
     taskRepository.update = vi.fn().mockResolvedValue({} as any);
     vi.spyOn(NotificationService, "sendNotification").mockResolvedValue({
       success: false,

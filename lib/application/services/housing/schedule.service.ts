@@ -298,6 +298,10 @@ export class ScheduleService {
     }
   }
 
+  /**
+   * For recurring edits with schedule-backed fields, patches the schedule document so the next
+   * generated instance (cron healing or `triggerNextInstance`) does not revert title/points/assignee.
+   */
   async updateTaskThisAndFuture(
     task: HousingTask,
     data: Partial<CreateAssignmentDTO>,
@@ -611,6 +615,10 @@ export class ScheduleService {
     }
   }
 
+  /**
+   * Soft-deactivates the schedule before deleting future rows so hourly `ensureFutureTasksJob`
+   * cannot recreate instances while cleanup runs (see `docs/behavior.md` delete rules).
+   */
   async deleteTaskThisAndFuture(task: HousingTask, effectiveFromDueAt: string) {
     if (!task.schedule_id) {
       await this.taskRepository.delete(task.id);

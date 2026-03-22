@@ -1,8 +1,9 @@
 /**
  * Maintenance Service
  *
- * Handles state updates for tasks that depend on time (Expiry, Unlocking).
- * Previously hidden inside DutyService.getMyTasks (Lazy Eval).
+ * Per-user fallback when cron has not run yet: unlock eligible tasks, expire overdue duties (same path as
+ * `expireOverdueDutyTask` / cron), and unclaim expired bounties. Does **not** duplicate recurring/urgent/expired
+ * Discord notifications or `ensureFutureTasksJob` — those stay in the hourly cron pipeline (`housing-time-driven.pipeline.ts`).
  */
 
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
@@ -10,6 +11,7 @@ import { IDutyService } from "@/lib/domain/ports/services/duty.service.port";
 import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
 import { ScheduleService } from "./schedule.service";
 import { expireOverdueDutyTask } from "./overdue-duty.service";
+import { processUnlockForTask } from "./task-unlock";
 
 export class MaintenanceService {
   constructor(
@@ -40,17 +42,22 @@ export class MaintenanceService {
             return;
           }
 
-          // Check B: Stuck in "Locked" but Time Passed
-          if (
-            task.status === "locked" &&
-            task.unlock_at &&
-            now >= new Date(task.unlock_at)
-          ) {
-            await this.taskRepository.update(task.id, {
-              status: "open",
-              notification_level: "unlocked",
-            });
-            return;
+          // Check B: Stuck in "Locked" but Time Passed (same rules/notifications as UnlockTasksJob)
+          if (task.status === "locked") {
+            const unlockResult = await processUnlockForTask(
+              this.taskRepository,
+              task,
+              now,
+            );
+            if (unlockResult.errors.length > 0) {
+              console.error("[MaintenanceService] Unlock errors", {
+                taskId: task.id,
+                errors: unlockResult.errors,
+              });
+            }
+            if (unlockResult.unlocked) {
+              return;
+            }
           }
 
           // Check C: Open/Pending but Expired (Duty)
