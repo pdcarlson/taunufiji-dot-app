@@ -225,6 +225,7 @@ describe("AdminService", () => {
         task,
         { description: "next" },
         "2026-03-10T03:59:00.000Z",
+        { scope: "this_and_future" },
       );
     });
 
@@ -245,6 +246,7 @@ describe("AdminService", () => {
         task,
         payload,
         undefined,
+        { scope: "entire_series" },
       );
     });
 

@@ -22,6 +22,31 @@ const NON_FINAL_STATUSES: HousingTask["status"][] = [
 
 const BATCH_SIZE = 500;
 
+function leadTimeFieldsForTask(
+  task: HousingTask,
+  leadTimeHours: number,
+  now: Date,
+): Partial<CreateAssignmentDTO> {
+  if (!task.due_at) {
+    return {};
+  }
+  const dueAt = new Date(task.due_at);
+  const unlockAt = new Date(
+    dueAt.getTime() - leadTimeHours * 60 * 60 * 1000,
+  );
+  const shouldBeLocked = unlockAt > now;
+  const shouldUpdateStatus =
+    task.status === "locked" || task.status === "open";
+  const patch: Partial<CreateAssignmentDTO> = {
+    unlock_at: unlockAt.toISOString(),
+  };
+  if (shouldUpdateStatus) {
+    patch.status = shouldBeLocked ? "locked" : "open";
+    patch.notification_level = shouldBeLocked ? "none" : "unlocked";
+  }
+  return patch;
+}
+
 export class ScheduleService {
   constructor(private readonly taskRepository: ITaskRepository) {}
 
@@ -285,7 +310,7 @@ export class ScheduleService {
         }
         if (data.lead_time_hours !== undefined) {
           scheduleRollbackPatch.lead_time_hours =
-            previousSchedule.lead_time_hours;
+            previousSchedule.lead_time_hours ?? undefined;
         }
         if (Object.keys(scheduleRollbackPatch).length > 0) {
           await this.taskRepository
@@ -306,36 +331,82 @@ export class ScheduleService {
     task: HousingTask,
     data: Partial<CreateAssignmentDTO>,
     effectiveFromDueAt: string,
+    recurringOptions?: RecurringMutationOptions,
   ) {
     if (!task.schedule_id) {
       return await this.taskRepository.update(task.id, data);
     }
+    const leadTimeHours = recurringOptions?.scheduleLeadTimeHours;
     const futureTaskPatch = this.toFutureTaskPatch(data);
-    const schedulePatch = this.toSchedulePatch(data);
+    const schedulePatch: Partial<CreateScheduleDTO> = {
+      ...this.toSchedulePatch(data),
+    };
+    if (leadTimeHours !== undefined) {
+      schedulePatch.lead_time_hours = leadTimeHours;
+    }
     const effectiveFrom = new Date(effectiveFromDueAt);
-    const seriesTasks =
-      Object.keys(futureTaskPatch).length > 0
-        ? await this.findAllNonFinalByScheduleId(task.schedule_id)
-        : [];
+    const now = new Date();
+    const needsAssignmentScan =
+      Object.keys(futureTaskPatch).length > 0 || leadTimeHours !== undefined;
+    const seriesTasks = needsAssignmentScan
+      ? await this.findAllNonFinalByScheduleId(task.schedule_id)
+      : [];
     const futureTargets = seriesTasks.filter((seriesTask) => {
       if (seriesTask.id === task.id || !seriesTask.due_at) {
         return false;
       }
       return new Date(seriesTask.due_at) >= effectiveFrom;
     });
+    const futureSnapshots = futureTargets.map((seriesTask) => ({
+      id: seriesTask.id,
+      title: seriesTask.title,
+      description: seriesTask.description,
+      assigned_to: seriesTask.assigned_to,
+      points_value: seriesTask.points_value,
+      unlock_at: seriesTask.unlock_at,
+      status: seriesTask.status,
+      notification_level: seriesTask.notification_level,
+    }));
     const previousSchedule =
       Object.keys(schedulePatch).length > 0
         ? await this.taskRepository.findScheduleById(task.schedule_id)
         : null;
 
-    try {
-      await this.taskRepository.update(task.id, data);
+    const mergeLeadIntoPatch = (
+      seriesTask: HousingTask,
+      base: Partial<CreateAssignmentDTO>,
+    ): Partial<CreateAssignmentDTO> => {
+      if (leadTimeHours === undefined) {
+        return base;
+      }
+      return {
+        ...base,
+        ...leadTimeFieldsForTask(seriesTask, leadTimeHours, now),
+      };
+    };
 
-      if (Object.keys(futureTaskPatch).length > 0) {
+    try {
+      if (Object.keys(schedulePatch).length > 0) {
+        await this.taskRepository.updateSchedule(task.schedule_id, {
+          ...schedulePatch,
+          last_generated_at: new Date().toISOString(),
+        });
+      }
+
+      const currentRowPatch = mergeLeadIntoPatch(task, { ...data });
+      await this.taskRepository.update(task.id, currentRowPatch);
+
+      if (futureTargets.length > 0) {
         const updateResults = await Promise.allSettled(
-          futureTargets.map((seriesTask) =>
-            this.taskRepository.update(seriesTask.id, futureTaskPatch),
-          ),
+          futureTargets.map((seriesTask) => {
+            const rowPatch = mergeLeadIntoPatch(seriesTask, {
+              ...futureTaskPatch,
+            });
+            if (Object.keys(rowPatch).length === 0) {
+              return Promise.resolve();
+            }
+            return this.taskRepository.update(seriesTask.id, rowPatch);
+          }),
         );
         const updateFailure = updateResults.find(
           (result) => result.status === "rejected",
@@ -345,37 +416,33 @@ export class ScheduleService {
         }
       }
 
-      if (Object.keys(schedulePatch).length > 0) {
-        await this.taskRepository.updateSchedule(task.schedule_id, {
-          ...schedulePatch,
-          last_generated_at: new Date().toISOString(),
-        });
-      }
-
       return await this.taskRepository.findById(task.id);
     } catch (error) {
-      if (Object.keys(futureTaskPatch).length > 0) {
-        await Promise.allSettled(
-          futureTargets.map((seriesTask) => {
-            const rollbackPatch: Partial<CreateAssignmentDTO> = {};
-            if (futureTaskPatch.title !== undefined) {
-              rollbackPatch.title = seriesTask.title;
-            }
-            if (futureTaskPatch.description !== undefined) {
-              rollbackPatch.description = seriesTask.description;
-            }
-            if (futureTaskPatch.assigned_to !== undefined) {
-              rollbackPatch.assigned_to = seriesTask.assigned_to;
-            }
-            if (futureTaskPatch.points_value !== undefined) {
-              rollbackPatch.points_value = seriesTask.points_value;
-            }
-            return Object.keys(rollbackPatch).length > 0
-              ? this.taskRepository.update(seriesTask.id, rollbackPatch)
-              : Promise.resolve();
-          }),
-        );
-      }
+      await Promise.allSettled(
+        futureSnapshots.map((snap) => {
+          const rollbackPatch: Partial<CreateAssignmentDTO> = {};
+          if (futureTaskPatch.title !== undefined) {
+            rollbackPatch.title = snap.title;
+          }
+          if (futureTaskPatch.description !== undefined) {
+            rollbackPatch.description = snap.description;
+          }
+          if (futureTaskPatch.assigned_to !== undefined) {
+            rollbackPatch.assigned_to = snap.assigned_to;
+          }
+          if (futureTaskPatch.points_value !== undefined) {
+            rollbackPatch.points_value = snap.points_value;
+          }
+          if (leadTimeHours !== undefined) {
+            rollbackPatch.unlock_at = snap.unlock_at ?? undefined;
+            rollbackPatch.status = snap.status;
+            rollbackPatch.notification_level = snap.notification_level;
+          }
+          return Object.keys(rollbackPatch).length > 0
+            ? this.taskRepository.update(snap.id, rollbackPatch)
+            : Promise.resolve();
+        }),
+      );
 
       const currentRollbackPatch: Partial<CreateAssignmentDTO> = {};
       if (data.title !== undefined) {
@@ -426,6 +493,11 @@ export class ScheduleService {
       if (data.completed_at !== undefined) {
         currentRollbackPatch.completed_at = task.completed_at;
       }
+      if (leadTimeHours !== undefined) {
+        currentRollbackPatch.unlock_at = task.unlock_at ?? undefined;
+        currentRollbackPatch.status = task.status;
+        currentRollbackPatch.notification_level = task.notification_level;
+      }
       if (Object.keys(currentRollbackPatch).length > 0) {
         await this.taskRepository
           .update(task.id, currentRollbackPatch)
@@ -445,6 +517,10 @@ export class ScheduleService {
         }
         if (schedulePatch.points_value !== undefined) {
           scheduleRollbackPatch.points_value = previousSchedule.points_value;
+        }
+        if (schedulePatch.lead_time_hours !== undefined) {
+          scheduleRollbackPatch.lead_time_hours =
+            previousSchedule.lead_time_hours ?? undefined;
         }
         scheduleRollbackPatch.last_generated_at =
           previousSchedule.last_generated_at;
@@ -466,33 +542,78 @@ export class ScheduleService {
     task: HousingTask,
     data: Partial<CreateAssignmentDTO>,
     effectiveFromDueAt?: string,
+    recurringOptions?: RecurringMutationOptions,
   ) {
     void effectiveFromDueAt;
     if (!task.schedule_id) {
       return await this.taskRepository.update(task.id, data);
     }
 
+    const leadTimeHours = recurringOptions?.scheduleLeadTimeHours;
     const seriesTasks = await this.findAllNonFinalByScheduleId(
       task.schedule_id,
     );
     const futureTaskPatch = this.toFutureTaskPatch(data);
-    const schedulePatch = this.toSchedulePatch(data);
+    const schedulePatch: Partial<CreateScheduleDTO> = {
+      ...this.toSchedulePatch(data),
+    };
+    if (leadTimeHours !== undefined) {
+      schedulePatch.lead_time_hours = leadTimeHours;
+    }
+    const now = new Date();
     const futureTargets = seriesTasks.filter(
       (seriesTask) => seriesTask.id !== task.id,
     );
+    const futureSnapshots = futureTargets.map((seriesTask) => ({
+      id: seriesTask.id,
+      title: seriesTask.title,
+      description: seriesTask.description,
+      assigned_to: seriesTask.assigned_to,
+      points_value: seriesTask.points_value,
+      unlock_at: seriesTask.unlock_at,
+      status: seriesTask.status,
+      notification_level: seriesTask.notification_level,
+    }));
     const previousSchedule =
       Object.keys(schedulePatch).length > 0
         ? await this.taskRepository.findScheduleById(task.schedule_id)
         : null;
 
-    try {
-      await this.taskRepository.update(task.id, data);
+    const mergeLeadIntoPatch = (
+      seriesTask: HousingTask,
+      base: Partial<CreateAssignmentDTO>,
+    ): Partial<CreateAssignmentDTO> => {
+      if (leadTimeHours === undefined) {
+        return base;
+      }
+      return {
+        ...base,
+        ...leadTimeFieldsForTask(seriesTask, leadTimeHours, now),
+      };
+    };
 
-      if (Object.keys(futureTaskPatch).length > 0) {
+    try {
+      if (Object.keys(schedulePatch).length > 0) {
+        await this.taskRepository.updateSchedule(task.schedule_id, {
+          ...schedulePatch,
+          last_generated_at: new Date().toISOString(),
+        });
+      }
+
+      const currentRowPatch = mergeLeadIntoPatch(task, { ...data });
+      await this.taskRepository.update(task.id, currentRowPatch);
+
+      if (futureTargets.length > 0) {
         const updateResults = await Promise.allSettled(
-          futureTargets.map((seriesTask) =>
-            this.taskRepository.update(seriesTask.id, futureTaskPatch),
-          ),
+          futureTargets.map((seriesTask) => {
+            const rowPatch = mergeLeadIntoPatch(seriesTask, {
+              ...futureTaskPatch,
+            });
+            if (Object.keys(rowPatch).length === 0) {
+              return Promise.resolve();
+            }
+            return this.taskRepository.update(seriesTask.id, rowPatch);
+          }),
         );
         const updateFailure = updateResults.find(
           (result) => result.status === "rejected",
@@ -502,37 +623,33 @@ export class ScheduleService {
         }
       }
 
-      if (Object.keys(schedulePatch).length > 0) {
-        await this.taskRepository.updateSchedule(task.schedule_id, {
-          ...schedulePatch,
-          last_generated_at: new Date().toISOString(),
-        });
-      }
-
       return await this.taskRepository.findById(task.id);
     } catch (error) {
-      if (Object.keys(futureTaskPatch).length > 0) {
-        await Promise.allSettled(
-          futureTargets.map((seriesTask) => {
-            const rollbackPatch: Partial<CreateAssignmentDTO> = {};
-            if (futureTaskPatch.title !== undefined) {
-              rollbackPatch.title = seriesTask.title;
-            }
-            if (futureTaskPatch.description !== undefined) {
-              rollbackPatch.description = seriesTask.description;
-            }
-            if (futureTaskPatch.assigned_to !== undefined) {
-              rollbackPatch.assigned_to = seriesTask.assigned_to;
-            }
-            if (futureTaskPatch.points_value !== undefined) {
-              rollbackPatch.points_value = seriesTask.points_value;
-            }
-            return Object.keys(rollbackPatch).length > 0
-              ? this.taskRepository.update(seriesTask.id, rollbackPatch)
-              : Promise.resolve();
-          }),
-        );
-      }
+      await Promise.allSettled(
+        futureSnapshots.map((snap) => {
+          const rollbackPatch: Partial<CreateAssignmentDTO> = {};
+          if (futureTaskPatch.title !== undefined) {
+            rollbackPatch.title = snap.title;
+          }
+          if (futureTaskPatch.description !== undefined) {
+            rollbackPatch.description = snap.description;
+          }
+          if (futureTaskPatch.assigned_to !== undefined) {
+            rollbackPatch.assigned_to = snap.assigned_to;
+          }
+          if (futureTaskPatch.points_value !== undefined) {
+            rollbackPatch.points_value = snap.points_value;
+          }
+          if (leadTimeHours !== undefined) {
+            rollbackPatch.unlock_at = snap.unlock_at ?? undefined;
+            rollbackPatch.status = snap.status;
+            rollbackPatch.notification_level = snap.notification_level;
+          }
+          return Object.keys(rollbackPatch).length > 0
+            ? this.taskRepository.update(snap.id, rollbackPatch)
+            : Promise.resolve();
+        }),
+      );
 
       const currentRollbackPatch: Partial<CreateAssignmentDTO> = {};
       if (data.title !== undefined) {
@@ -583,6 +700,11 @@ export class ScheduleService {
       if (data.completed_at !== undefined) {
         currentRollbackPatch.completed_at = task.completed_at;
       }
+      if (leadTimeHours !== undefined) {
+        currentRollbackPatch.unlock_at = task.unlock_at ?? undefined;
+        currentRollbackPatch.status = task.status;
+        currentRollbackPatch.notification_level = task.notification_level;
+      }
       if (Object.keys(currentRollbackPatch).length > 0) {
         await this.taskRepository
           .update(task.id, currentRollbackPatch)
@@ -602,6 +724,10 @@ export class ScheduleService {
         }
         if (schedulePatch.points_value !== undefined) {
           scheduleRollbackPatch.points_value = previousSchedule.points_value;
+        }
+        if (schedulePatch.lead_time_hours !== undefined) {
+          scheduleRollbackPatch.lead_time_hours =
+            previousSchedule.lead_time_hours ?? undefined;
         }
         scheduleRollbackPatch.last_generated_at =
           previousSchedule.last_generated_at;
@@ -689,13 +815,41 @@ export class ScheduleService {
       task.schedule_id,
     );
 
-    await this.taskRepository.delete(task.id);
+    const otherIds = seriesTasks
+      .filter((seriesTask) => seriesTask.id !== task.id)
+      .map((seriesTask) => seriesTask.id);
 
-    await Promise.all(
-      seriesTasks
-        .filter((seriesTask) => seriesTask.id !== task.id)
-        .map((seriesTask) => this.taskRepository.delete(seriesTask.id)),
+    const deleteOtherResults = await Promise.allSettled(
+      otherIds.map((taskId) => this.taskRepository.delete(taskId)),
     );
+    const deleteOtherFailure = deleteOtherResults.find(
+      (result) => result.status === "rejected",
+    );
+    if (deleteOtherFailure && deleteOtherFailure.status === "rejected") {
+      const message =
+        deleteOtherFailure.reason instanceof Error
+          ? deleteOtherFailure.reason.message
+          : String(deleteOtherFailure.reason);
+      throw new Error(
+        `Series deactivated but one or more task rows failed to delete: ${message}`,
+      );
+    }
+
+    const deleteCurrentResult = await Promise.allSettled([
+      this.taskRepository.delete(task.id),
+    ]);
+    const deleteCurrentFailure = deleteCurrentResult.find(
+      (result) => result.status === "rejected",
+    );
+    if (deleteCurrentFailure && deleteCurrentFailure.status === "rejected") {
+      const message =
+        deleteCurrentFailure.reason instanceof Error
+          ? deleteCurrentFailure.reason.message
+          : String(deleteCurrentFailure.reason);
+      throw new Error(
+        `Series deactivated but the current task row failed to delete: ${message}`,
+      );
+    }
   }
 
   private toSchedulePatch(

@@ -9,4 +9,9 @@ export type RecurringMutationScope = (typeof RECURRING_MUTATION_SCOPES)[number];
 export interface RecurringMutationOptions {
   scope: RecurringMutationScope;
   effectiveFromDueAt?: string;
+  /**
+   * Patches `housing_schedules.lead_time_hours` in the same service transaction as task rows
+   * (see `ScheduleService.updateTaskThisAndFuture` / `updateTaskEntireSeries`).
+   */
+  scheduleLeadTimeHours?: number;
 }
