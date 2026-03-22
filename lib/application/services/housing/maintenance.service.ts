@@ -7,13 +7,16 @@
 
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { IDutyService } from "@/lib/domain/ports/services/duty.service.port";
-import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
-import { TaskEvents } from "@/lib/domain/events";
+import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
+import { ScheduleService } from "./schedule.service";
+import { expireOverdueDutyTask } from "./overdue-duty.service";
 
 export class MaintenanceService {
   constructor(
     private readonly taskRepository: ITaskRepository,
     private readonly dutyService: IDutyService,
+    private readonly pointsService: IPointsService,
+    private readonly scheduleService: ScheduleService,
   ) {}
 
   /**
@@ -58,19 +61,37 @@ export class MaintenanceService {
             now > new Date(task.due_at) &&
             !task.proof_s3_key
           ) {
-            // IT IS EXPIRED
-            await this.taskRepository.update(task.id, {
-              status: "expired",
+            const result = await expireOverdueDutyTask(task, {
+              taskRepository: this.taskRepository,
+              pointsService: this.pointsService,
+              scheduleService: this.scheduleService,
             });
-
-            // Emit Event
-            await DomainEventBus.publish(TaskEvents.TASK_EXPIRED, {
-              taskId: task.id,
-              title: task.title,
-              userId: userId,
-              fineAmount: 50,
-            });
-            return;
+            if (result.errors.length > 0) {
+              console.error("[MaintenanceService] Overdue processing errors", {
+                taskId: task.id,
+                scheduleId: task.schedule_id ?? null,
+                errors: result.errors,
+              });
+            }
+            if (result.expired) {
+              console.log("[MaintenanceService]", {
+                phase: "task_expired",
+                taskId: task.id,
+                scheduleId: task.schedule_id ?? null,
+                fined: result.fined,
+                triggeredNextInstance: result.triggeredNextInstance,
+              });
+            } else {
+              console.log("[MaintenanceService]", {
+                phase: "task_expire_skipped",
+                taskId: task.id,
+                type: task.type,
+                status: task.status,
+              });
+            }
+            if (result.expired) {
+              return;
+            }
           }
 
           // Check D: Open Bounty but Expired (Assigned)

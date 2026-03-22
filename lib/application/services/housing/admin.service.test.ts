@@ -263,5 +263,22 @@ describe("AdminService", () => {
       );
       expect(mockTaskRepo.delete).not.toHaveBeenCalled();
     });
+
+    it("routes delete to schedule service for this_and_future scope", async () => {
+      const task = {
+        id: "task-Z",
+        schedule_id: "schedule-Z",
+        due_at: "2026-03-10T03:59:00.000Z",
+      };
+      (mockTaskRepo.findById as any).mockResolvedValue(task);
+
+      await service.deleteTask("task-Z", { scope: "this_and_future" });
+
+      expect(mockScheduleService.deleteTaskThisAndFuture).toHaveBeenCalledWith(
+        task,
+        "2026-03-10T03:59:00.000Z",
+      );
+      expect(mockTaskRepo.delete).not.toHaveBeenCalled();
+    });
   });
 });

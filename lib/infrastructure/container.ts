@@ -94,6 +94,8 @@ export function getContainer(): Container {
     const maintenanceService = new MaintenanceService(
       taskRepository,
       dutyService,
+      pointsService,
+      scheduleService,
     );
     const adminService = new AdminService(taskRepository, scheduleService);
     const libraryService = new LibraryService(

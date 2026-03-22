@@ -93,6 +93,8 @@ What it verifies:
 - Discord guild reachability with bot token
 - Discord housing channel reachability
 - Configured housing role IDs exist in the target guild
+- Cron endpoint auth contract and HOURLY dispatch health (manual run path)
+- Housing expiry notification dependencies (`DISCORD_HOUSING_CHANNEL_ID`, bot DM capability)
 
 If this command fails, do not promote staging to production until the failing checks are resolved.
 

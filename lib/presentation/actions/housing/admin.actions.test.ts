@@ -139,6 +139,22 @@ describe("housing admin actions", () => {
     );
   });
 
+  it("surfaces scoped delete failures from admin service", async () => {
+    hoisted.mockContainer.adminService.deleteTask.mockRejectedValue(
+      new Error(
+        "Series deactivated but one or more task rows failed to delete",
+      ),
+    );
+
+    const result = await deleteTaskAction("task-1", "jwt-token", {
+      scope: "this_and_future",
+      effectiveFromDueAt: "2026-03-10T03:59:00.000Z",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Series deactivated");
+  });
+
   it("passes acting user id to verifyTask on approve", async () => {
     await approveTaskAction("task-1", "jwt-token", 25);
 

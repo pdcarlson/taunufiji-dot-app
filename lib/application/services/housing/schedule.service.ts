@@ -617,6 +617,16 @@ export class ScheduleService {
       return;
     }
 
+    const schedule = await this.taskRepository.findScheduleById(
+      task.schedule_id,
+    );
+    if (schedule?.active) {
+      await this.taskRepository.updateSchedule(task.schedule_id, {
+        active: false,
+        last_generated_at: new Date().toISOString(),
+      });
+    }
+
     const effectiveFrom = new Date(effectiveFromDueAt);
     const seriesTasks = await this.findAllNonFinalByScheduleId(
       task.schedule_id,
@@ -641,13 +651,14 @@ export class ScheduleService {
       (result) => result.status === "rejected",
     );
     if (deleteFailure && deleteFailure.status === "rejected") {
-      throw deleteFailure.reason;
+      const message =
+        deleteFailure.reason instanceof Error
+          ? deleteFailure.reason.message
+          : String(deleteFailure.reason);
+      throw new Error(
+        `Series deactivated but one or more task rows failed to delete: ${message}`,
+      );
     }
-
-    await this.taskRepository.updateSchedule(task.schedule_id, {
-      active: false,
-      last_generated_at: new Date().toISOString(),
-    });
   }
 
   /**

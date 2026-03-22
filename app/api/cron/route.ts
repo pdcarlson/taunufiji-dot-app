@@ -124,6 +124,8 @@ export async function GET(req: Request) {
       job,
       allowedJobs: ALLOWED_JOBS,
       hasResult: result !== undefined,
+      resultType: typeof result,
+      completedAt: new Date().toISOString(),
     });
 
     return NextResponse.json({ success: true, result });
