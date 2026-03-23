@@ -142,6 +142,56 @@ describe("DutyService", () => {
       // CRITICAL: Ensure NO updates were called
       expect(mockTaskRepo.update).not.toHaveBeenCalled();
     });
+
+    it("should hide overdue open and pending duty rows without proof (awaiting expiry write)", async () => {
+      const pastDue = "2020-01-01T12:00:00.000Z";
+      const tasks = [
+        createMockTask({
+          id: "t_pending_ok",
+          status: "pending",
+          type: "duty",
+          due_at: "2030-01-01T12:00:00.000Z",
+          proof_s3_key: null,
+        }),
+        createMockTask({
+          id: "t_pending_limbo",
+          status: "pending",
+          type: "duty",
+          due_at: pastDue,
+          proof_s3_key: null,
+        }),
+        createMockTask({
+          id: "t_open_limbo",
+          status: "open",
+          type: "duty",
+          due_at: pastDue,
+          proof_s3_key: null,
+        }),
+        createMockTask({
+          id: "t_pending_proof",
+          status: "pending",
+          type: "duty",
+          due_at: pastDue,
+          proof_s3_key: "proof",
+        }),
+      ];
+
+      mockTaskRepo.findByAssignee = vi.fn().mockResolvedValue(tasks);
+
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-06-01T12:00:00.000Z"));
+      let result: Awaited<ReturnType<DutyService["getMyTasks"]>>;
+      try {
+        result = await service.getMyTasks("user_1");
+      } finally {
+        vi.useRealTimers();
+      }
+
+      expect(result.documents.map((d) => d.id).sort()).toEqual([
+        "t_pending_ok",
+        "t_pending_proof",
+      ]);
+    });
   });
   describe("requestAdHocPoints", () => {
     it("should create a task and emit submitted event", async () => {

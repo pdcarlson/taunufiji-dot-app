@@ -111,7 +111,7 @@ export default function ProofReviewModal({
       const jwt = await getJWT();
       const res = await rejectTaskAction(task.id, reason, jwt);
       if (!res.success) throw new Error(res.error);
-      toast.error("Proof Rejected.");
+      toast.success("Proof rejected.");
       onSuccess();
       onClose();
     } catch (err: unknown) {
