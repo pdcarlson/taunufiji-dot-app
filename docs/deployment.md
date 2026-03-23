@@ -96,20 +96,22 @@ The app may introduce new persisted values for `assignments.notification_level` 
 
 ## Staging Runtime Diagnostics
 
-Use the diagnostics script from the repo root:
+The script loads `.env.local` when present (same staging keys as the app: Appwrite, AWS placeholders if required by schema, Discord bot + guild + housing channel + `DISCORD_ROLE_ID_*` role IDs). It validates env with `serverEnvSchema` before running checks.
+
+From the repo root:
 
 ```bash
 npm run diagnose:staging
 ```
 
-What it verifies:
+Exit code `0` prints a line per check with pass/fail; exit code `1` if validation fails or any check fails.
+
+What it verifies today:
 
 - Appwrite admin access to critical collections (`users`, `assignments`)
 - Discord guild reachability with bot token
 - Discord housing channel reachability
 - Configured housing role IDs exist in the target guild
-- Cron endpoint auth contract and HOURLY dispatch health (manual run path)
-- Housing expiry notification dependencies (`DISCORD_HOUSING_CHANNEL_ID`, bot DM capability)
 
 If this command fails, do not promote staging to production until the failing checks are resolved.
 

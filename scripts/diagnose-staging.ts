@@ -1,6 +1,7 @@
 import { config as loadDotEnv } from "dotenv";
 import { Databases, Query } from "node-appwrite";
 import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
+import { createAppwriteAdminClientFromEnv } from "@/lib/infrastructure/persistence/appwrite-admin-factory";
 import {
   readServerEnv,
   serverEnvSchema,
@@ -302,9 +303,7 @@ async function main(): Promise<void> {
   console.log(`   Appwrite endpoint host: ${endpointHost}`);
   console.log(`   Appwrite project id: ${env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`);
 
-  const { getAdminClient } =
-    await import("@/lib/infrastructure/persistence/client");
-  const databases = new Databases(getAdminClient());
+  const databases = new Databases(createAppwriteAdminClientFromEnv());
 
   const results: DiagnosticResult[] = [
     ...(await runAppwriteChecks(databases)),

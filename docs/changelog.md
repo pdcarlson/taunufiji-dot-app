@@ -1,5 +1,12 @@
 # Project Log
 
+## 2026-03-23: Housing domain events and staging diagnostics
+
+- **Dead event path removed**: `TaskEvents.TASK_EXPIRED` and `TaskExpiredHandler` were never published; overdue expiry and `triggerNextInstance` already run inside `expireOverdueDutyTask` (cron + maintenance). Removed the unused enum value, payload type, handler, and `initDomainEvents` wiring so the bus only reflects events that actually fire.
+- **`npm run diagnose:staging`**: Fixed failure when dynamic-importing `getAdminClient()` pulled in `server-only` `env` (Next.js client/server boundary error under `tsx`). Diagnostics now build the Appwrite admin client from `process.env` via `createAppwriteAdminClientFromEnv` (`lib/infrastructure/persistence/appwrite-admin-factory.ts`).
+- **Server env schema**: Extended `serverEnvSchema` with `DISCORD_ROLE_ID_*` keys so the same validation used by the diagnose script matches the Discord role checks it runs.
+- **Docs**: Clarified in `docs/architecture.md` that duty expiry is pipeline-driven, not bus-driven; expanded `docs/behavior.md` with pipeline order, fine/ledger behavior, and idempotency notes.
+
 ## 2026-03-22: Housing time-driven pipeline unification
 
 - **Appwrite note**: `scripts/add-expired-admin-notification-enum.ts` documents how to add `expired_admin` when `notification_level` is an enum; staging uses a **string** attribute so no enum migration was required there.
