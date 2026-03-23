@@ -66,6 +66,15 @@ This document is the durable behavioral reference for the Housing module.
    - cron (`ExpireDutiesJob`) as the primary scheduled path, and
    - dashboard maintenance as a fallback path for assigned-user views.
 
+### Hourly pipeline: overdue duties, fines, and ledger
+
+The ordered hourly sequence lives in `HousingTimeDrivenPipeline` (see `lib/application/services/jobs/housing-time-driven.pipeline.ts`). **Expire overdue duties** is step 4 and must run **before** **Notify expired** (step 5): the task row is moved to `expired` first, then notification stages run.
+
+- **What “expire” does** (`expireDutiesJob` → `expireOverdueDutyTask`): picks mandatory work that is overdue (`open` or `pending` without `proof_s3_key`), sets `status: expired`, applies the configured **fine** in the same step via `PointsService.awardPoints` (negative amount, `category: "fine"`, `reason` of the form `Missed Duty: <title>`), and for schedule-backed duties calls `triggerNextInstance` so the next instance is not left to a separate code path.
+- **Domain events**: expiry does **not** publish a `TaskEvents` message; downstream work is synchronous in the pipeline and maintenance. That avoids dead “event-driven” handlers and duplicate `triggerNextInstance` calls.
+- **Task metadata**: the assignment schema includes optional `is_fine` on persisted tasks (`HousingTask` / app types) when the product marks fine-bearing rows; ledger entries remain the authoritative record of debits (`amount` positive with `is_debit: true` per `PointsService`).
+- **Idempotency**: there is no separate fine queue job: fines are applied when `expireOverdueDutyTask` runs on an eligible task. After the row is `expired`, later cron passes skip it, so the fine path does not re-run for the same task. Retrying before the status flip (or duplicate maintenance + cron in the same window) can still double-apply unless ledger deduplication is added later.
+
 ## 3.2 One-Off Duty Flow
 
 1. Admin creates one-off task, usually assigned to a user.
