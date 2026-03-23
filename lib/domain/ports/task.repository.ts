@@ -20,11 +20,29 @@ export interface TaskQueryOptions {
   assignedTo?: string;
   scheduleId?: string;
   notificationLevel?: HousingTask["notification_level"];
+  /** `notification_level` is null/unset OR equals this value (Appwrite OR query). */
+  notificationLevelOrNull?: NonNullable<HousingTask["notification_level"]>;
+  /** When true, only tasks with a non-empty `assigned_to`. */
+  assignedToPresent?: boolean;
+  /** When true, only tasks with a non-empty `schedule_id`. */
+  scheduleIdPresent?: boolean;
+  /** When true, only tasks with no proof key (missed-duty / expiry candidates). */
+  proofS3KeyAbsent?: boolean;
+  /**
+   * When true, only tasks where `is_fine` is unset or false (missed-duty fine not yet persisted).
+   * Pair with `status: "expired"` and `assignedToPresent: true` for fine retry scans.
+   */
+  fineNotApplied?: boolean;
+  /**
+   * With `status: "expired"`, restrict to tasks that have not finished the expired-notification path
+   * (`notification_level` is absent, pre-final stages, or `expired_admin` awaiting assignee DM).
+   */
+  expiredNotificationIncomplete?: boolean;
   dueBefore?: Date;
   unlockBefore?: Date;
   limit?: number;
   offset?: number;
-  orderBy?: "createdAt" | "due_at";
+  orderBy?: "createdAt" | "due_at" | "unlock_at";
   orderDirection?: "asc" | "desc";
 }
 

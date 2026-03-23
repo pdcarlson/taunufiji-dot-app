@@ -22,7 +22,7 @@ Orchestrates business logic and use cases.
 
 - **Services**: `DutyService`, `LedgerService`, `LibraryService`, `ScheduleService`, `AdminService`.
 - **Event Handlers**: Asynchronous listeners for domain events (e.g., `JobCompletedEvent`).
-- **Scheduling**: Cron handlers (`lib/application/services/jobs`) for recurring logic — `UnlockTasksJob`, `NotifyUrgentJob`, `ExpireDutiesJob`, `EnsureFutureTasksJob`.
+- **Scheduling**: Cron handlers (`lib/application/services/jobs`) for recurring logic — `UnlockTasksJob`, `NotifyRecurringJob`, `NotifyUrgentJob`, `ExpireDutiesJob`, `NotifyExpiredJob`, `EnsureFutureTasksJob`.
 
 ### 3. Infrastructure Layer (`lib/infrastructure`)
 

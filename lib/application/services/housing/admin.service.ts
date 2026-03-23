@@ -219,6 +219,7 @@ export class AdminService {
         task,
         data,
         undefined,
+        recurringOptions,
       );
     }
 
@@ -234,6 +235,7 @@ export class AdminService {
       task,
       data,
       effectiveFromDueAt,
+      recurringOptions,
     );
   }
 

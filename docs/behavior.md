@@ -30,6 +30,7 @@ This document is the durable behavioral reference for the Housing module.
 - `none`: no delivery stage completed
 - `unlocked`: initial availability notification sent
 - `urgent`: urgent warning sent
+- `expired_admin`: housing admin channel was alerted for an expired task; assignee DM not yet confirmed (retry DM only on the next run)
 - `expired`: expiry path notifications completed
 
 ## 2) Identity and Authorization Model
@@ -61,6 +62,11 @@ This document is the durable behavioral reference for the Housing module.
 5. Admin approves -> `approved`.
 6. Next recurring instance is generated.
 7. If missed deadline, task transitions to `expired` and fine behavior is triggered.
+   - Assignments use `is_fine`: set `false` when the row is expired with a pending ledger fine; set `true` only after `awardPoints` succeeds. Hourly cron runs `pendingFinesJob` to retry fines when the ledger call failed after expiry.
+   - Missed-duty fine ledger rows embed the task id in `reason` (`[task:<id>]`) so `expireOverdueDutyTask` and `pendingFinesJob` can skip `awardPoints` when a matching fine already exists (avoids double charges if `is_fine` was not persisted).
+8. Overdue transition is canonicalized through shared expiry logic and may run from:
+   - cron (`ExpireDutiesJob`) as the primary scheduled path, and
+   - dashboard maintenance as a fallback path for assigned-user views.
 
 ## 3.2 One-Off Duty Flow
 
@@ -91,6 +97,26 @@ This document is the durable behavioral reference for the Housing module.
 
 ## 4) Mutation Behavior Rules
 
+### Housing admin: recurring scope → collections written
+
+UI scope labels map to `RecurringMutationScope` on server actions. Cron reads **`housing_schedules`** for `ensureFutureTasksJob` / `triggerNextInstance`; if the schedule row is wrong, new instances can ignore an edit that only touched **`housing_assignments`**.
+
+| UI / scope | Entry point | `housing_schedules` | `housing_assignments` | Cron can ignore edit if schedule wrong? |
+| --- | --- | --- | --- | --- |
+| **This instance** | `updateTaskAction` / `deleteTaskAction` → `AdminService` | No | Yes (single row) | No (next instance uses unchanged schedule) |
+| **This + future** (edit) | `updateTaskAction` → `ScheduleService.updateTaskThisAndFuture` | Yes — **first** (`title`, `description`, `points_value`, `assigned_to`, optional `lead_time_hours` via `scheduleLeadTimeHours`, `last_generated_at`) | Yes — current row + non-final rows with `due_at >= effectiveFrom` | **Would** — schedule is updated in the same flow before rows |
+| **Entire series** (edit) | `updateTaskAction` → `ScheduleService.updateTaskEntireSeries` | Same fields as this + future (entire non-final set) | Yes — current + all other non-final rows | **Would** — schedule updated first |
+| **This + future** (delete) | `deleteTaskAction` → `ScheduleService.deleteTaskThisAndFuture` | Yes — `active: false` **before** deletes | Yes — current + matching future rows | N/A (schedule deactivated; no new instances) |
+| **Entire series** (delete) | `deleteTaskAction` → `ScheduleService.deleteTaskEntireSeries` | Yes — `active: false` **before** deletes | Yes — peers then current row; throws if any delete fails | N/A |
+| **Lead time only** (recurring edit modal) | Same `updateTaskAction` with `scheduleLeadTimeHours` in options (no separate second action) | Yes | Yes — unlock/status on open/locked rows when lead time changes | **Would** if only assignments changed |
+
+**Already correct (audit, no code change needed for behavior):**
+
+- `createScheduleAction` → `ScheduleService.createSchedule`: writes schedule then first assignment.
+- `approveTaskAction` → `verifyTask` + `triggerNextInstance`: reads schedule for next instance (schedule must already match series intent).
+- `adminReassign` / `rejectTask` / non-recurring paths: assignment-only by design.
+- `updateScheduleLeadTimeAction` → `ScheduleService.updateSchedule`: direct schedule + scoped row recalculation when lead time changes without a task edit (still valid).
+
 ### Create Task
 
 - Allowed only for housing admins.
@@ -111,6 +137,7 @@ This document is the durable behavioral reference for the Housing module.
 - Allowed only for housing admins.
 - Should fail clearly if task is not found.
 - Historical audit concerns should be considered for already-approved records.
+- For recurring deletions using `this_and_future` or `entire_series`, the schedule is soft-deactivated (`active: false`) before future-row cleanup to prevent cron resurrection races.
 
 ### Claim / Unclaim
 
@@ -167,11 +194,20 @@ This document is the durable behavioral reference for the Housing module.
 - Recurrence generation should avoid creating overdue instances on recovery paths.
 - Expiry check must use consistent timezone assumptions.
 - Cron runs should be idempotent enough to avoid repeated destructive side effects.
+- `open` tasks whose due time has passed should not remain user-actionable in dashboard views; they must be transitioned to `expired` by canonical expiry logic or hidden until transition completes.
 
 ## 5.5 Notification Edge Cases
 
 - Notification delivery failure should not silently mark notification stage complete when retry is desired.
-- Critical dual-notification paths (admin channel + user DM) should only mark complete after required deliveries succeed.
+- **Expired task alerts (duty / one-off / project; not bounties)** use a **primary** path and a **secondary** path:
+  - **Primary — housing admin channel**: Treat as the critical path for admins. The system must not advance to the final `notification_level: expired` until this step has succeeded at least once for the task.
+  - **Secondary — assignee DM**: Less critical for admin awareness but still required before the flow is considered complete.
+- **Partial failure rules**:
+  - Channel fails: do not send the assignee DM yet; leave `notification_level` below `expired_admin`; retry both channel and DM on a later run.
+  - Channel succeeds, DM fails: set `notification_level` to `expired_admin` so the next cron pass skips repeating the channel alert and only retries the DM; after DM succeeds, set `notification_level` to `expired`.
+  - Unassigned expired tasks: mark `expired` without DMs (no assignee); admins still see the task in data if needed.
+- Unlock and recurring notification stages should persist completion only after successful delivery.
+- Urgent reminder threshold is `12` hours before `due_at`.
 
 ## 6) Error Surface Expectations
 

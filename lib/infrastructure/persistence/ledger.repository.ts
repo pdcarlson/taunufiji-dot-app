@@ -157,8 +157,11 @@ export class AppwriteLedgerRepository implements ILedgerRepository {
       queries.push(Query.orderDesc(dbField));
     }
 
-    // Limit
+    // Limit / offset (pagination for callers that scan ledger pages)
     queries.push(Query.limit(options.limit ?? 100));
+    if (options.offset !== undefined && options.offset > 0) {
+      queries.push(Query.offset(options.offset));
+    }
 
     return queries;
   }

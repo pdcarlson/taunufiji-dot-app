@@ -1,81 +1,90 @@
-import { AppwriteTaskRepository } from "@/lib/infrastructure/persistence/task.repository";
-import { PointsService } from "@/lib/application/services/ledger/points.service";
-import { ScheduleService } from "@/lib/application/services/housing/schedule.service";
-import { AppwriteLedgerRepository } from "@/lib/infrastructure/persistence/ledger.repository";
-import { AppwriteUserRepository } from "@/lib/infrastructure/persistence/user.repository";
-import { HOUSING_CONSTANTS } from "@/lib/constants";
+import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
+import { expireOverdueDutyTask } from "@/lib/application/services/housing/overdue-duty.service";
+import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
+import { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
+import {
+  fetchAllTaskPages,
+  HOUSING_CRON_TASK_PAGE_SIZE,
+} from "../task-query-pagination";
 
-// Helper to construct services (DI Container Lite)
-function getServices() {
-  const taskRepo = new AppwriteTaskRepository();
-  const ledgerRepo = new AppwriteLedgerRepository();
-  const userRepo = new AppwriteUserRepository();
-
-  const pointsService = new PointsService(userRepo, ledgerRepo);
-  const scheduleService = new ScheduleService(taskRepo);
-
-  return { taskRepo, pointsService, scheduleService };
-}
-
-export const expireDutiesJob = async (): Promise<{ errors: string[] }> => {
-  const { taskRepo, pointsService, scheduleService } = getServices();
+export const expireDutiesJob = async (
+  taskRepository: ITaskRepository,
+  pointsService: IPointsService,
+  scheduleService: IScheduleService,
+  ledgerRepository: ILedgerRepository,
+): Promise<{ errors: string[] }> => {
   const errors: string[] = [];
   const now = new Date();
 
-  console.log("⏰ Running ExpireDutiesJob...");
+  console.log("[ExpireDutiesJob]", {
+    phase: "start",
+    now: now.toISOString(),
+  });
 
   try {
-    const allOpenTasks = await taskRepo.findMany({
-      status: "open",
-      limit: 100,
+    const openOverdue = await fetchAllTaskPages(
+      taskRepository,
+      {
+        status: "open",
+        dueBefore: now,
+        proofS3KeyAbsent: true,
+        orderBy: "due_at",
+        orderDirection: "asc",
+      },
+      HOUSING_CRON_TASK_PAGE_SIZE,
+    );
+
+    const pendingOverdue = await fetchAllTaskPages(
+      taskRepository,
+      {
+        status: "pending",
+        dueBefore: now,
+        proofS3KeyAbsent: true,
+        orderBy: "due_at",
+        orderDirection: "asc",
+      },
+      HOUSING_CRON_TASK_PAGE_SIZE,
+    );
+
+    // Pending rows intentionally overwrite open when the same id appears in both
+    // lists so we use the later assignment state for deduplication.
+    const byId = new Map<string, (typeof openOverdue)[0]>();
+    for (const task of openOverdue) {
+      byId.set(task.id, task);
+    }
+    for (const task of pendingOverdue) {
+      byId.set(task.id, task);
+    }
+    const overdueTasks = [...byId.values()].sort((a, b) => {
+      const aDue = a.due_at ? new Date(a.due_at).getTime() : 0;
+      const bDue = b.due_at ? new Date(b.due_at).getTime() : 0;
+      return aDue - bDue;
     });
 
-    // Filter for overdue tasks
-    const overdueTasks = allOpenTasks.filter((task) => {
-      if (!task.due_at) return false;
-      return new Date(task.due_at) <= now;
+    console.log("[ExpireDutiesJob]", {
+      phase: "overdue_scan_complete",
+      overdueCount: overdueTasks.length,
     });
-
-    console.log(`   Found ${overdueTasks.length} overdue tasks.`);
 
     for (const task of overdueTasks) {
       try {
-        if (task.type === "bounty" || task.type === "project") continue;
-
-        console.log(`   Expiring task: "${task.title}" (ID: ${task.id})`);
-
-        await taskRepo.update(task.id, {
-          status: "expired",
+        const result = await expireOverdueDutyTask(task, {
+          taskRepository,
+          pointsService,
+          scheduleService,
+          ledgerRepository,
         });
-
-        if (task.assigned_to) {
-          try {
-            await pointsService.awardPoints(task.assigned_to, {
-              amount: -Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY),
-              reason: `Missed Duty: ${task.title}`,
-              category: "fine",
-            });
-          } catch (e) {
-            console.error(`   Failed to fine user for ${task.id}`, e);
-          }
-        }
-
-        if (task.schedule_id) {
-          try {
-            await scheduleService.triggerNextInstance(task.schedule_id, task);
-            console.log(
-              `   Triggered next instance for schedule ${task.schedule_id}`,
-            );
-          } catch (e) {
-            // CRITICAL: If this fails, the recurrence chain breaks.
-            console.error(
-              `🚨 CRITICAL SCHEDULER ERROR: Failed to trigger next instance for expired task ${task.id} (Schedule: ${task.schedule_id})`,
-              e,
-            );
-            errors.push(
-              `Scheduler Failed for ${task.id}: ${e instanceof Error ? e.message : String(e)}`,
-            );
-          }
+        errors.push(...result.errors);
+        if (result.expired) {
+          console.log("[ExpireDutiesJob]", {
+            phase: "task_expired",
+            taskId: task.id,
+            scheduleId: task.schedule_id ?? null,
+            fined: result.fined,
+            triggeredNextInstance: result.triggeredNextInstance,
+            errorCount: result.errors.length,
+          });
         }
       } catch (error: unknown) {
         const errMsg = `Failed to expire task ${task.id}: ${error instanceof Error ? error.message : String(error)}`;

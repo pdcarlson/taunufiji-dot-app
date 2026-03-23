@@ -3,10 +3,7 @@ import {
   updateTaskAction,
   deleteTaskAction,
 } from "@/lib/presentation/actions/housing/admin.actions";
-import {
-  getScheduleAction,
-  updateScheduleLeadTimeAction,
-} from "@/lib/presentation/actions/housing/schedule.actions";
+import { getScheduleAction } from "@/lib/presentation/actions/housing/schedule.actions";
 import { useJWT } from "@/hooks/useJWT";
 import { Member, HousingTask } from "@/lib/domain/entities";
 import { Loader } from "@/components/ui/Loader";
@@ -19,14 +16,14 @@ import {
 } from "@/lib/utils/eastern-time";
 import { RecurringMutationScope } from "@/lib/domain/types/recurring";
 
-interface EditTaskModalProps {
+export interface EditTaskModalProps {
   task: HousingTask;
   members: Member[];
   onClose: () => void;
   onRefresh: () => void;
 }
 
-export default function EditTaskModal({
+export function EditTaskModal({
   task,
   members,
   onClose,
@@ -150,11 +147,21 @@ export default function EditTaskModal({
       }
 
       const effectiveFromDueAt = task.due_at ?? undefined;
+      const shouldMergeLeadTimeIntoRecurringUpdate =
+        isRecurring &&
+        task.schedule_id &&
+        mutationScope !== "this_instance" &&
+        (scheduleLoaded || leadTimeDirty);
       const recurringOptions =
         isRecurring && task.schedule_id
           ? {
               scope: mutationScope,
               effectiveFromDueAt,
+              ...(shouldMergeLeadTimeIntoRecurringUpdate
+                ? {
+                    scheduleLeadTimeHours: Number(formData.lead_time_hours) || 24,
+                  }
+                : {}),
             }
           : undefined;
 
@@ -166,28 +173,6 @@ export default function EditTaskModal({
       );
       if (!taskRes.success) {
         throw new Error(taskRes.error || "Task update failed");
-      }
-
-      const shouldUpdateLeadTime =
-        isRecurring &&
-        task.schedule_id &&
-        mutationScope !== "this_instance" &&
-        typeof effectiveFromDueAt === "string" &&
-        (scheduleLoaded || leadTimeDirty);
-      if (shouldUpdateLeadTime) {
-        const scheduleId = task.schedule_id!;
-        const scheduleRes = await updateScheduleLeadTimeAction(
-          scheduleId,
-          Number(formData.lead_time_hours),
-          jwt,
-          {
-            scope: mutationScope,
-            effectiveFromDueAt,
-          },
-        );
-        if (scheduleRes && !scheduleRes.success) {
-          throw new Error(scheduleRes.error || "Schedule update failed");
-        }
       }
 
       toast.success("Task updated");
@@ -225,14 +210,26 @@ export default function EditTaskModal({
           : undefined,
       });
       if (result.success) {
-        toast.success("Task deleted");
+        const successMessage =
+          isRecurring && task.schedule_id
+            ? mutationScope === "entire_series"
+              ? "Recurring series deleted and schedule deactivated"
+              : mutationScope === "this_and_future"
+                ? "Task and future recurring instances deleted"
+                : "Recurring task instance deleted"
+            : "Task deleted";
+        toast.success(successMessage);
         onRefresh();
         onClose();
       } else {
         toast.error(result.error || "Delete failed");
       }
-    } catch {
-      toast.error("Failed to delete");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete";
+      toast.error(message);
+      onRefresh();
+      onClose();
     } finally {
       setLoading(false);
     }

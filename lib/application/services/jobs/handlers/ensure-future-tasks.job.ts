@@ -1,10 +1,22 @@
-import { AppwriteTaskRepository } from "@/lib/infrastructure/persistence/task.repository";
+import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { calculateNextInstance } from "@/lib/utils/scheduler";
 
-export const ensureFutureTasksJob = async () => {
+/**
+ * Self-heals **active** recurring schedules that have no open/pending/locked instance.
+ *
+ * @param taskRepository — Injected `ITaskRepository` (same contract as cron: read schedules, `findMany` by
+ *   schedule, `create` duty rows, `updateSchedule` for `last_generated_at`). Callers must not pass a repository
+ *   that swallows errors silently.
+ * @returns Resolves to `void`. On unexpected repository failures, logs `🔥 EnsureFutureTasksJob Failed` and
+ *   does not rethrow (hourly cron continues). Per-schedule failures (e.g. cannot compute next instance) log and
+ *   `continue` to the next schedule.
+ */
+export const ensureFutureTasksJob = async (
+  taskRepository: ITaskRepository,
+) => {
   console.log("🛡️ Running EnsureFutureTasksJob (Self-Healing)...");
 
-  const taskRepo = new AppwriteTaskRepository();
+  const taskRepo = taskRepository;
 
   try {
     const schedules = await taskRepo.findActiveSchedules();

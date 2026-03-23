@@ -1,91 +1,76 @@
 /**
  * Cron Service
  *
- * Handles scheduled job execution by orchestrating specialized job handlers.
+ * Delegates hourly housing work to {@link HousingTimeDrivenPipeline} so cron and dashboard maintenance
+ * cannot drift on ordering or shared rules.
  */
 
-import { getContainer } from "@/lib/infrastructure/container";
-import { UnlockTasksJob } from "./handlers/unlock-tasks.job";
-import { NotifyRecurringJob } from "./handlers/notify-recurring.job";
-import { NotifyUrgentJob } from "./handlers/notify-urgent.job";
+import { HousingTimeDrivenPipeline } from "./housing-time-driven.pipeline";
 import { expireDutiesJob } from "./handlers/expire-duties.job";
-import { NotifyExpiredJob } from "./handlers/notify-expired.job";
 import { ensureFutureTasksJob } from "./handlers/ensure-future-tasks.job";
+import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
+import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
+import { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
 
 /** Result type for cron job execution */
 export interface CronResult {
   unlocked: number;
+  recurring_notified: number;
   urgent: number;
   expired_notified: number;
   skipped_unassigned: number;
   errors: string[];
 }
 
-export const CronService = {
+export class CronService {
+  constructor(
+    private readonly housingTimeDrivenPipeline: typeof HousingTimeDrivenPipeline,
+    private readonly taskRepository: ITaskRepository,
+    private readonly pointsService: IPointsService,
+    private readonly scheduleService: IScheduleService,
+    private readonly ledgerRepository: ILedgerRepository,
+  ) {}
+
   /**
-   * Hourly Cron Job
-   * Orchestrates the execution of all hourly tasks.
+   * Hourly Cron Job — full time-driven housing pipeline (see `housing-time-driven.pipeline.ts`).
    */
-  async runHourly() {
-    console.log("🚀 Starting Cron Job...");
-    const { taskRepository } = getContainer();
+  async runHourly(): Promise<CronResult> {
+    console.log("[CronService]", {
+      job: "HOURLY",
+      phase: "start",
+      startedAt: new Date().toISOString(),
+    });
 
-    // Aggregated Stats
-    let unlocked = 0;
-    let urgent = 0;
-    let expired_notified = 0;
-    let skipped_unassigned = 0;
-    const errors: string[] = [];
+    const stats = await this.housingTimeDrivenPipeline.runFullHourlyCycle(
+      this.taskRepository,
+      this.pointsService,
+      this.scheduleService,
+      this.ledgerRepository,
+    );
 
-    // 1. Unlock Tasks
-    const unlockResult = await UnlockTasksJob.run(taskRepository);
-    unlocked += unlockResult.unlocked;
-    errors.push(...unlockResult.errors);
-
-    // 2. Notify Recurring
-    const recurringResult = await NotifyRecurringJob.run(taskRepository);
-    unlocked += recurringResult.notified;
-    errors.push(...recurringResult.errors);
-
-    // 3. Notify Urgent
-    const urgentResult = await NotifyUrgentJob.run(taskRepository);
-    urgent += urgentResult.urgent;
-    errors.push(...urgentResult.errors);
-
-    // 4. Expire Duties (Self-Contained)
-    const expireResult = await expireDutiesJob();
-    errors.push(...expireResult.errors);
-
-    // 5. Notify Expired
-    const notifyExpiredResult = await NotifyExpiredJob.run(taskRepository);
-    expired_notified += notifyExpiredResult.expired_notified;
-    skipped_unassigned += notifyExpiredResult.skipped_unassigned;
-    errors.push(...notifyExpiredResult.errors);
-
-    // 6. Ensure Future Tasks (Self-Healing)
-    await ensureFutureTasksJob();
-
-    // Summary
-    const stats = {
-      unlocked,
-      urgent,
-      expired_notified,
-      skipped_unassigned,
-      errors,
-    };
-    console.log("📊 Cron Summary:", stats);
-    if (errors.length > 0) {
-      console.error("⚠️ Cron Errors:", errors);
+    console.log("[CronService]", {
+      job: "HOURLY",
+      phase: "completed",
+      ...stats,
+    });
+    if (stats.errors.length > 0) {
+      console.error("⚠️ Cron Errors:", stats.errors);
     }
 
     return stats;
-  },
+  }
 
   async expireDuties() {
-    return await expireDutiesJob();
-  },
+    return await expireDutiesJob(
+      this.taskRepository,
+      this.pointsService,
+      this.scheduleService,
+      this.ledgerRepository,
+    );
+  }
 
   async ensureFutureTasks() {
-    return await ensureFutureTasksJob();
-  },
-};
+    return await ensureFutureTasksJob(this.taskRepository);
+  }
+}

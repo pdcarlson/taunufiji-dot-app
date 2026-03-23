@@ -7,6 +7,7 @@ import {
   IPointsService,
   PointsTransaction,
 } from "@/lib/domain/ports/services/points.service.port";
+import { hasPersistedMissedDutyFine } from "@/lib/application/services/housing/missed-duty-fine";
 
 export class PointsService implements IPointsService {
   constructor(
@@ -21,6 +22,20 @@ export class PointsService implements IPointsService {
    */
   async awardPoints(discordUserId: string, tx: PointsTransaction) {
     try {
+      if (tx.category === "fine" && tx.fineTaskId) {
+        const duplicate = await hasPersistedMissedDutyFine(
+          this.ledgerRepository,
+          discordUserId,
+          tx.fineTaskId,
+        );
+        if (duplicate) {
+          logger.log(
+            `PointsService: skipped duplicate missed-duty fine for task ${tx.fineTaskId}`,
+          );
+          return true;
+        }
+      }
+
       // 1. Resolve User via Repository
       const user = await this.userRepository.findByDiscordId(discordUserId);
       if (!user) {

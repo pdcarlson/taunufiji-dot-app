@@ -6,11 +6,14 @@ on:
   pull_request:
     branches: [main, staging]
 
+# Artifact upload/download of `node_modules` breaks npm's `.bin` symlinks (zip
+# round-trip), which surfaces as `next: not found`, `vitest: not found`, etc.
+# Use `actions/setup-node` npm cache + `npm ci` per job instead.
 permissions:
   contents: read
 
 jobs:
-  quality-gate:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,14 +32,78 @@ jobs:
       - name: Lint
         run: npm run lint
 
+  typecheck:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Type check
         run: npx tsc --noEmit
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Test
         run: npm run test -- --run
 
+  coverage-critical:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Coverage (Critical Modules)
         run: npm run test:coverage:critical
+
+  e2e-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
@@ -44,6 +111,11 @@ jobs:
       - name: E2E Smoke Tests
         run: npm run test:e2e
 
+  validate-secrets:
+    if: ${{ github.secret_source == 'Actions' }}
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Validate GitHub Secrets
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
@@ -52,6 +124,22 @@ jobs:
             echo "CRON_SECRET is missing in GitHub Secrets!"
             exit 1
           fi
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build
         env:
@@ -72,4 +160,54 @@ jobs:
           DISCORD_ROLE_ID_CABINET: "mock-role-cabinet"
           DISCORD_ROLE_ID_HOUSING_CHAIR: "mock-role-housing-chair"
           CRON_SECRET: "mock-cron-secret"
-        run: npm run build
+        run: SKIP_ENV_VALIDATION=true npm run build
+
+  quality-gate:
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - typecheck
+      - test
+      - coverage-critical
+      - e2e-smoke
+      - validate-secrets
+      - build
+    steps:
+      - name: Enforce upstream job success
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+          TYPECHECK_RESULT: ${{ needs.typecheck.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          COVERAGE_RESULT: ${{ needs.coverage-critical.result }}
+          E2E_RESULT: ${{ needs.e2e-smoke.result }}
+          SECRETS_RESULT: ${{ needs.validate-secrets.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: |
+          set -euo pipefail
+          failed=0
+          for pair in \
+            "lint:${LINT_RESULT}" \
+            "typecheck:${TYPECHECK_RESULT}" \
+            "test:${TEST_RESULT}" \
+            "coverage-critical:${COVERAGE_RESULT}" \
+            "e2e-smoke:${E2E_RESULT}" \
+            "validate-secrets:${SECRETS_RESULT}" \
+            "build:${BUILD_RESULT}"; do
+            name="${pair%%:*}"
+            result="${pair#*:}"
+            if [ "$name" = "validate-secrets" ] && [ "$result" = "skipped" ]; then
+              continue
+            fi
+            if [ "$result" != "success" ]; then
+              echo "::error::Job $name finished with result=$result (expected success)"
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "All required jobs succeeded."
+
+      - name: Quality gate passed
+        run: echo "All CI checks passed."

@@ -23,11 +23,21 @@ export class QueryService {
   }
 
   async getAllActiveTasks() {
-    return await this.taskRepository.findMany({
+    const tasks = await this.taskRepository.findMany({
       status: ["open", "pending", "locked", "rejected"],
       orderBy: "createdAt",
       orderDirection: "desc",
       limit: 100, // Reasonable limit for now
+    });
+
+    const now = new Date();
+    return tasks.filter((task) => {
+      const isOverdueWithoutProof =
+        (task.status === "open" || task.status === "pending") &&
+        !!task.due_at &&
+        now > new Date(task.due_at) &&
+        !task.proof_s3_key;
+      return !isOverdueWithoutProof;
     });
   }
 

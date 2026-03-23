@@ -1,29 +1,18 @@
-const hoisted = vi.hoisted(() => {
-  const repository = {
-    findActiveSchedules: vi.fn(),
-    findMany: vi.fn(),
-    create: vi.fn(),
-    updateSchedule: vi.fn(),
-  };
-
-  return { repository };
-});
-
-vi.mock("@/lib/infrastructure/persistence/task.repository", () => ({
-  AppwriteTaskRepository: function () {
-    return hoisted.repository;
-  },
-}));
-
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Mock } from "vitest";
 import { ensureFutureTasksJob } from "./ensure-future-tasks.job";
+import { MockFactory } from "@/lib/test/mock-factory";
 
 describe("ensureFutureTasksJob", () => {
+  let taskRepository: ReturnType<typeof MockFactory.createTaskRepository>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    taskRepository = MockFactory.createTaskRepository();
   });
 
   it("skips deactivated schedules to avoid resurrection", async () => {
-    hoisted.repository.findActiveSchedules.mockResolvedValue([
+    (taskRepository.findActiveSchedules as Mock).mockResolvedValue([
       {
         id: "schedule-1",
         title: "Kitchen Duty",
@@ -33,14 +22,14 @@ describe("ensureFutureTasksJob", () => {
       },
     ]);
 
-    await ensureFutureTasksJob();
+    await ensureFutureTasksJob(taskRepository);
 
-    expect(hoisted.repository.findMany).not.toHaveBeenCalled();
-    expect(hoisted.repository.create).not.toHaveBeenCalled();
+    expect(taskRepository.findMany).not.toHaveBeenCalled();
+    expect(taskRepository.create).not.toHaveBeenCalled();
   });
 
   it("creates a task for active schedules missing future instances", async () => {
-    hoisted.repository.findActiveSchedules.mockResolvedValue([
+    (taskRepository.findActiveSchedules as Mock).mockResolvedValue([
       {
         id: "schedule-2",
         title: "Chapter Room",
@@ -51,14 +40,14 @@ describe("ensureFutureTasksJob", () => {
         points_value: 0,
       },
     ]);
-    hoisted.repository.findMany
+    (taskRepository.findMany as Mock)
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
-    await ensureFutureTasksJob();
+    await ensureFutureTasksJob(taskRepository);
 
-    expect(hoisted.repository.create).toHaveBeenCalledTimes(1);
-    expect(hoisted.repository.updateSchedule).toHaveBeenCalledWith(
+    expect(taskRepository.create).toHaveBeenCalledTimes(1);
+    expect(taskRepository.updateSchedule).toHaveBeenCalledWith(
       "schedule-2",
       expect.objectContaining({
         last_generated_at: expect.any(String),
@@ -67,7 +56,7 @@ describe("ensureFutureTasksJob", () => {
   });
 
   it("does not create when repository.findMany returns existing future instances", async () => {
-    hoisted.repository.findActiveSchedules.mockResolvedValue([
+    (taskRepository.findActiveSchedules as Mock).mockResolvedValue([
       {
         id: "schedule-3",
         title: "Bathroom",
@@ -76,19 +65,19 @@ describe("ensureFutureTasksJob", () => {
         lead_time_hours: 24,
       },
     ]);
-    hoisted.repository.findMany.mockResolvedValue([
+    (taskRepository.findMany as Mock).mockResolvedValue([
       { id: "task-1", schedule_id: "schedule-3", status: "open" },
     ]);
 
-    await ensureFutureTasksJob();
+    await ensureFutureTasksJob(taskRepository);
 
-    expect(hoisted.repository.findMany).toHaveBeenCalled();
-    expect(hoisted.repository.create).not.toHaveBeenCalled();
-    expect(hoisted.repository.updateSchedule).not.toHaveBeenCalled();
+    expect(taskRepository.findMany).toHaveBeenCalled();
+    expect(taskRepository.create).not.toHaveBeenCalled();
+    expect(taskRepository.updateSchedule).not.toHaveBeenCalled();
   });
 
   it("surfaces error when repository.create rejects", async () => {
-    hoisted.repository.findActiveSchedules.mockResolvedValue([
+    (taskRepository.findActiveSchedules as Mock).mockResolvedValue([
       {
         id: "schedule-4",
         title: "Hallway",
@@ -97,16 +86,16 @@ describe("ensureFutureTasksJob", () => {
         lead_time_hours: 24,
       },
     ]);
-    hoisted.repository.findMany
+    (taskRepository.findMany as Mock)
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
-    hoisted.repository.create.mockRejectedValue(new Error("db fail"));
+    (taskRepository.create as Mock).mockRejectedValue(new Error("db fail"));
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    await ensureFutureTasksJob();
+    await ensureFutureTasksJob(taskRepository);
 
-    expect(hoisted.repository.create).toHaveBeenCalled();
+    expect(taskRepository.create).toHaveBeenCalled();
     expect(consoleSpy).toHaveBeenCalledWith(
       "🔥 EnsureFutureTasksJob Failed:",
       expect.any(Error),
@@ -115,7 +104,7 @@ describe("ensureFutureTasksJob", () => {
   });
 
   it("processes multiple active schedules and invokes create/updateSchedule per schedule", async () => {
-    hoisted.repository.findActiveSchedules.mockResolvedValue([
+    (taskRepository.findActiveSchedules as Mock).mockResolvedValue([
       {
         id: "schedule-a",
         title: "Room A",
@@ -131,23 +120,23 @@ describe("ensureFutureTasksJob", () => {
         lead_time_hours: 24,
       },
     ]);
-    hoisted.repository.findMany
+    (taskRepository.findMany as Mock)
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
-    hoisted.repository.create.mockResolvedValue(undefined);
-    hoisted.repository.updateSchedule.mockResolvedValue(undefined);
+    (taskRepository.create as Mock).mockResolvedValue(undefined);
+    (taskRepository.updateSchedule as Mock).mockResolvedValue(undefined);
 
-    await ensureFutureTasksJob();
+    await ensureFutureTasksJob(taskRepository);
 
-    expect(hoisted.repository.create).toHaveBeenCalledTimes(2);
-    expect(hoisted.repository.updateSchedule).toHaveBeenCalledTimes(2);
-    expect(hoisted.repository.updateSchedule).toHaveBeenCalledWith(
+    expect(taskRepository.create).toHaveBeenCalledTimes(2);
+    expect(taskRepository.updateSchedule).toHaveBeenCalledTimes(2);
+    expect(taskRepository.updateSchedule).toHaveBeenCalledWith(
       "schedule-a",
       expect.objectContaining({ last_generated_at: expect.any(String) }),
     );
-    expect(hoisted.repository.updateSchedule).toHaveBeenCalledWith(
+    expect(taskRepository.updateSchedule).toHaveBeenCalledWith(
       "schedule-b",
       expect.objectContaining({ last_generated_at: expect.any(String) }),
     );

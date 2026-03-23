@@ -181,8 +181,16 @@ export class DutyService implements IDutyService {
         continue;
       }
 
-      // If it looks expired but isn't updated yet, we hide it or show it as is.
-      // Ideally Maintenance runs BEFORE this, so the data is fresh.
+      // Defensive filter: never present overdue duty rows as actionable if
+      // maintenance/cron has not persisted the expired transition yet.
+      const isOpenOrPendingWithoutProof =
+        (task.status === "open" || task.status === "pending") &&
+        !!task.due_at &&
+        new Date() > new Date(task.due_at) &&
+        !task.proof_s3_key;
+      if (isOpenOrPendingWithoutProof) {
+        continue;
+      }
 
       filtered.push(task);
     }

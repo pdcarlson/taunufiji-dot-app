@@ -15,6 +15,7 @@ export interface LedgerQueryOptions {
   userId?: string;
   category?: LedgerEntry["category"];
   limit?: number;
+  offset?: number;
   startDate?: Date;
   endDate?: Date;
   orderBy?: string;

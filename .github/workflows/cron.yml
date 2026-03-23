@@ -1,29 +1,149 @@
 name: Scheduled Cron Job
 
 on:
-    schedule:
-        # Runs every 12 minutes (production only)
-        - cron: "*/12 * * * *"
-    workflow_dispatch:
-        inputs:
-            environment:
-                description: "Target environment"
-                required: true
-                default: "production"
-                type: choice
-                options:
-                    - production
-                    - staging
+  schedule:
+    # Runs every 12 minutes (production only)
+    - cron: "*/12 * * * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
 
 jobs:
-    cron:
-        runs-on: ubuntu-latest
-        timeout-minutes: 5
-        environment: ${{ github.event.inputs.environment || 'production' }}
+  cron:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    concurrency:
+      group: cron-${{ github.event.inputs.environment || 'production' }}
+      cancel-in-progress: false
 
-        steps:
-            - name: Trigger cron endpoint
-              run: |
-                  echo "Environment: ${{ github.event.inputs.environment || 'production' }}"
-                  curl -f -X GET \
-                    "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/cron?key=${{ secrets.CRON_SECRET }}&job=HOURLY"
+    steps:
+      - name: Validate required scheduler configuration
+        env:
+          NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$NEXT_PUBLIC_APP_URL" ]; then
+            echo "NEXT_PUBLIC_APP_URL is missing in GitHub Environment Variables."
+            exit 1
+          fi
+
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is missing in GitHub Environment Secrets."
+            exit 1
+          fi
+
+          if ! [[ "$NEXT_PUBLIC_APP_URL" =~ ^https?:// ]]; then
+            echo "NEXT_PUBLIC_APP_URL must start with http:// or https://."
+            exit 1
+          fi
+
+      - name: Preflight cron auth/config contract
+        env:
+          BASE_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          NORMALIZED_BASE_URL="${BASE_URL%/}"
+          PREFLIGHT_URL="${NORMALIZED_BASE_URL}/api/cron"
+
+          echo "Environment: ${{ github.event.inputs.environment || 'production' }}"
+          echo "Preflight URL: ${PREFLIGHT_URL}"
+
+          response_file="$(mktemp)"
+          curl_exit=0
+          http_status="$(
+            curl --silent --show-error \
+              --connect-timeout 10 --max-time 30 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -o "${response_file}" \
+              -w "%{http_code}" \
+              "${PREFLIGHT_URL}"
+          )" || curl_exit=$?
+
+          if [ "${curl_exit}" -ne 0 ]; then
+            echo "Cron preflight failed to reach endpoint (curl exit ${curl_exit})."
+            if [ -s "${response_file}" ]; then
+              echo "Response body:"
+              cat "${response_file}"
+            fi
+            exit 1
+          fi
+
+          body="$(cat "${response_file}")"
+
+          if [ "${http_status}" != "400" ]; then
+            echo "Cron preflight failed. Expected HTTP 400 (invalid job), got HTTP ${http_status}."
+            if [ -n "${body}" ]; then
+              echo "Response body:"
+              echo "${body}"
+            fi
+            if [[ "${body}" == *"Server Configuration Error"* ]]; then
+              echo "Diagnostic: platform/runtime reports a server configuration issue before cron contract validation."
+              echo "Check deployed runtime env for CRON_SECRET and ensure deployment has completed."
+            fi
+            exit 1
+          fi
+
+          if [[ "${body}" != *"\"code\":\"INVALID_JOB\""* ]]; then
+            echo "Cron preflight failed. Expected INVALID_JOB response body."
+            if [ -n "${body}" ]; then
+              echo "Response body:"
+              echo "${body}"
+            fi
+            exit 1
+          fi
+
+          echo "Cron preflight passed."
+
+      - name: Trigger cron endpoint
+        env:
+          BASE_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          echo "Environment: ${{ github.event.inputs.environment || 'production' }}"
+          NORMALIZED_BASE_URL="${BASE_URL%/}"
+          ENDPOINT_URL="${NORMALIZED_BASE_URL}/api/cron?job=HOURLY"
+          echo "Cron URL: ${ENDPOINT_URL}"
+          response_file="$(mktemp)"
+          curl_exit=0
+          http_status="$(
+            curl --silent --show-error -X GET \
+              --connect-timeout 10 --max-time 60 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -o "${response_file}" \
+              -w "%{http_code}" \
+              "${ENDPOINT_URL}"
+          )" || curl_exit=$?
+
+          if [ "${curl_exit}" -ne 0 ]; then
+            echo "Cron HOURLY request failed to reach endpoint (curl exit ${curl_exit})."
+            if [ -s "${response_file}" ]; then
+              echo "Response body:"
+              cat "${response_file}"
+            fi
+            exit 1
+          fi
+
+          body="$(cat "${response_file}")"
+
+          if [ "${http_status}" != "200" ]; then
+            echo "Cron HOURLY execution failed with HTTP ${http_status}."
+            if [ -n "${body}" ]; then
+              echo "Response body:"
+              echo "${body}"
+            fi
+            exit 1
+          fi
+
+          echo "Cron HOURLY execution succeeded."

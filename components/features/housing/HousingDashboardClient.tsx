@@ -9,7 +9,7 @@ import ProofReviewModal from "./ProofReviewModal";
 import CreateBountyModal from "./CreateBountyModal";
 import CreateScheduleModal from "./CreateScheduleModal";
 import CreateOneOffModal from "./CreateOneOffModal";
-import EditTaskModal from "./EditTaskModal";
+import { EditTaskModal } from "./EditTaskModal";
 import { CalendarClock, Zap, UserPlus } from "lucide-react";
 import toast from "react-hot-toast";
 

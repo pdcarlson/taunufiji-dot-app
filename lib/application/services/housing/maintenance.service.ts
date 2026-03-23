@@ -1,19 +1,26 @@
 /**
  * Maintenance Service
  *
- * Handles state updates for tasks that depend on time (Expiry, Unlocking).
- * Previously hidden inside DutyService.getMyTasks (Lazy Eval).
+ * Per-user fallback when cron has not run yet: unlock eligible tasks, expire overdue duties (same path as
+ * `expireOverdueDutyTask` / cron), and unclaim expired bounties. Does **not** duplicate recurring/urgent/expired
+ * Discord notifications or `ensureFutureTasksJob` — those stay in the hourly cron pipeline (`housing-time-driven.pipeline.ts`).
  */
 
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
 import { IDutyService } from "@/lib/domain/ports/services/duty.service.port";
-import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
-import { TaskEvents } from "@/lib/domain/events";
+import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
+import { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
+import { expireOverdueDutyTask } from "./overdue-duty.service";
+import { processUnlockForTask } from "./task-unlock";
 
 export class MaintenanceService {
   constructor(
     private readonly taskRepository: ITaskRepository,
     private readonly dutyService: IDutyService,
+    private readonly pointsService: IPointsService,
+    private readonly scheduleService: IScheduleService,
+    private readonly ledgerRepository: ILedgerRepository,
   ) {}
 
   /**
@@ -37,17 +44,22 @@ export class MaintenanceService {
             return;
           }
 
-          // Check B: Stuck in "Locked" but Time Passed
-          if (
-            task.status === "locked" &&
-            task.unlock_at &&
-            now >= new Date(task.unlock_at)
-          ) {
-            await this.taskRepository.update(task.id, {
-              status: "open",
-              notification_level: "unlocked",
-            });
-            return;
+          // Check B: Stuck in "Locked" but Time Passed (same rules/notifications as UnlockTasksJob)
+          if (task.status === "locked") {
+            const unlockResult = await processUnlockForTask(
+              this.taskRepository,
+              task,
+              now,
+            );
+            if (unlockResult.errors.length > 0) {
+              console.error("[MaintenanceService] Unlock errors", {
+                taskId: task.id,
+                errors: unlockResult.errors,
+              });
+            }
+            if (unlockResult.unlocked) {
+              return;
+            }
           }
 
           // Check C: Open/Pending but Expired (Duty)
@@ -58,19 +70,35 @@ export class MaintenanceService {
             now > new Date(task.due_at) &&
             !task.proof_s3_key
           ) {
-            // IT IS EXPIRED
-            await this.taskRepository.update(task.id, {
-              status: "expired",
+            const result = await expireOverdueDutyTask(task, {
+              taskRepository: this.taskRepository,
+              pointsService: this.pointsService,
+              scheduleService: this.scheduleService,
+              ledgerRepository: this.ledgerRepository,
             });
-
-            // Emit Event
-            await DomainEventBus.publish(TaskEvents.TASK_EXPIRED, {
+            if (result.errors.length > 0) {
+              console.error("[MaintenanceService] Overdue processing errors", {
+                taskId: task.id,
+                scheduleId: task.schedule_id ?? null,
+                errors: result.errors,
+              });
+            }
+            if (result.expired) {
+              console.log("[MaintenanceService]", {
+                phase: "task_expired",
+                taskId: task.id,
+                scheduleId: task.schedule_id ?? null,
+                fined: result.fined,
+                triggeredNextInstance: result.triggeredNextInstance,
+              });
+              return;
+            }
+            console.log("[MaintenanceService]", {
+              phase: "task_expire_skipped",
               taskId: task.id,
-              title: task.title,
-              userId: userId,
-              fineAmount: 50,
+              type: task.type,
+              status: task.status,
             });
-            return;
           }
 
           // Check D: Open Bounty but Expired (Assigned)

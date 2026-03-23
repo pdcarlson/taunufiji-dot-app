@@ -1,5 +1,44 @@
 # Project Log
 
+## 2026-03-23: Housing cron hardening and fine retry
+
+- **Cron workflow**: Removed transport-level `curl --retry` from preflight and `job=HOURLY` calls to avoid duplicate notification side effects; timeouts retained.
+- **API**: Cron route returns a generic message on execution failure while logging details server-side.
+- **Fines**: Expired duties set `is_fine: false` until `awardPoints` succeeds; `pendingFinesJob` retries on each hourly run. Requires `is_fine` on assignments in Appwrite (already on schema types).
+- **Fine idempotency**: Ledger `reason` ends with `[task:<assignmentId>]`; `PointsTransaction.fineTaskId` triggers a ledger check inside `awardPoints` so concurrent workers cannot double-debit; `hasPersistedMissedDutyFine` pages ledger `findMany` with `offset` until exhausted.
+- **CI**: `quality-gate` runs with `if: always()` and fails if any required job is not `success` (`validate-secrets` may be `skipped` on fork PRs when `github.secret_source != 'Actions'`).
+- **Pipeline**: `recurring_notified` is separate from `unlocked` in cron stats; `HousingTimeDrivenPipeline.runFullHourlyCycle` takes injected services; `ensureFutureTasksJob` receives `ITaskRepository` from the container (no `new AppwriteTaskRepository()` inside the job).
+- **CI**: Each job runs `npm ci` with `actions/setup-node` npm cache (no `node_modules` artifact — zip round-trip breaks `node_modules/.bin` symlinks and caused `next`/`vitest`/`eslint` not found on runners).
+- **UI**: `EditTaskModal` is a named export; import as `{ EditTaskModal }`.
+
+## 2026-03-22: Housing recurring admin — schedule vs assignment consistency
+
+- **Recurring edits**: `ScheduleService` updates `housing_schedules` **before** `housing_assignments` for this-and-future and entire-series task edits so hourly cron cannot emit a new instance from stale schedule metadata mid-mutation.
+- **Lead time**: Edit-task flow passes `scheduleLeadTimeHours` through `RecurringMutationOptions` so schedule lead time and row unlock windows update in one service transaction (no separate success toast after a failed task update).
+- **Entire-series delete**: Deletes peer assignment rows first with `Promise.allSettled`; throws if any fail after `active: false`, so the UI does not imply the series is gone when rows remain.
+
+## 2026-03-22: Housing time-driven pipeline unification
+
+- **Appwrite note**: `scripts/add-expired-admin-notification-enum.ts` documents how to add `expired_admin` when `notification_level` is an enum; staging uses a **string** attribute so no enum migration was required there.
+- **Single pipeline**: `HousingTimeDrivenPipeline` defines the ordered hourly sequence (unlock → recurring notify → urgent → expire duties → pending fine retries → notify expired → ensure future); `CronService` is constructed by the IoC container and delegates `runHourly` to the pipeline.
+- **Maintenance alignment**: Per-user maintenance reuses shared `processUnlockForTask` and `expireOverdueDutyTask`; does not duplicate Discord stages or ensure-future healing.
+- **Cron query correctness**: Jobs page through `findMany` with targeted filters (`due_at`, `unlock_at`, notification filters) so backlogs beyond 100 rows are not skipped; `expireDutiesJob` includes overdue `pending` (no proof) as well as `open`.
+- **Expired notifications**: Added `expired_admin` stage when housing channel succeeds but assignee DM fails; documented primary/secondary behavior in `docs/behavior.md`.
+
+## 2026-03-14: Cron Reliability Hardening
+
+- **Cron contract fix**:
+  - Updated `.github/workflows/cron.yml` to call `/api/cron?job=HOURLY` with `Authorization: Bearer <CRON_SECRET>` (matching API route auth).
+  - Added URL normalization, `curl` retries/timeouts, and explicit secret preflight checks.
+  - Added workflow concurrency grouping to avoid overlapping scheduled runs.
+- **API diagnostics**:
+  - Improved `app/api/cron/route.ts` error responses with stable error codes (`UNAUTHORIZED`, `INVALID_JOB`, `SERVER_CONFIG_ERROR`, `JOB_EXECUTION_FAILED`) and structured logging by job.
+- **Regression protection**:
+  - Added `app/api/cron/route.test.ts` covering auth failures, invalid job, missing server secret, success dispatch, and execution exceptions.
+  - Refactored `.github/workflows/ci.yml` into explicit gate jobs (lint, typecheck, tests, coverage, e2e, secret validation, build) plus aggregate `quality-gate`.
+- **Validation snapshot**:
+  - Manual `workflow_dispatch` runs confirmed current remote `staging` and `main` cron workflows still fail with `curl` exit `22` and HTTP `500` while using the legacy query-key call path.
+
 ## 2026-03-13: Library Upload Auth + Metadata Stability Fix
 
 - **Upload auth correctness**:

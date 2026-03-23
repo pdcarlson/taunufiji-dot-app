@@ -266,6 +266,60 @@ export class AppwriteTaskRepository implements ITaskRepository {
       );
     }
 
+    if (options.notificationLevelOrNull !== undefined) {
+      queries.push(
+        Query.or([
+          Query.isNull("notification_level"),
+          Query.equal(
+            "notification_level",
+            options.notificationLevelOrNull,
+          ),
+        ]),
+      );
+    }
+
+    if (options.assignedToPresent) {
+      queries.push(
+        Query.and([
+          Query.isNotNull("assigned_to"),
+          Query.notEqual("assigned_to", ""),
+        ]),
+      );
+    }
+
+    if (options.scheduleIdPresent) {
+      queries.push(
+        Query.and([
+          Query.isNotNull("schedule_id"),
+          Query.notEqual("schedule_id", ""),
+        ]),
+      );
+    }
+
+    if (options.proofS3KeyAbsent) {
+      queries.push(Query.isNull("proof_s3_key"));
+    }
+
+    if (options.fineNotApplied) {
+      queries.push(
+        Query.or([Query.isNull("is_fine"), Query.equal("is_fine", false)]),
+      );
+    }
+
+    // Requires status: "expired" (see domain port JSDoc and notify-expired.job.ts).
+    if (options.expiredNotificationIncomplete) {
+      queries.push(Query.equal("status", "expired"));
+      queries.push(
+        Query.or([
+          Query.isNull("notification_level"),
+          Query.equal("notification_level", "none"),
+          Query.equal("notification_level", "unlocked"),
+          Query.equal("notification_level", "urgent"),
+          Query.equal("notification_level", "expired_admin"),
+        ]),
+      );
+    }
+
     if (options.dueBefore) {
       queries.push(
         Query.lessThanEqual("due_at", options.dueBefore.toISOString()),
@@ -284,6 +338,8 @@ export class AppwriteTaskRepository implements ITaskRepository {
 
     let dbField: string = orderBy;
     if (orderBy === "createdAt") dbField = "$createdAt";
+    if (orderBy === "unlock_at") dbField = "unlock_at";
+    if (orderBy === "due_at") dbField = "due_at";
 
     if (orderDir === "asc") {
       queries.push(Query.orderAsc(dbField));
