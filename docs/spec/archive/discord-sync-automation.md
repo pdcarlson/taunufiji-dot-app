@@ -31,7 +31,7 @@ Discord Slash Commands needed to be registered/updated manually. Automating this
 
 Used Discord's "Bulk Overwrite Guild Application Commands" endpoint (PUT to `/applications/{id}/guilds/{guild_id}/commands`) via `scripts/register-discord-commands.ts`.
 
-The script was originally integrated into `deploy-staging.yml` and `deploy-prod.yml`. After the [Deploy Strategy Update](deploy-strategy-update.md) moved deployments to direct Appwrite/GitHub integration, those workflows were deleted. Command registration is now triggered manually: `npm run discord:register`.
+The script was originally integrated into `deploy-staging.yml` and `deploy-prod.yml`. Those workflows were deleted as part of the [Deploy Strategy Update](deploy-strategy-update.md). **Current hosting:** the Next.js app deploys via **Vercel** + GitHub (see `docs/platform-map.md`); Appwrite is not the web host. Command registration is now triggered manually: `npm run discord:register`.
 
 ## References
 

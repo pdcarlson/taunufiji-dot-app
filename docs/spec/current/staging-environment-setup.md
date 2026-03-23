@@ -6,7 +6,7 @@ in-progress
 
 ## Problem
 
-The project needs a fully functional staging environment to test changes before production deployment. The original staging setup track began on 2026-02-19 and made significant progress, but some validation steps remain incomplete. The deployment strategy was subsequently changed from GitHub Actions to direct Appwrite/GitHub integration, which supersedes parts of the original plan.
+The project needs a fully functional staging environment to test changes before production deployment. The original staging setup track began on 2026-02-19 and made significant progress, but some validation steps remain incomplete. **Hosting** is on **Vercel** (GitHub-connected); **Appwrite** is backend-only (Auth, Databases). Legacy references to **Appwrite Sites** as the app host are obsolete.
 
 The current gap is not deployment wiring — it is **runtime confidence**. Staging can appear healthy while role checks, environment mismatches, and data mutations still fail in ways that are difficult to diagnose.
 
@@ -14,10 +14,10 @@ The current gap is not deployment wiring — it is **runtime confidence**. Stagi
 
 ### Functional
 
-- [x] `staging` branch exists and is deployable
-- [x] Appwrite watches `staging` branch and auto-deploys to Staging Site
+- [x] `staging` branch may still exist for CI compatibility; integration work targets **`main`** / **`production`**
+- [x] Staging URL is served by **Vercel Preview** (from **`main`** or project domain config), not Appwrite Sites
 - [x] Environment variable validation supports Local/Staging/Production contexts
-- [x] CI quality gates (`ci.yml`) run on pushes and PRs to both `main` and `staging`
+- [x] CI quality gates (`ci.yml`) run on pushes and PRs to **`main`**, **`production`**, and optionally **`staging`** (legacy branch only for CI if still present)
 - [x] Cron workflow supports targeting `staging` environment
 - [x] No hardcoded production URLs or Discord IDs in the codebase
 - [x] Dynamic page titles prefix environment name (e.g., `[STAGING]`)
@@ -46,8 +46,8 @@ The current gap is not deployment wiring — it is **runtime confidence**. Stagi
 
 ## Technical Approach
 
-- Appwrite/GitHub direct integration handles deployment (no GitHub Actions deploy workflows)
-- Secrets managed in Appwrite Console per environment
+- **Vercel** + GitHub handles app deployment (no GitHub Actions deploy workflows for the Next.js host)
+- Runtime secrets for the deployed app live in **Vercel** per environment; Appwrite Console is for Appwrite project/API keys and schema
 - `env.ts` uses Zod validation with `SKIP_ENV_VALIDATION` escape hatch
 - Branding constants in `lib/constants.ts` support environment-aware titles
 - Add a staging diagnostics utility that validates runtime dependencies without exposing secrets

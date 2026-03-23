@@ -1,5 +1,20 @@
 # Project Log
 
+## 2026-03-23: Docs — platform map and confusion audit
+
+- **`docs/platform-map.md`**: Single canonical table for **Vercel (host)** vs **Appwrite (backend)** vs CI/cron; names the `staging` branch vs “staging environment” trap.
+- **Cross-links**: `docs/README.md`, `AGENTS.md` overview, `docs/deployment.md` intro, `README.md` architecture blurb, `docs/product.md` technical goals.
+- **Specs**: `staging-environment-setup` CI bullet aligned with `ci.yml`; `appwrite-build-env-validation` wording fixed (Vercel build, not “Appwrite deployment”); `discord-sync-automation` archive no longer says “Appwrite/GitHub integration” for hosting.
+- **`.github/STAGING_TO_MAIN_PR_DRAFT.md`**: Marked **deprecated** with pointers to current docs.
+- **Older changelog rows** (for example 2026-02-09 cron / 2026-02-19 CI-CD) sometimes describe Appwrite as the app host; that is **obsolete** — use `docs/platform-map.md` as source of truth.
+
+## 2026-03-23: Docs — Vercel hosting, remove Appwrite Sites
+
+- **Docs**: `docs/deployment.md`, `docs/architecture.md`, and `docs/tech-stack.md` now describe **Vercel** + GitHub for the Next.js app; **Appwrite** is documented as backend-only (no Appwrite Sites hosting). Secret/runtime checklist and troubleshooting point at Vercel env and deployment logs.
+- **Specs**: `docs/spec/current/staging-environment-setup.md` and `appwrite-build-env-validation.md` updated; `docs/spec/archive/deploy-strategy-update.md` annotated as historical with a Vercel supersession note.
+- **AGENTS.md**: Branch workflow aligned with **`main`** / **`production`**.
+- **Removed**: `scripts/inspect-appwrite-site-deployments.ts` and `npm run inspect:appwrite-sites` (Appwrite Sites–specific).
+
 ## 2026-03-23: CI triggers for `production`
 
 - **`ci.yml`**: `push` and `pull_request` now include **`production`** so merges to the release branch run the same quality gates as **`main`**, matching the production branch ruleset’s required status checks.

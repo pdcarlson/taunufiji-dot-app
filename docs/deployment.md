@@ -1,14 +1,18 @@
 # Deployment Workflow
 
+**Canonical split:** Vercel hosts the app; Appwrite is the backend. If anything here conflicts with another doc, prefer this file plus [`platform-map.md`](platform-map.md).
+
 ## Pipeline Overview
 
 ```text
-Feature Branch → PR (CI Quality Gates) → Merge to main → Appwrite deploys Staging
+Feature Branch → PR (CI Quality Gates) → Merge to main → Vercel Preview (staging host)
                                                               ↓
-                                   Manual QA → Merge to production → Appwrite deploys Production
+                                   Manual QA → Merge to production → Vercel Production
 ```
 
-**Branches**: **`main`** is the default integration branch (staging Appwrite site). **`production`** is the release branch (production Appwrite site). Treat **`production`** as protected: promote only after QA.
+**Branches**: **`main`** is the default integration branch (preview / staging URL). **`production`** is the release branch (production deployment on Vercel). Treat **`production`** as protected: promote only after QA.
+
+**Hosting**: The Next.js app is deployed on **Vercel** with **GitHub** connected to the repository. **Appwrite** remains the backend (Auth, Databases); it does not host this app.
 
 ## 1. Quality Gates (`ci.yml`)
 
@@ -22,21 +26,22 @@ Feature Branch → PR (CI Quality Gates) → Merge to main → Appwrite deploys 
 
 This workflow does **not** handle deployment. It serves strictly as a quality gate.
 
-## 2. Staging Deployment
+## 2. Staging deployment (preview)
 
 **Trigger**: Push to **`main`** (usually via PR merge from a feature branch).
 
-- Appwrite is connected directly to the GitHub repository
-- Listens for pushes to **`main`** and auto-deploys to the Staging Appwrite Site
-- Environment variables managed in the Appwrite Console (Staging project)
-- For the staging Appwrite project, set `NODE_ENV=staging` in the Console so the app title and metadata show a `[STAGING]` prefix and distinguish the environment from production.
+- **Vercel** builds and deploys **Preview** deployments from **`main`** (and from other branches as configured in the Vercel project).
+- **Environment variables** for preview/staging behavior live in the **Vercel** project (Preview / custom environments), not in Appwrite Console for hosting.
+- Use a **staging** Appwrite **project** (separate from production) for data and auth on the staging URL; point `NEXT_PUBLIC_APPWRITE_*` and `APPWRITE_API_KEY` at that project in the Vercel env for the preview/staging environment.
+- Set `NODE_ENV=staging` (or equivalent) in Vercel for the staging/preview environment so the app title and metadata can show a `[STAGING]` prefix.
 
-## 3. Production Deployment
+## 3. Production deployment
 
-**Trigger**: Push to the **`production`** branch.
+**Trigger**: Push to the **`production`** branch (per Vercel **Production Branch** setting for the project).
 
-- Appwrite listens for pushes to **`production`** and auto-deploys to the Production Appwrite Site
-- Environment variables managed in the Appwrite Console (Production project)
+- **Vercel** builds and deploys **Production** from **`production`** when that branch is configured as the production branch in the Vercel Git integration.
+- **Environment variables** for production are configured in **Vercel** (Production environment).
+- **Appwrite production** credentials belong in Vercel Production env vars, not only in the Appwrite Console (the Console is where you create API keys; Vercel injects them at runtime).
 
 ## Git branches, default branch, and protection (Stage 2)
 
@@ -107,11 +112,11 @@ Required status check contexts (from `ci.yml` job ids; `validate-secrets` is opt
 
 Tweak review counts or check contexts in **Settings → Rules** if your team’s bar differs (for example if two approvals on `production` is heavier than the old `main` bar).
 
-## Secret Management
+## Secret management
 
 - **Local development**: `.env.local` file (not committed)
-- **Staging/Production**: Managed in the Appwrite Console for their respective projects
-- **CI**: Minimal secrets in GitHub (only what's needed for quality gates)
+- **Staging / production (runtime)**: Environment variables in **Vercel** per environment (Preview vs Production). Appwrite **API keys** are created in the **Appwrite Console** per Appwrite project, then stored as secrets in Vercel.
+- **CI**: Minimal secrets in GitHub (only what quality gates need)
 
 ## Environment Matrix (Minimum Required)
 
@@ -126,9 +131,9 @@ Tweak review counts or check contexts in **Settings → Rules** if your team’s
 
 `SKIP_ENV_VALIDATION=true` is intended for local fallback scenarios only when intentionally bypassing strict checks. CI should validate against a complete placeholder matrix, and runtime staging/production should validate with real environment values.
 
-## Appwrite Environment Checklist (Per Site)
+## Runtime environment checklist (Vercel)
 
-Before promoting a merge to **`production`**, verify the target Appwrite Site has these keys configured:
+Before promoting a merge to **`production`**, verify the **Vercel Production** environment has these variables set (and that **Preview** / staging has the staging Appwrite project values where they differ):
 
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_APPWRITE_ENDPOINT`
@@ -188,22 +193,13 @@ If this command fails, do not promote staging to production until the failing ch
 
 ## Staging Troubleshooting Runbook
 
-### Symptom: Appwrite Sites shows “Timed out waiting for runtime” (`runtime_timeout`)
+### Symptom: Deploy succeeds but first request is slow or times out
 
-This is a **cold-start / runtime-ready** timeout at the edge (not your route handler finishing slowly). With SSR Next.js on low CPU/RAM, the first request after idle can exceed the platform budget even when the site **build** succeeded.
+This is often **cold start** or heavy SSR on the first hit after idle.
 
-1. **Confirm builds are healthy**: In the Appwrite Console, open the site → **Deployments** → **Logs** for a “small” vs “large” deployment. Failed installs or missing output usually show in **build** logs. The console **Total size** column maps to API fields `sourceSize`, `buildSize`, and `totalSize` on each deployment ([Deployment model](https://appwrite.io/docs/references/cloud/models/deployment)): **source** = uploaded repo snapshot, **build** = build output, **total** = both. A drop in **total** often means a reporting or packaging change—not necessarily a broken deploy.
-2. **Compare deployments via API** (requires `.env.local` with **cloud** `NEXT_PUBLIC_APPWRITE_ENDPOINT`, not localhost):
-
-   ```bash
-   npm run inspect:appwrite-sites
-   APPWRITE_SITE_ID="<site id>" npm run inspect:appwrite-sites
-   APPWRITE_SITE_ID="<site id>" npm run inspect:appwrite-sites -- --deployment="<deployment id>" --log-tail=8000
-   ```
-
-   The API key must have permission to read Sites. Use `--deployment=` to print full deployment JSON and a tail of `buildLogs`.
-3. **Warm the runtime** after deploy: hit a **static** URL first (served from CDN without running React), e.g. `https://<your-staging-host>/health.txt`, then load `/login` or the dashboard. **`/` is not a good probe**—it redirects to `/dashboard` and pulls in heavy server work.
-4. **Site request logs**: Console → Site → **Logs** shows per-request status and duration; filter by path or `deploymentId` to see whether timeouts correlate with a specific deployment.
+1. **Confirm the Vercel deployment build** succeeded: Vercel dashboard → **Deployments** → open the deployment → **Build Logs**.
+2. **Warm the runtime** after deploy: hit a **static** URL first (served from the edge without running the full app), e.g. `https://<your-host>/health.txt`, then load `/login` or the dashboard. **`/` is not a good probe**—it redirects and pulls in heavier server work.
+3. Use **Vercel** request / function logs for the deployment to see slow routes or errors.
 
 ### Symptom: “Failed to assign duty” / task creation fails
 
@@ -237,15 +233,15 @@ This is a **cold-start / runtime-ready** timeout at the edge (not your route han
 2. Interpret preflight status before running `job=HOURLY`:
    - When the server returns `400` with `INVALID_JOB`, auth and runtime cron config are aligned (safe to run HOURLY).
    - If you receive `401` with `UNAUTHORIZED`, the GitHub/CLI secret does not match deployed runtime `CRON_SECRET`.
-   - When `500` indicates `SERVER_CONFIG_ERROR`, the deployed runtime is missing `CRON_SECRET` (Appwrite env issue).
+   - When `500` indicates `SERVER_CONFIG_ERROR`, the deployed runtime is missing `CRON_SECRET` (hosting env issue).
    - When `500` indicates `JOB_EXECUTION_FAILED`, runtime dependencies failed during execution; inspect app logs.
-3. In Appwrite Console for the target site (staging or production), verify:
+3. In **Vercel** for the target deployment environment (Preview/staging or Production), verify:
    - `CRON_SECRET` is present and non-empty.
    - `NEXT_PUBLIC_APP_URL` matches the deployed site URL for that environment.
-4. Confirm GitHub Environment configuration (`staging` or `production`) matches Appwrite runtime values:
+4. Confirm GitHub Environment configuration (`staging` or `production`) matches **deployed** runtime values:
    - variable: `NEXT_PUBLIC_APP_URL`
    - secret: `CRON_SECRET`
-5. Re-deploy only if Appwrite environment values changed (Appwrite does not always apply env edits to already-running builds).
+5. **Redeploy** after changing environment variables if the platform does not hot-reload them for existing deployments (Vercel typically requires a new deployment for env changes to take effect).
 6. Re-run manual cron dispatch after preflight passes:
    - `gh workflow run cron.yml --ref main -f environment=staging`
 7. Confirm endpoint auth contract is Bearer header (`Authorization: Bearer <CRON_SECRET>`), not query-string `key`.
