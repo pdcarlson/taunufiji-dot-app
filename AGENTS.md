@@ -107,14 +107,14 @@ When making changes to the codebase, update documentation as needed:
 | Significant completed work                     | Add entry to `docs/changelog.md`                                             |
 | UI/UX guidelines                               | Update `docs/product.md`                                                     |
 
-## Branch Workflow
+## Branch workflow
 
-Use `staging` as the integration branch for all active development work.
+Use **`main`** as the integration branch and **`production`** as the protected release branch (see `docs/deployment.md`).
 
-1. If currently on `staging` and beginning a new task, create a feature branch: `feature/<descriptive-name>`.
+1. If currently on **`main`** or **`production`** and beginning a new task, create a feature branch: `c/<short-topic>` or `feature/<descriptive-name>`.
 2. If already on a feature branch for the current task, continue working on that branch.
-3. Open pull requests from feature branches to `staging`.
-4. Do not commit directly to `staging` or `main`.
+3. Open pull requests from feature branches into **`main`**; promote **`main` → `production`** after QA.
+4. Do not commit directly to **`production`** without following team policy (and never bypass required checks).
 
 ---
 

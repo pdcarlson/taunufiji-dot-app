@@ -48,7 +48,7 @@ Appwrite production deployment from `main` failed during `next build` because gl
 
 ## Dependencies
 
-- Appwrite Site environment settings for production/staging.
+- **Vercel** environment variables for production / preview (staging) deployments.
 - GitHub Actions workflow (`.github/workflows/ci.yml`).
 
 ## References

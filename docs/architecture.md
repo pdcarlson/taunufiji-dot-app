@@ -61,9 +61,9 @@ Concrete implementations of domain ports.
 4. JWT is passed to Server Actions for stateless authentication
 5. Server Actions verify JWT and resolve user profile (including Discord roles)
 
-## Deployment Architecture
+## Deployment architecture
 
-- **Staging**: Appwrite watches **`main`** → auto-deploys to Staging Site
-- **Production**: Appwrite watches **`production`** → auto-deploys to Production Site
-- **CI**: GitHub Actions runs quality gates (lint, type check, test, build) on PRs
+- **Hosting**: **Vercel** builds and serves the Next.js app from the GitHub repo (**Preview** from **`main`** and other branches as configured; **Production** from **`production`** when set as the production branch).
+- **Backend**: **Appwrite** (Auth, Databases) is configured via env vars injected at deploy time; it does not host the web app.
+- **CI**: GitHub Actions runs quality gates (lint, type check, test, build) on pushes and PRs.
 - **Cron**: GitHub Actions triggers `/api/cron?job=HOURLY` every 12 minutes and must send `Authorization: Bearer <CRON_SECRET>` in headers

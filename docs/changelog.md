@@ -1,5 +1,12 @@
 # Project Log
 
+## 2026-03-23: Docs — Vercel hosting, remove Appwrite Sites
+
+- **Docs**: `docs/deployment.md`, `docs/architecture.md`, and `docs/tech-stack.md` now describe **Vercel** + GitHub for the Next.js app; **Appwrite** is documented as backend-only (no Appwrite Sites hosting). Secret/runtime checklist and troubleshooting point at Vercel env and deployment logs.
+- **Specs**: `docs/spec/current/staging-environment-setup.md` and `appwrite-build-env-validation.md` updated; `docs/spec/archive/deploy-strategy-update.md` annotated as historical with a Vercel supersession note.
+- **AGENTS.md**: Branch workflow aligned with **`main`** / **`production`**.
+- **Removed**: `scripts/inspect-appwrite-site-deployments.ts` and `npm run inspect:appwrite-sites` (Appwrite Sites–specific).
+
 ## 2026-03-23: CI triggers for `production`
 
 - **`ci.yml`**: `push` and `pull_request` now include **`production`** so merges to the release branch run the same quality gates as **`main`**, matching the production branch ruleset’s required status checks.
