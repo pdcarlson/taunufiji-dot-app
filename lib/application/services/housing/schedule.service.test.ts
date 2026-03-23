@@ -31,11 +31,13 @@ function baseTask(overrides: Partial<HousingTask> = {}): HousingTask {
 }
 
 describe("ScheduleService updateTaskThisAndFuture", () => {
-  const taskRepository = MockFactory.createTaskRepository();
-  const service = new ScheduleService(taskRepository);
+  let taskRepository: ReturnType<typeof MockFactory.createTaskRepository>;
+  let service: ScheduleService;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    taskRepository = MockFactory.createTaskRepository();
+    service = new ScheduleService(taskRepository);
   });
 
   it("updates housing_schedules before housing_assignments so cron cannot emit stale schedule rows mid-mutation", async () => {
@@ -150,11 +152,13 @@ describe("ScheduleService updateTaskThisAndFuture", () => {
 });
 
 describe("ScheduleService deleteTaskEntireSeries", () => {
-  const taskRepository = MockFactory.createTaskRepository();
-  const service = new ScheduleService(taskRepository);
+  let taskRepository: ReturnType<typeof MockFactory.createTaskRepository>;
+  let service: ScheduleService;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    taskRepository = MockFactory.createTaskRepository();
+    service = new ScheduleService(taskRepository);
   });
 
   it("deactivates schedule before deletes and throws if a delete fails (no silent partial success)", async () => {
@@ -242,11 +246,13 @@ describe("ScheduleService deleteTaskEntireSeries", () => {
 });
 
 describe("ScheduleService deleteTaskThisAndFuture", () => {
-  const taskRepository = MockFactory.createTaskRepository();
-  const service = new ScheduleService(taskRepository);
+  let taskRepository: ReturnType<typeof MockFactory.createTaskRepository>;
+  let service: ScheduleService;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    taskRepository = MockFactory.createTaskRepository();
+    service = new ScheduleService(taskRepository);
   });
 
   it("deactivates schedule before deleting rows to avoid cron resurrection", async () => {

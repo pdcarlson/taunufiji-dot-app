@@ -43,6 +43,10 @@ function baseTask(overrides: Partial<HousingTask> = {}): HousingTask {
 describe("expireDutiesJob", () => {
   let taskRepository: ReturnType<typeof MockFactory.createTaskRepository>;
   const ledgerRepository = MockFactory.createLedgerRepository();
+  const pointsService = { awardPoints: vi.fn() } as unknown as IPointsService;
+  const scheduleService = {
+    triggerNextInstance: vi.fn(),
+  } as unknown as IScheduleService;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -90,8 +94,8 @@ describe("expireDutiesJob", () => {
 
     const result = await expireDutiesJob(
       taskRepository,
-      {} as unknown as IPointsService,
-      {} as unknown as IScheduleService,
+      pointsService,
+      scheduleService,
       ledgerRepository,
     );
 
@@ -102,6 +106,8 @@ describe("expireDutiesJob", () => {
       expect.objectContaining({
         taskRepository,
         ledgerRepository,
+        pointsService,
+        scheduleService,
       }),
     );
     expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledWith(
@@ -109,6 +115,8 @@ describe("expireDutiesJob", () => {
       expect.objectContaining({
         taskRepository,
         ledgerRepository,
+        pointsService,
+        scheduleService,
       }),
     );
   });

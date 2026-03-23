@@ -5,7 +5,9 @@ import type { HousingTask } from "@/lib/domain/types/task";
 import { MockFactory } from "@/lib/test/mock-factory";
 import { pendingFinesJob } from "./pending-fines.job";
 import { HOUSING_CONSTANTS } from "@/lib/constants";
-import { missedDutyFineReason } from "@/lib/application/services/housing/missed-duty-fine";
+import {
+  missedDutyFineReason,
+} from "@/lib/application/services/housing/missed-duty-fine";
 
 function baseTask(overrides: Partial<HousingTask> = {}): HousingTask {
   return {
@@ -68,6 +70,7 @@ describe("pendingFinesJob", () => {
       amount: -Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY),
       reason: missedDutyFineReason("Kitchen", "task-1"),
       category: "fine",
+      fineTaskId: "task-1",
     });
     expect(taskRepository.update).toHaveBeenCalledWith("task-1", {
       is_fine: true,

@@ -60,6 +60,7 @@ export const pendingFinesJob = async (
           amount: -Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY),
           reason: missedDutyFineReason(task.title, task.id),
           category: "fine",
+          fineTaskId: task.id,
         });
         await taskRepository.update(task.id, { is_fine: true });
       } catch (error: unknown) {

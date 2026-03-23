@@ -4,10 +4,11 @@ import { ensureFutureTasksJob } from "./ensure-future-tasks.job";
 import { MockFactory } from "@/lib/test/mock-factory";
 
 describe("ensureFutureTasksJob", () => {
-  const taskRepository = MockFactory.createTaskRepository();
+  let taskRepository: ReturnType<typeof MockFactory.createTaskRepository>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    taskRepository = MockFactory.createTaskRepository();
   });
 
   it("skips deactivated schedules to avoid resurrection", async () => {

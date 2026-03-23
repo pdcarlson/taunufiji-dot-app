@@ -10,7 +10,7 @@ import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
 import { IDutyService } from "@/lib/domain/ports/services/duty.service.port";
 import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
-import { ScheduleService } from "./schedule.service";
+import { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
 import { expireOverdueDutyTask } from "./overdue-duty.service";
 import { processUnlockForTask } from "./task-unlock";
 
@@ -19,7 +19,7 @@ export class MaintenanceService {
     private readonly taskRepository: ITaskRepository,
     private readonly dutyService: IDutyService,
     private readonly pointsService: IPointsService,
-    private readonly scheduleService: ScheduleService,
+    private readonly scheduleService: IScheduleService,
     private readonly ledgerRepository: ILedgerRepository,
   ) {}
 
@@ -91,17 +91,14 @@ export class MaintenanceService {
                 fined: result.fined,
                 triggeredNextInstance: result.triggeredNextInstance,
               });
-            } else {
-              console.log("[MaintenanceService]", {
-                phase: "task_expire_skipped",
-                taskId: task.id,
-                type: task.type,
-                status: task.status,
-              });
-            }
-            if (result.expired) {
               return;
             }
+            console.log("[MaintenanceService]", {
+              phase: "task_expire_skipped",
+              taskId: task.id,
+              type: task.type,
+              status: task.status,
+            });
           }
 
           // Check D: Open Bounty but Expired (Assigned)

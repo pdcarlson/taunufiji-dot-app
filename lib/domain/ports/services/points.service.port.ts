@@ -4,6 +4,11 @@ export interface PointsTransaction {
   amount: number;
   reason: string;
   category: "task" | "fine" | "event" | "manual";
+  /**
+   * When set with `category: "fine"`, `awardPoints` no-ops if a ledger row for this
+   * user/category already carries the same missed-duty marker (see housing fine flow).
+   */
+  fineTaskId?: string;
 }
 
 export interface IPointsService {

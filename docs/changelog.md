@@ -5,7 +5,8 @@
 - **Cron workflow**: Removed transport-level `curl --retry` from preflight and `job=HOURLY` calls to avoid duplicate notification side effects; timeouts retained.
 - **API**: Cron route returns a generic message on execution failure while logging details server-side.
 - **Fines**: Expired duties set `is_fine: false` until `awardPoints` succeeds; `pendingFinesJob` retries on each hourly run. Requires `is_fine` on assignments in Appwrite (already on schema types).
-- **Fine idempotency**: Ledger `reason` includes `[task:<assignmentId>]`; expiry and pending-fine retry consult the ledger before calling `awardPoints` so a persisted fine without `is_fine: true` does not double-charge.
+- **Fine idempotency**: Ledger `reason` ends with `[task:<assignmentId>]`; `PointsTransaction.fineTaskId` triggers a ledger check inside `awardPoints` so concurrent workers cannot double-debit; `hasPersistedMissedDutyFine` pages ledger `findMany` with `offset` until exhausted.
+- **CI**: `quality-gate` runs with `if: always()` and fails if any required job is not `success` (`validate-secrets` may be `skipped` on fork PRs when `github.secret_source != 'Actions'`).
 - **Pipeline**: `recurring_notified` is separate from `unlocked` in cron stats; `HousingTimeDrivenPipeline.runFullHourlyCycle` takes injected services; `ensureFutureTasksJob` receives `ITaskRepository` from the container (no `new AppwriteTaskRepository()` inside the job).
 - **CI**: Single `deps` job runs `npm ci` and uploads `node_modules`; lint/typecheck/test/coverage/build download the artifact to avoid repeated installs (Playwright still installs browsers in e2e).
 - **UI**: `EditTaskModal` is a named export; import as `{ EditTaskModal }`.

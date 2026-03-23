@@ -149,6 +149,7 @@ jobs:
         run: npm run test:e2e
 
   validate-secrets:
+    if: ${{ github.secret_source == 'Actions' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -202,6 +203,7 @@ jobs:
         run: SKIP_ENV_VALIDATION=true npm run build
 
   quality-gate:
+    if: always()
     runs-on: ubuntu-latest
     needs:
       - lint
@@ -212,5 +214,40 @@ jobs:
       - validate-secrets
       - build
     steps:
+      - name: Enforce upstream job success
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+          TYPECHECK_RESULT: ${{ needs.typecheck.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          COVERAGE_RESULT: ${{ needs.coverage-critical.result }}
+          E2E_RESULT: ${{ needs.e2e-smoke.result }}
+          SECRETS_RESULT: ${{ needs.validate-secrets.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: |
+          set -euo pipefail
+          failed=0
+          for pair in \
+            "lint:${LINT_RESULT}" \
+            "typecheck:${TYPECHECK_RESULT}" \
+            "test:${TEST_RESULT}" \
+            "coverage-critical:${COVERAGE_RESULT}" \
+            "e2e-smoke:${E2E_RESULT}" \
+            "validate-secrets:${SECRETS_RESULT}" \
+            "build:${BUILD_RESULT}"; do
+            name="${pair%%:*}"
+            result="${pair#*:}"
+            if [ "$name" = "validate-secrets" ] && [ "$result" = "skipped" ]; then
+              continue
+            fi
+            if [ "$result" != "success" ]; then
+              echo "::error::Job $name finished with result=$result (expected success)"
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "All required jobs succeeded."
+
       - name: Quality gate passed
         run: echo "All CI checks passed."
