@@ -1,5 +1,7 @@
 # AGENTS.md
 
+Instructions for AI coding agents and automated contributors working in this repository. Humans may also use it as a quick orientation; canonical detail lives in `spec/` and `docs/`.
+
 ## Project Overview
 
 **Tau Nu Fiji** is a single Next.js 16 application (not a monorepo) serving as the operational platform for a fraternity chapter. It has three core modules — Housing (chore management), Ledger (scholarship points), and Library (academic resources) — all backed by external cloud services (Appwrite, Discord, AWS S3). There are no local databases or Docker containers.
@@ -73,26 +75,34 @@ The codebase follows Clean Architecture (Onion) with strict layer boundaries. Se
 
 **Always run the full quality gate locally before pushing or opening a PR** so CI does not fail. Do not wait for the PR to run CI to discover failures.
 
+CI uses **Node.js 20** (`actions/setup-node` in `.github/workflows/ci.yml`). Match that locally when debugging version-specific issues.
+
 Run these checks (matching CI in `.github/workflows/ci.yml`):
 
 ```bash
-npm run lint              # ESLint — must have 0 errors (warnings OK)
-npx tsc --noEmit          # TypeScript strict mode — must pass
-npm run test -- --run     # Vitest — all tests must pass
-SKIP_ENV_VALIDATION=true npm run build  # Next.js build — must succeed
+npm run lint                           # ESLint — must have 0 errors (warnings OK)
+npx tsc --noEmit                       # TypeScript strict mode — must pass
+npm run test -- --run                  # Vitest — all tests must pass
+npm run test:coverage:critical         # Critical-module coverage thresholds (see vitest.critical.config.ts)
+npx playwright install --with-deps chromium   # once per machine, if browsers missing
+npm run test:e2e                     # Playwright smoke (Chromium)
+SKIP_ENV_VALIDATION=true npm run build # Next.js build — must succeed
 ```
 
-**Coverage target**: >80% for new code. All new services and domain logic must have corresponding test files.
+**Coverage target**: >80% for new code. All new services and domain logic must have corresponding test files. CI additionally enforces the critical-module gate via `test:coverage:critical`.
 
 ### Skill: Testing
 
 **When to use**: When writing new code or modifying existing code.
 
-- **Framework**: Vitest with jsdom. Config in `vitest.config.ts`, setup in `vitest.setup.ts`.
+- **Unit & integration**: Vitest with jsdom. Config in `vitest.config.ts`, setup in `vitest.setup.ts`.
+- **E2E smoke**: Playwright with Chromium (`playwright.config.ts`, `tests/e2e/`). Run `npm run test:e2e`; first run may need `npx playwright install --with-deps chromium`.
 - **Mocking**: `vitest.setup.ts` provides mock env vars and mocks `server-only`. Tests run without external services.
 - **Convention**: Test files are co-located with source files (e.g., `duty.service.test.ts` next to `duty.service.ts`).
 - **Pattern**: Mock infrastructure via domain ports/interfaces. Use constructor injection to pass mocks.
 - Run non-interactively: `npm run test -- --run`
+- **Critical coverage**: `npm run test:coverage:critical` — same thresholds as CI for designated modules (see `vitest.critical.config.ts`).
+- **Staging diagnostics** (optional, hits real services): `npm run diagnose:staging` — see `docs/deployment/troubleshooting.md` for interpretation.
 
 For full testing docs, see `docs/quality/testing.md`.
 
