@@ -8,7 +8,7 @@
 - **Fine idempotency**: Ledger `reason` ends with `[task:<assignmentId>]`; `PointsTransaction.fineTaskId` triggers a ledger check inside `awardPoints` so concurrent workers cannot double-debit; `hasPersistedMissedDutyFine` pages ledger `findMany` with `offset` until exhausted.
 - **CI**: `quality-gate` runs with `if: always()` and fails if any required job is not `success` (`validate-secrets` may be `skipped` on fork PRs when `github.secret_source != 'Actions'`).
 - **Pipeline**: `recurring_notified` is separate from `unlocked` in cron stats; `HousingTimeDrivenPipeline.runFullHourlyCycle` takes injected services; `ensureFutureTasksJob` receives `ITaskRepository` from the container (no `new AppwriteTaskRepository()` inside the job).
-- **CI**: Single `deps` job runs `npm ci` and uploads `node_modules`; lint/typecheck/test/coverage/build download the artifact to avoid repeated installs (Playwright still installs browsers in e2e).
+- **CI**: Each job runs `npm ci` with `actions/setup-node` npm cache (no `node_modules` artifact — zip round-trip breaks `node_modules/.bin` symlinks and caused `next`/`vitest`/`eslint` not found on runners).
 - **UI**: `EditTaskModal` is a named export; import as `{ EditTaskModal }`.
 
 ## 2026-03-22: Housing recurring admin — schedule vs assignment consistency

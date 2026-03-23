@@ -6,15 +6,16 @@ on:
   pull_request:
     branches: [main, staging]
 
-# `actions: write` is required for upload-artifact / download-artifact; with only
-# `contents: read`, the default GITHUB_TOKEN cannot access workflow artifacts.
+# Artifact upload/download of `node_modules` breaks npm's `.bin` symlinks (zip
+# round-trip), which surfaces as `next: not found`, `vitest: not found`, etc.
+# Use `actions/setup-node` npm cache + `npm ci` per job instead.
 permissions:
   contents: read
-  actions: write
 
 jobs:
-  deps:
+  lint:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,37 +29,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Upload node_modules
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
-          retention-days: 1
-
-  lint:
-    needs: deps
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Download node_modules
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
-
       - name: Lint
         run: npm run lint
 
   typecheck:
-    needs: deps
     runs-on: ubuntu-latest
 
     steps:
@@ -69,18 +43,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
-      - name: Download node_modules
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
+      - name: Install dependencies
+        run: npm ci
 
       - name: Type check
         run: npx tsc --noEmit
 
   test:
-    needs: deps
     runs-on: ubuntu-latest
 
     steps:
@@ -91,18 +62,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
-      - name: Download node_modules
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
+      - name: Install dependencies
+        run: npm ci
 
       - name: Test
         run: npm run test -- --run
 
   coverage-critical:
-    needs: deps
     runs-on: ubuntu-latest
 
     steps:
@@ -113,18 +81,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
-      - name: Download node_modules
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
+      - name: Install dependencies
+        run: npm ci
 
       - name: Coverage (Critical Modules)
         run: npm run test:coverage:critical
 
   e2e-smoke:
-    needs: deps
     runs-on: ubuntu-latest
 
     steps:
@@ -135,12 +100,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
-      - name: Download node_modules
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
+      - name: Install dependencies
+        run: npm ci
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
@@ -163,7 +126,6 @@ jobs:
           fi
 
   build:
-    needs: deps
     runs-on: ubuntu-latest
 
     steps:
@@ -174,12 +136,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
-      - name: Download node_modules
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build
         env:
