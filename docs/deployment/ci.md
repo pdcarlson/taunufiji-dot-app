@@ -24,11 +24,7 @@ All jobs run `npm ci` with `actions/setup-node` npm cache independently (no shar
 
 ## Build Environment
 
-The `build` job provides a complete placeholder env matrix so the build runs without `SKIP_ENV_VALIDATION=true`:
-
-- Appwrite, Discord, AWS, and Cron env vars are set to mock/placeholder values
-- Real secrets from GitHub Secrets are used when available (e.g., `APPWRITE_API_KEY`)
-- `SKIP_ENV_VALIDATION=true` is still set as a safety net
+The **`build`** job in `.github/workflows/ci.yml` supplies a **complete** placeholder env matrix (Appwrite, Discord, AWS, Cron, and related vars) so Next.js can resolve every key the server env schema expects. GitHub **Secrets** / **Variables** are used **when present** (for example `APPWRITE_API_KEY` and the `NEXT_PUBLIC_APPWRITE_*` values); otherwise the workflow falls back to mock values. The build step still runs with **`SKIP_ENV_VALIDATION=true` explicitly set** as a safety net so the job succeeds even when placeholders are in use — placeholders satisfy presence checks, and the flag avoids strict validation failures during CI.
 
 ## Required Status Checks
 

@@ -49,11 +49,20 @@ export GH_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
 gh api repos/OWNER/REPO/rulesets -H "X-GitHub-Api-Version: 2022-11-28"
 ```
 
-**Example** (create or update rulesets — requires `administration: write` on the repository; adjust JSON to match your policy):
+**Create** a new ruleset with **`POST`** (requires `administration: write` on the repository; adjust JSON to match your policy). **`POST` always creates a new ruleset** — use it only when you intend to add one. Re-running the same payload with **`POST`** can create **duplicate** rulesets and **policy drift**.
 
 ```bash
 export GH_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
 gh api --method POST repos/OWNER/REPO/rulesets \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  --input ruleset-payload.json
+```
+
+**Update** an existing ruleset with **`PUT`** against `repos/OWNER/REPO/rulesets/RULESET_ID` (replace `RULESET_ID` with the numeric id from the rulesets list or API). Use the **same** headers and payload shape as create; **`PUT` updates that ruleset in place** so you do not accumulate duplicates.
+
+```bash
+export GH_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
+gh api --method PUT repos/OWNER/REPO/rulesets/RULESET_ID \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   --input ruleset-payload.json
 ```

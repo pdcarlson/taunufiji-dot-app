@@ -19,7 +19,7 @@
 ## Coverage
 
 - **Tooling**: `@vitest/coverage-v8`
-- **Critical module gate**: `npm run test:coverage:critical` — enforces ≥90% thresholds on critical modules
+- **Critical module gate**: `npm run test:coverage:critical` — enforces ≥90% on lines, statements, and functions and ≥80% on branches for critical modules (see `vitest.critical.config.ts`)
 - **General coverage**: `npm run test:coverage` — generates a coverage report for all modules
 - **Target**: >80% for new code. All new services and domain logic must have corresponding test files.
 
