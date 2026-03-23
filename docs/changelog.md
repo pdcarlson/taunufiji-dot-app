@@ -7,6 +7,10 @@
 - **Server env schema**: Extended `serverEnvSchema` with `DISCORD_ROLE_ID_*` keys so the same validation used by the diagnose script matches the Discord role checks it runs.
 - **Docs**: Clarified in `docs/architecture.md` that duty expiry is pipeline-driven, not bus-driven; expanded `docs/behavior.md` with pipeline order, fine/ledger behavior, and idempotency notes.
 
+## 2026-03-23: Docs — housing pipeline vs code (reconciliation)
+
+- **Behavior reference**: Updated `docs/behavior.md` so the documented hourly sequence matches `HousingTimeDrivenPipeline` (six steps, no separate fine-retry job) and fine/idempotency wording matches `expireOverdueDutyTask` + `PointsService` (no `pendingFinesJob`, `[task:…]` markers, or `fineTaskId` in the current codebase).
+
 ## 2026-03-22: Housing time-driven pipeline unification
 
 - **Appwrite note**: `scripts/add-expired-admin-notification-enum.ts` documents how to add `expired_admin` when `notification_level` is an enum; staging uses a **string** attribute so no enum migration was required there.

@@ -62,18 +62,28 @@ This document is the durable behavioral reference for the Housing module.
 5. Admin approves -> `approved`.
 6. Next recurring instance is generated.
 7. If missed deadline, task transitions to `expired` and fine behavior is triggered.
+   - For assigned mandatory duties, `expireOverdueDutyTask` sets `status: expired` and calls `PointsService.awardPoints` with a negative amount, `category: "fine"`, and `reason: Missed Duty: <task title>` (plain string; no embedded task id). There is **no** separate hourly “pending fines” job and **no** `[task:<id>]` ledger marker or `fineTaskId` flow in the current tree.
 8. Overdue transition is canonicalized through shared expiry logic and may run from:
-   - cron (`ExpireDutiesJob`) as the primary scheduled path, and
+   - cron (`expireDutiesJob`) as the primary scheduled path, and
    - dashboard maintenance as a fallback path for assigned-user views.
 
 ### Hourly pipeline: overdue duties, fines, and ledger
 
-The ordered hourly sequence lives in `HousingTimeDrivenPipeline` (see `lib/application/services/jobs/housing-time-driven.pipeline.ts`). **Expire overdue duties** is step 4 and must run **before** **Notify expired** (step 5): the task row is moved to `expired` first, then notification stages run.
+The ordered hourly sequence is implemented in `HousingTimeDrivenPipeline.runFullHourlyCycle` (`lib/application/services/jobs/housing-time-driven.pipeline.ts`):
 
-- **What “expire” does** (`expireDutiesJob` → `expireOverdueDutyTask`): picks mandatory work that is overdue (`open` or `pending` without `proof_s3_key`), sets `status: expired`, applies the configured **fine** in the same step via `PointsService.awardPoints` (negative amount, `category: "fine"`, `reason` of the form `Missed Duty: <title>`), and for schedule-backed duties calls `triggerNextInstance` so the next instance is not left to a separate code path.
+1. **Unlock** (`UnlockTasksJob`)
+2. **Recurring notify** (`NotifyRecurringJob`)
+3. **Urgent notify** (`NotifyUrgentJob`)
+4. **Expire overdue duties** (`expireDutiesJob` → `expireOverdueDutyTask` per eligible row) — must run **before** expired notifications so tasks are `expired` first
+5. **Notify expired** (`NotifyExpiredJob`)
+6. **Ensure future tasks** (`ensureFutureTasksJob`)
+
+There is **no** additional step after step 4 beyond notify-then-ensure-future; do not assume a fine-retry pass in the hourly cycle.
+
+- **What “expire” does** (`expireDutiesJob` → `expireOverdueDutyTask`): loads overdue mandatory work (`open` or `pending` without `proof_s3_key`), sets `status: expired`, attempts the missed-duty fine via `awardPoints`, and for schedule-backed duties calls `triggerNextInstance`.
 - **Domain events**: expiry does **not** publish a `TaskEvents` message; downstream work is synchronous in the pipeline and maintenance. That avoids dead “event-driven” handlers and duplicate `triggerNextInstance` calls.
-- **Task metadata**: the assignment schema includes optional `is_fine` on persisted tasks (`HousingTask` / app types) when the product marks fine-bearing rows; ledger entries remain the authoritative record of debits (`amount` positive with `is_debit: true` per `PointsService`).
-- **Idempotency**: there is no separate fine queue job: fines are applied when `expireOverdueDutyTask` runs on an eligible task. After the row is `expired`, later cron passes skip it, so the fine path does not re-run for the same task. Retrying before the status flip (or duplicate maintenance + cron in the same window) can still double-apply unless ledger deduplication is added later.
+- **Task metadata**: `is_fine` may exist on assignment types / Appwrite schema, but the current expiry + fine path does **not** read or write it; the ledger row is the record of the debit (`amount` positive with `is_debit: true` per `PointsService`).
+- **Idempotency**: once a task is `expired`, later `expireDutiesJob` scans (open/pending overdue only) do not revisit it, so the fine is not retried on subsequent hourly runs. If `awardPoints` fails, the task stays `expired` without a compensating retry job. Concurrent expiry of the **same** task before the status update (e.g. overlapping maintenance and cron) could still double-apply until a ledger-level dedup strategy exists.
 
 ## 3.2 One-Off Duty Flow
 
