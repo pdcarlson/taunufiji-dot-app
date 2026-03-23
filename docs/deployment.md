@@ -3,14 +3,16 @@
 ## Pipeline Overview
 
 ```text
-Feature Branch → PR (CI Quality Gates) → Merge to staging → Appwrite deploys Staging
+Feature Branch → PR (CI Quality Gates) → Merge to main → Appwrite deploys Staging
                                                               ↓
-                                              Manual QA → Merge to main → Appwrite deploys Production
+                                   Manual QA → Merge to production → Appwrite deploys Production
 ```
+
+**Branches**: **`main`** is the default integration branch (staging Appwrite site). **`production`** is the release branch (production Appwrite site). Treat **`production`** as protected: promote only after QA.
 
 ## 1. Quality Gates (`ci.yml`)
 
-**Trigger**: Opening a PR or pushing to `main`/`staging`.
+**Trigger**: Pushes and pull requests targeting **`main`**, **`production`**, or **`staging`** (see `push` / `pull_request` `branches` in `.github/workflows/ci.yml`). Including **`production`** ensures required status checks run for PRs into the release branch and on direct pushes that the branch ruleset allows.
 
 - Installs dependencies (`npm ci`)
 - Lint: `npm run lint`
@@ -22,19 +24,88 @@ This workflow does **not** handle deployment. It serves strictly as a quality ga
 
 ## 2. Staging Deployment
 
-**Trigger**: Push to the `staging` branch (usually via PR merge).
+**Trigger**: Push to **`main`** (usually via PR merge from a feature branch).
 
 - Appwrite is connected directly to the GitHub repository
-- Listens for pushes to `staging` and auto-deploys to the Staging Appwrite Site
+- Listens for pushes to **`main`** and auto-deploys to the Staging Appwrite Site
 - Environment variables managed in the Appwrite Console (Staging project)
 - For the staging Appwrite project, set `NODE_ENV=staging` in the Console so the app title and metadata show a `[STAGING]` prefix and distinguish the environment from production.
 
 ## 3. Production Deployment
 
-**Trigger**: Push to the `main` branch.
+**Trigger**: Push to the **`production`** branch.
 
-- Appwrite listens for pushes to `main` and auto-deploys to the Production Appwrite Site
+- Appwrite listens for pushes to **`production`** and auto-deploys to the Production Appwrite Site
 - Environment variables managed in the Appwrite Console (Production project)
+
+## Git branches, default branch, and protection (Stage 2)
+
+Complete this in GitHub so the branch model above matches repo settings. **Doc-only updates do not replace applying settings in GitHub.**
+
+### Human checklist (GitHub UI)
+
+1. **Default branch (`main`)** — Repo **Settings → General → Default branch** → **`main`**. Verify: opening **New pull request** defaults the base branch to **`main`**.
+2. **Inventory** — **Settings → Rules** (rulesets) and/or **Settings → Branches**. Note rules targeting **`main`**, **`production`**, and any leftover **`staging`**.
+3. **`main`** — Match or exceed what **`staging`** had before the migration (required PRs, required status checks, review rules, etc.).
+4. **`production`** — Match or exceed what **`main`** had before the migration, plus extra safeguards as needed (e.g. block force-push, restrict who can push).
+5. **Cleanup** — Remove rules that only applied to the deleted **`staging`** branch if they are redundant.
+
+**Verify**: Attempt an operation your policy should block (for example a direct push to **`production`** without a PR) and confirm GitHub rejects it.
+
+### Automating GitHub repo settings (maintainers)
+
+Use a **fine-grained PAT** with access to this repository. For **organization** repositories, authorize the PAT for SSO: **Settings → Developer settings → Personal access tokens → … → Configure SSO**.
+
+The GitHub CLI reads **`GH_TOKEN`** (or **`GITHUB_TOKEN`**) from the environment. If your tooling only injects a differently named secret (for example **`GITHUB_PERSONAL_ACCESS_TOKEN`** in Cursor Cloud), export it before calling `gh`:
+
+```bash
+export GH_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
+```
+
+**Smoke test** (local shell; do not rely on `GITHUB_TOKEN` inside Actions for admin API calls):
+
+```bash
+export GH_TOKEN="<fine-grained-pat>"
+gh auth status -h github.com
+gh api repos/OWNER/REPO \
+  -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28"
+```
+
+- **401** — wrong or expired token, or `GH_TOKEN` not exported in this shell.
+- **403** — often missing repo scope or **SSO** not enabled for the PAT on the org.
+- **404** — wrong `OWNER/REPO`, or PAT cannot access that repository.
+
+If the UI uses **repository rulesets**, prefer the [rulesets API](https://docs.github.com/en/rest/repos/rules) when automating; legacy branch-protection endpoints may not match what the UI shows.
+
+**Example** (read-only; redact secrets; replace `OWNER/REPO`):
+
+```bash
+export GH_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
+gh api repos/OWNER/REPO/rulesets -H "X-GitHub-Api-Version: 2022-11-28"
+```
+
+**Example** (create or update rulesets — requires `administration: write` on the repository; adjust JSON to match your policy):
+
+```bash
+export GH_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
+gh api --method POST repos/OWNER/REPO/rulesets \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  --input ruleset-payload.json
+```
+
+### Repository rulesets (reference)
+
+This repo uses **branch rulesets** (not legacy branch protection API). As configured for **`main`** and **`production`**:
+
+| Ruleset | Branch | Policy (summary) |
+| ------- | ------ | ---------------- |
+| Protect main (integration) | `refs/heads/main` | Pull request required (**1** approval), required status checks (see below), **block force-push** (`non_fast_forward`) |
+| Protect production (release) | `refs/heads/production` | Pull request required (**2** approvals), same required checks, **block force-push**, **block branch deletion** |
+
+Required status check contexts (from `ci.yml` job ids; `validate-secrets` is optional when skipped): `lint`, `typecheck`, `test`, `coverage-critical`, `e2e-smoke`, `build`, `quality-gate`. **Strict** policy: the merge head must be up to date with the base branch.
+
+Tweak review counts or check contexts in **Settings → Rules** if your team’s bar differs (for example if two approvals on `production` is heavier than the old `main` bar).
 
 ## Secret Management
 
@@ -57,7 +128,7 @@ This workflow does **not** handle deployment. It serves strictly as a quality ga
 
 ## Appwrite Environment Checklist (Per Site)
 
-Before promoting a merge to `main`, verify the target Appwrite Site has these keys configured:
+Before promoting a merge to **`production`**, verify the target Appwrite Site has these keys configured:
 
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_APPWRITE_ENDPOINT`
@@ -176,7 +247,7 @@ This is a **cold-start / runtime-ready** timeout at the edge (not your route han
    - secret: `CRON_SECRET`
 5. Re-deploy only if Appwrite environment values changed (Appwrite does not always apply env edits to already-running builds).
 6. Re-run manual cron dispatch after preflight passes:
-   - `gh workflow run cron.yml --ref staging -f environment=staging`
+   - `gh workflow run cron.yml --ref main -f environment=staging`
 7. Confirm endpoint auth contract is Bearer header (`Authorization: Bearer <CRON_SECRET>`), not query-string `key`.
 
 ## Cron Jobs

@@ -36,4 +36,4 @@
 - **Testing**: Vitest (Unit & Integration) with jsdom, Playwright (E2E smoke)
 - **Linting**: ESLint (flat config, `eslint.config.mjs`)
 - **CI**: GitHub Actions (`ci.yml` — quality gates)
-- **CD**: Direct Appwrite/GitHub Integration (branch-based: `staging` and `main`)
+- **CD**: Direct Appwrite/GitHub Integration (branch-based: **`main`** for staging site, **`production`** for production site)

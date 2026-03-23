@@ -1,5 +1,15 @@
 # Project Log
 
+## 2026-03-23: CI triggers for `production`
+
+- **`ci.yml`**: `push` and `pull_request` now include **`production`** so merges to the release branch run the same quality gates as **`main`**, matching the production branch ruleset’s required status checks.
+- **`docs/deployment.md`**: Quality Gates trigger line updated to describe **`main`**, **`production`**, and **`staging`**.
+
+## 2026-03-23: Git branch model docs (main / production)
+
+- **Docs**: `docs/deployment.md` describes integration on **`main`**, releases on **`production`**, Stage 2 human checklist for default branch and branch protection/rulesets, maintainer notes mapping **`GITHUB_PERSONAL_ACCESS_TOKEN`** → **`GH_TOKEN`**, rulesets API examples, and a reference table for the **`main`** / **`production`** rulesets (PR + required checks + no force-push; **`production`** also blocks deletion and requires two approvals). Aligned `docs/architecture.md` and `docs/tech-stack.md` CD bullets. Cron manual-run example uses `--ref main` for the staging GitHub Environment.
+- **GitHub**: Active repository rulesets created via API for **`main`** and **`production`** (see deployment doc reference table).
+
 ## 2026-03-23: Housing cron hardening and fine retry
 
 - **Cron workflow**: Removed transport-level `curl --retry` from preflight and `job=HOURLY` calls to avoid duplicate notification side effects; timeouts retained.
