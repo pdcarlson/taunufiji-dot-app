@@ -58,9 +58,12 @@ This is often **cold start** or heavy SSR on the first hit after idle.
    BASE_URL="<app-url>"
    CRON_SECRET="<cron-secret-for-that-deployment>"
    curl --silent --show-error \
+     -w '\n%{http_code}\n' \
      -H "Authorization: Bearer ${CRON_SECRET}" \
      "${BASE_URL%/}/api/cron"
    ```
+
+   The response body is printed first; the **last line** is the numeric HTTP status (for example `400`, `401`, or `500`).
 
 2. Interpret preflight status before running `job=HOUSING_BATCH`:
    - When the server returns `400` and the body has `error.code` **`INVALID_JOB`** with `error.details.reason` **`INVALID_JOB_PARAMETER`** (preflight with no `job` query param), auth and runtime cron config are aligned (safe to run the housing batch).

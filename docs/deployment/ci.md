@@ -17,7 +17,7 @@ Quality gates run via GitHub Actions (`.github/workflows/ci.yml`). This workflow
 | `test` | `npm run test -- --run` | Vitest — all tests must pass |
 | `coverage-critical` | `npm run test:coverage:critical` | Coverage thresholds on critical modules |
 | `e2e-smoke` | `npm run test:e2e` | Playwright smoke tests for deployment-critical routes |
-| `build` | `npm run build` | Next.js build with CI placeholder env vars |
+| `build` | `SKIP_ENV_VALIDATION=true npm run build` | Next.js build with CI placeholder env vars |
 | `quality-gate` | Aggregate check | Fails if any required job above is not `success` |
 
 All jobs run `npm ci` with `actions/setup-node` npm cache independently (no shared `node_modules` artifact — zip round-trip breaks `.bin` symlinks).

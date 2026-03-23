@@ -36,7 +36,9 @@
 | Discord Core  | `DISCORD_APP_ID`, `DISCORD_PUBLIC_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_HOUSING_CHANNEL_ID` |
 | Discord Roles | `DISCORD_ROLE_ID_BROTHER`, `DISCORD_ROLE_ID_CABINET`, `DISCORD_ROLE_ID_HOUSING_CHAIR`  |
 | AWS/S3        | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME`          |
-| Cron          | `CRON_SECRET`                                                                          |
+| Cron (optional) | `CRON_SECRET` — set when Vercel cron or authenticated `/api/cron` use is enabled |
+
+In `serverEnvSchema` (`lib/infrastructure/config/server-env-schema.ts`), **`CRON_SECRET` is optional** (Zod `.optional()`). Omit it only when cron is disabled and nothing calls `/api/cron`; otherwise configure a non-empty secret in Vercel (and locally) so the endpoint can authorize requests.
 
 `SKIP_ENV_VALIDATION=true` is intended for local fallback scenarios only when intentionally bypassing strict checks. CI should validate against a complete placeholder matrix, and runtime staging/production should validate with real environment values.
 
@@ -60,7 +62,7 @@ Before promoting a merge to **`production`**, verify the **Vercel Production** e
 - `DISCORD_ROLE_ID_BROTHER`
 - `DISCORD_ROLE_ID_CABINET`
 - `DISCORD_ROLE_ID_HOUSING_CHAIR`
-- `CRON_SECRET`
+- `CRON_SECRET` (when using Vercel cron or manual `/api/cron` invocations; optional in schema otherwise)
 
 For production specifically, the three `DISCORD_ROLE_ID_*` keys must be present before deployment. Missing role IDs can break role-gated runtime flows even when unrelated routes (such as image proxying) build successfully.
 
