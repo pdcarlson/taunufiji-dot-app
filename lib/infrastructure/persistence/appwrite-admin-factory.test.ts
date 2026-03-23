@@ -2,8 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createAppwriteAdminClientFromEnv } from "./appwrite-admin-factory";
 
 describe("createAppwriteAdminClientFromEnv", () => {
-  const original = { ...process.env };
-
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_APPWRITE_ENDPOINT", "https://example.com/v1");
     vi.stubEnv("NEXT_PUBLIC_APPWRITE_PROJECT_ID", "proj");
@@ -11,7 +9,6 @@ describe("createAppwriteAdminClientFromEnv", () => {
   });
 
   afterEach(() => {
-    process.env = { ...original };
     vi.unstubAllEnvs();
   });
 
