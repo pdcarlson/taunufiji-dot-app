@@ -1,8 +1,13 @@
 # Project Log
 
+## 2026-03-23: Cron — Hobby plan daily schedule (1 AM Eastern intent)
+
+- **`vercel.json`**: Replaced `*/15 * * * *` with **`0 6 * * *`** (once per day, UTC) to satisfy Vercel Hobby’s maximum frequency and avoid deploy failures.
+- **Docs**: `docs/deployment.md` explains UTC vs Eastern (EST vs EDT), Hobby hourly precision, and why hour `6` UTC targets post-midnight Eastern duties.
+
 ## 2026-03-23: Cron — Vercel scheduler (replaces GitHub Actions)
 
-- **`vercel.json`**: Vercel Cron GET `/api/cron?job=HOURLY` every 15 minutes (`*/15 * * * *`, UTC).
+- **`vercel.json`**: Vercel Cron GET `/api/cron?job=HOURLY` once daily at `0 6 * * *` (UTC; ~1 AM Eastern Standard Time; see `docs/deployment.md` for Hobby limits and precision).
 - **Removed**: `.github/workflows/cron.yml` (no replacement GitHub scheduler workflow).
 - **`app/api/cron/route.ts`**: Auth check matches Vercel’s documented pattern (`authorization` header must equal `` `Bearer ${CRON_SECRET}` ``).
 - **`ci.yml`**: Dropped `validate-secrets` job that only enforced GitHub-stored `CRON_SECRET` for Actions cron.

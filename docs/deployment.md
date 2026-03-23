@@ -249,7 +249,10 @@ This is often **cold start** or heavy SSR on the first hit after idle.
 
 ## Cron Jobs
 
-- **Scheduler**: [Vercel Cron](https://vercel.com/docs/cron-jobs) via root `vercel.json`: GET `/api/cron?job=HOURLY` every **15 minutes** (`*/15 * * * *`, UTC).
+- **Scheduler**: [Vercel Cron](https://vercel.com/docs/cron-jobs) via root `vercel.json`: GET `/api/cron?job=HOURLY` **once per day** at **`0 6 * * *`** (minute `0` of hour `6`, every day, **UTC**).
+  - **Hobby plan**: Vercel allows at most one invocation per day for cron; the expression must not run more frequently than daily.
+  - **Hobby timing**: Invocations are distributed within the scheduled **hour** (roughly any time from `06:00:00` through `06:59:59` UTC), not necessarily on the minute — see [Cron jobs accuracy](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-jobs-accuracy).
+  - **Why 06:00 UTC**: Duties go overdue at **midnight Eastern**. We target **~1:00 AM Eastern** so a run that lands early in the allowed window still falls **after** midnight. **Note:** cron expressions are **UTC-only**. `06:00` UTC is **1:00 AM Eastern Standard Time** and **2:00 AM Eastern Daylight Time**; during EDT the same UTC hour corresponds to **2:00–2:59 AM** local (still after midnight the prior calendar day in Eastern).
 - **Which deployment**: Per Vercel’s documentation, cron invokes the project’s **production deployment URL** only — preview deployments are not targeted by scheduled cron.
 - **`job=HOURLY`**: Logical batch name for hourly-cadence work (unlock, notify, expire) that remains safe to run more often than once per hour.
 - **Auth**: Set `CRON_SECRET` on the Vercel project; Vercel sends it as `Authorization: Bearer <CRON_SECRET>` when invoking the route. The handler compares the header to `Bearer ${CRON_SECRET}` as in Vercel’s recommended pattern. Do not pass the secret as a query parameter.
