@@ -12,6 +12,7 @@ import {
 import { HousingTask, Member } from "@/lib/domain/entities";
 import { HOUSING_CONSTANTS } from "@/lib/constants";
 import { EASTERN_TIME_ZONE } from "@/lib/utils/eastern-time";
+import { isAwaitingExpiryTransition } from "@/lib/utils/housing-assignee-task-state";
 
 interface DutyRosterProps {
   tasks: HousingTask[];
@@ -124,10 +125,32 @@ export default function DutyRoster({
         </span>
       );
     }
+    if (task.status === "pending" && isAwaitingExpiryTransition(task)) {
+      return (
+        <span
+          className="inline-flex flex-col gap-0.5 text-amber-800 text-xs font-bold max-w-[200px]"
+          title="Past due without proof — not assignee-completable until marked expired"
+        >
+          <span className="inline-flex items-center gap-1">
+            <AlertCircle className="w-3 h-3 shrink-0" /> Awaiting expiry
+          </span>
+          <span className="font-normal text-[10px] text-amber-700/90 leading-tight">
+            System or admin will close this row; assignees cannot submit proof.
+          </span>
+        </span>
+      );
+    }
     if (task.status === "pending") {
       return (
         <span className="inline-flex items-center gap-1 text-blue-500 text-xs font-bold">
           <Clock className="w-3 h-3" /> In Progress
+        </span>
+      );
+    }
+    if (task.status === "expired") {
+      return (
+        <span className="inline-flex items-center gap-1 text-stone-600 text-xs font-bold">
+          <AlertCircle className="w-3 h-3" /> Expired
         </span>
       );
     }

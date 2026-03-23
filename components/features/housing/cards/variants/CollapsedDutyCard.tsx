@@ -1,6 +1,10 @@
 import { HousingTask } from "@/lib/domain/entities";
 import { ChevronRight, Zap, RefreshCw, Briefcase } from "lucide-react";
 import { TimeDisplay } from "../TimeDisplay";
+import {
+  isAwaitingExpiryTransition,
+  isAssigneeNotCompletable,
+} from "@/lib/utils/housing-assignee-task-state";
 
 interface CollapsedDutyCardProps {
   task: HousingTask;
@@ -17,6 +21,8 @@ export default function CollapsedDutyCard({
 
   const isDuty = task.type === "duty" || task.type === "one_off";
   const isOneOff = task.type === "one_off";
+  const dutyLimbo = isDuty && isAwaitingExpiryTransition(task);
+  const notCompletable = isAssigneeNotCompletable(task);
 
   return (
     <div
@@ -43,11 +49,27 @@ export default function CollapsedDutyCard({
         </h3>
 
         {/* Status Mini-Badges */}
-        {isPending && (
+        {isPending && dutyLimbo && (
+          <span
+            className="text-[10px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded"
+            title="Past due — awaiting system or admin to mark expired"
+          >
+            Awaiting update
+          </span>
+        )}
+        {isPending && !dutyLimbo && (
           <span
             className="w-2 h-2 rounded-full bg-fiji-gold animate-pulse"
             title="Pending"
           />
+        )}
+        {notCompletable && task.status === "expired" && (
+          <span
+            className="text-[10px] font-bold uppercase tracking-wide text-stone-600 bg-stone-100 border border-stone-200 px-1.5 py-0.5 rounded"
+            title="Not completable"
+          >
+            Expired
+          </span>
         )}
         {isRejected && (
           <span className="w-2 h-2 rounded-full bg-red-500" title="Rejected" />
