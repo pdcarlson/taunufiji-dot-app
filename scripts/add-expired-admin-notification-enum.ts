@@ -61,8 +61,8 @@ async function main(): Promise<void> {
     key: ATTRIBUTE_KEY,
   });
 
-  const type = (attr as { type?: string }).type;
-  const format = (attr as any).format;
+  type AttributeMeta = { type?: string; format?: string };
+  const { type, format } = attr as unknown as AttributeMeta;
 
   // Handle string attributes with format === "enum" (they are enums)
   if (type === "string" && format === "enum") {

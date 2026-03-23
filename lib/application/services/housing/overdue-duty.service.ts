@@ -2,12 +2,12 @@ import { HOUSING_CONSTANTS } from "@/lib/constants";
 import { HousingTask } from "@/lib/domain/types/task";
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
-import { ScheduleService } from "./schedule.service";
+import { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
 
 type OverdueDutyDependencies = {
   taskRepository: ITaskRepository;
   pointsService: IPointsService;
-  scheduleService: ScheduleService;
+  scheduleService: IScheduleService;
 };
 
 type OverdueDutyResult = {
@@ -63,6 +63,7 @@ export async function expireOverdueDutyTask(
 
   await taskRepository.update(task.id, {
     status: "expired",
+    ...(task.assigned_to ? { is_fine: false } : {}),
   });
 
   let fined = false;
@@ -73,10 +74,14 @@ export async function expireOverdueDutyTask(
         reason: `Missed Duty: ${task.title}`,
         category: "fine",
       });
+      await taskRepository.update(task.id, { is_fine: true });
       fined = true;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       errors.push(`Fine failed for ${task.id}: ${message}`);
+      await taskRepository
+        .update(task.id, { is_fine: false })
+        .catch(() => undefined);
     }
   }
 

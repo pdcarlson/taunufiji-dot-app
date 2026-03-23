@@ -1,7 +1,7 @@
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { expireOverdueDutyTask } from "@/lib/application/services/housing/overdue-duty.service";
 import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
-import { ScheduleService } from "@/lib/application/services/housing/schedule.service";
+import { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
 import {
   fetchAllTaskPages,
   HOUSING_CRON_TASK_PAGE_SIZE,
@@ -10,7 +10,7 @@ import {
 export const expireDutiesJob = async (
   taskRepository: ITaskRepository,
   pointsService: IPointsService,
-  scheduleService: ScheduleService,
+  scheduleService: IScheduleService,
 ): Promise<{ errors: string[] }> => {
   const errors: string[] = [];
   const now = new Date();
@@ -45,6 +45,8 @@ export const expireDutiesJob = async (
       HOUSING_CRON_TASK_PAGE_SIZE,
     );
 
+    // Pending rows intentionally overwrite open when the same id appears in both
+    // lists so we use the later assignment state for deduplication.
     const byId = new Map<string, (typeof openOverdue)[0]>();
     for (const task of openOverdue) {
       byId.set(task.id, task);

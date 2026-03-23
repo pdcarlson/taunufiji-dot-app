@@ -16,6 +16,11 @@ export async function fetchAllTaskPages(
   base: Omit<TaskQueryOptions, "offset" | "limit">,
   pageSize: number,
 ): Promise<HousingTask[]> {
+  if (!Number.isInteger(pageSize) || pageSize <= 0) {
+    throw new Error(
+      `fetchAllTaskPages: pageSize must be a positive integer (got ${String(pageSize)})`,
+    );
+  }
   const all: HousingTask[] = [];
   let offset = 0;
   let batch: HousingTask[];

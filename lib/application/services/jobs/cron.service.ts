@@ -8,18 +8,28 @@
 import { HousingTimeDrivenPipeline } from "./housing-time-driven.pipeline";
 import { expireDutiesJob } from "./handlers/expire-duties.job";
 import { ensureFutureTasksJob } from "./handlers/ensure-future-tasks.job";
-import { getContainer } from "@/lib/infrastructure/container";
+import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
+import { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
 
 /** Result type for cron job execution */
 export interface CronResult {
   unlocked: number;
+  recurring_notified: number;
   urgent: number;
   expired_notified: number;
   skipped_unassigned: number;
   errors: string[];
 }
 
-export const CronService = {
+export class CronService {
+  constructor(
+    private readonly housingTimeDrivenPipeline: typeof HousingTimeDrivenPipeline,
+    private readonly taskRepository: ITaskRepository,
+    private readonly pointsService: IPointsService,
+    private readonly scheduleService: IScheduleService,
+  ) {}
+
   /**
    * Hourly Cron Job — full time-driven housing pipeline (see `housing-time-driven.pipeline.ts`).
    */
@@ -30,7 +40,11 @@ export const CronService = {
       startedAt: new Date().toISOString(),
     });
 
-    const stats = await HousingTimeDrivenPipeline.runFromContainer();
+    const stats = await this.housingTimeDrivenPipeline.runFullHourlyCycle(
+      this.taskRepository,
+      this.pointsService,
+      this.scheduleService,
+    );
 
     console.log("[CronService]", {
       job: "HOURLY",
@@ -42,18 +56,17 @@ export const CronService = {
     }
 
     return stats;
-  },
+  }
 
   async expireDuties() {
-    const { taskRepository, pointsService, scheduleService } = getContainer();
     return await expireDutiesJob(
-      taskRepository,
-      pointsService,
-      scheduleService,
+      this.taskRepository,
+      this.pointsService,
+      this.scheduleService,
     );
-  },
+  }
 
   async ensureFutureTasks() {
     return await ensureFutureTasksJob();
-  },
-};
+  }
+}

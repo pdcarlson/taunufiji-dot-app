@@ -290,7 +290,15 @@ export class AppwriteTaskRepository implements ITaskRepository {
       queries.push(Query.isNull("proof_s3_key"));
     }
 
+    if (options.fineNotApplied) {
+      queries.push(
+        Query.or([Query.isNull("is_fine"), Query.equal("is_fine", false)]),
+      );
+    }
+
+    // Requires status: "expired" (see domain port JSDoc and notify-expired.job.ts).
     if (options.expiredNotificationIncomplete) {
+      queries.push(Query.equal("status", "expired"));
       queries.push(
         Query.or([
           Query.isNull("notification_level"),

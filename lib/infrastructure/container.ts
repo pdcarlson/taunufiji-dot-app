@@ -41,6 +41,8 @@ import {
 import { PointsService } from "@/lib/application/services/ledger";
 import { UserService, AuthService } from "@/lib/application/services/identity";
 import { LibraryService } from "@/lib/application/services/library";
+import { CronService } from "@/lib/application/services/jobs/cron.service";
+import { HousingTimeDrivenPipeline } from "@/lib/application/services/jobs/housing-time-driven.pipeline";
 
 // ...
 
@@ -62,6 +64,7 @@ export interface Container {
   maintenanceService: MaintenanceService;
   adminService: AdminService;
   libraryService: LibraryService;
+  cronService: CronService;
 }
 
 // Singleton container instance
@@ -102,6 +105,12 @@ export function getContainer(): Container {
       libraryRepository,
       storageService,
     );
+    const cronService = new CronService(
+      HousingTimeDrivenPipeline,
+      taskRepository,
+      pointsService,
+      scheduleService,
+    );
 
     container = {
       taskRepository,
@@ -121,6 +130,7 @@ export function getContainer(): Container {
       maintenanceService,
       adminService,
       libraryService,
+      cronService,
     };
   }
   return container!;
