@@ -772,7 +772,7 @@ export class ScheduleService implements IScheduleService {
 
   /**
    * Soft-deactivates the schedule before deleting future rows so the scheduled `ensureFutureTasksJob` pass
-   * cannot recreate instances while cleanup runs (see `docs/behavior.md` delete rules).
+   * cannot recreate instances while cleanup runs (see `spec/behavior.md` delete rules).
    */
   async deleteTaskThisAndFuture(task: HousingTask, effectiveFromDueAt: string) {
     if (!task.schedule_id) {

@@ -1,10 +1,6 @@
 # Housing Behavior Reference
 
-This document is the durable behavioral reference for the Housing module.
-
-- **Active specs** in `docs/spec/current/` define in-progress rollout work.
-- **Completed specs** are archived in `docs/spec/archive/`.
-- **This document** defines expected runtime behavior, state transitions, and edge-case handling that should remain true across implementations.
+This document is the durable behavioral reference for the Housing module. It defines expected runtime behavior, state transitions, and edge-case handling that should remain true across implementations.
 
 ## 1) Core Entities
 
@@ -80,8 +76,8 @@ The full ordered sequence runs on the platform-scheduled batch (daily on current
 6. **Notify expired** (`NotifyExpiredJob`)
 7. **Ensure future tasks** (`ensureFutureTasksJob`)
 
-- **What “expire” does** (`expireDutiesJob` → `expireOverdueDutyTask`): loads overdue mandatory work (`open` or `pending` without `proof_s3_key`), sets `status: expired`, attempts the missed-duty fine via `awardPoints` (with `fineTaskId` for ledger dedup), and for schedule-backed duties calls `triggerNextInstance`.
-- **Domain events**: expiry does **not** publish a `TaskEvents` message; downstream work is synchronous in the pipeline and maintenance. That avoids dead “event-driven” handlers and duplicate `triggerNextInstance` calls.
+- **What "expire" does** (`expireDutiesJob` → `expireOverdueDutyTask`): loads overdue mandatory work (`open` or `pending` without `proof_s3_key`), sets `status: expired`, attempts the missed-duty fine via `awardPoints` (with `fineTaskId` for ledger dedup), and for schedule-backed duties calls `triggerNextInstance`.
+- **Domain events**: expiry does **not** publish a `TaskEvents` message; downstream work is synchronous in the pipeline and maintenance. That avoids dead "event-driven" handlers and duplicate `triggerNextInstance` calls.
 - **Task metadata**: `is_fine` on assignments tracks whether the missed-duty fine was persisted; the ledger row remains the record of the debit (`amount` positive with `is_debit: true` per `PointsService`).
 - **Idempotency**: `expireDutiesJob` does not revisit already-`expired` rows; `pendingFinesJob` picks up rows that stayed `expired` with `is_fine` false. `PointsService.awardPoints` skips duplicate debits when a fine for the same `fineTaskId` or `[task:<id>]` marker already exists in the ledger.
 
@@ -267,6 +263,5 @@ Minimum walkthrough before production merge:
 
 - [Product Definition](product.md)
 - [Architecture](architecture.md)
-- [Deployment Workflow](deployment.md)
-- [Staging Environment Setup Spec](spec/current/staging-environment-setup.md)
-- [QA Audit and Staging Hardening Spec (Archived)](spec/archive/qa-audit-and-staging-hardening.md)
+- [Deployment](../docs/deployment/)
+- [Testing](../docs/quality/testing.md)

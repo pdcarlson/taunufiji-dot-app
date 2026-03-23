@@ -61,9 +61,11 @@ Concrete implementations of domain ports.
 4. JWT is passed to Server Actions for stateless authentication
 5. Server Actions verify JWT and resolve user profile (including Discord roles)
 
-## Deployment architecture
+## Deployment Architecture
 
 - **Hosting**: **Vercel** builds and serves the Next.js app from the GitHub repo (**Preview** from **`main`** and other branches as configured; **Production** from **`production`** when set as the production branch).
 - **Backend**: **Appwrite** (Auth, Databases) is configured via env vars injected at deploy time; it does not host the web app.
 - **CI**: GitHub Actions runs quality gates (lint, type check, test, build) on pushes and PRs.
-- **Cron**: Vercel Cron triggers `/api/cron?job=HOUSING_BATCH` on the **production** deployment per `vercel.json` (once daily on the current schedule); Vercel sends `Authorization: Bearer <CRON_SECRET>` when that env var is set on the project
+- **Cron**: Vercel Cron triggers `/api/cron?job=HOUSING_BATCH` on the **production** deployment per `vercel.json` (once daily on the current schedule); Vercel sends `Authorization: Bearer <CRON_SECRET>` when that env var is set on the project.
+
+For the full platform split (Vercel vs Appwrite vs AWS vs Discord vs GitHub), see [Platform](platform.md). For deployment procedures, see [docs/deployment/](../docs/deployment/).

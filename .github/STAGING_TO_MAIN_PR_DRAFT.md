@@ -4,8 +4,8 @@
 
 For the correct branch model and hosting split (Vercel vs Appwrite), see:
 
-- `docs/platform-map.md`
-- `docs/deployment.md`
+- `spec/platform.md`
+- `docs/deployment/`
 
 ---
 

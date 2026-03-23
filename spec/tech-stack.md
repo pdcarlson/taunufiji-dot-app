@@ -17,7 +17,7 @@
 ## Integrations
 
 - **Messaging/Identity**: Discord API (for role verification and notifications)
-- **Scheduling**: Next.js route handlers (`/api/cron?job=…`) triggered by [Vercel Cron](https://vercel.com/docs/cron-jobs) (`vercel.json`); production schedule uses `job=HOUSING_BATCH` once per day (see `docs/deployment.md`).
+- **Scheduling**: Next.js route handlers (`/api/cron?job=…`) triggered by [Vercel Cron](https://vercel.com/docs/cron-jobs) (`vercel.json`); production schedule uses `job=HOUSING_BATCH` once per day (see [docs/deployment/cron.md](../docs/deployment/cron.md)).
 
 ## Architecture & Patterns
 

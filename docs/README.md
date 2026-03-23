@@ -1,44 +1,45 @@
 # Documentation
 
-Project documentation for Tau Nu Fiji — The Digital Chapter.
+Granular, topic-organized documentation for Tau Nu Fiji — The Digital Chapter.
 
-## Contents
+For canonical contracts (architecture, behavior, platform, product, tech stack), see [`spec/README.md`](../spec/README.md).
 
-| Document                                  | Description                                                                  |
-| ----------------------------------------- | ---------------------------------------------------------------------------- |
-| [**Platform map**](platform-map.md)       | **Vercel vs Appwrite vs GitHub** — canonical split so hosting is not confused with backend |
-| [Product Definition](product.md)          | What the product does, who it's for, key modules                             |
-| [Tech Stack](tech-stack.md)               | Frameworks, services, and tooling                                            |
-| [Architecture](architecture.md)           | Clean Architecture layers, patterns, authentication flow                     |
-| [Deployment](deployment.md)               | CI/CD pipeline, staging/production workflow, secret management               |
-| [Housing Behavior Reference](behavior.md) | Canonical housing lifecycle, edge-case matrix, and expected runtime behavior |
-| [Changelog](changelog.md)                 | Historical log of all major changes                                          |
+> Release history is tracked in git (`git log`); there is no separate changelog file.
 
-## Specs
+## Topics
 
-Spec-driven development workflow and active specifications live in [`docs/spec/current/`](spec/current/). Completed specs are archived in [`docs/spec/archive/`](spec/archive/README.md).
+### Deployment
 
-| Active Spec                                                            | Status      |
-| ---------------------------------------------------------------------- | ----------- |
-| [Staging Environment Setup](spec/current/staging-environment-setup.md) | In Progress |
+Step-by-step deployment procedures, CI configuration, environment management, and troubleshooting.
 
-| Archived Completed Spec        | Location                                                                                              |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Deploy Strategy Update         | [docs/spec/archive/deploy-strategy-update.md](spec/archive/deploy-strategy-update.md)                 |
-| Discord Sync Automation        | [docs/spec/archive/discord-sync-automation.md](spec/archive/discord-sync-automation.md)               |
-| Centralize Env Config          | [docs/spec/archive/centralize-env-config.md](spec/archive/centralize-env-config.md)                   |
-| Quality Gate Fixes             | [docs/spec/archive/quality-gate-fixes.md](spec/archive/quality-gate-fixes.md)                         |
-| Infrastructure Logic Hardening | [docs/spec/archive/infra-logic-hardening.md](spec/archive/infra-logic-hardening.md)                   |
-| QA Audit and Staging Hardening | [docs/spec/archive/qa-audit-and-staging-hardening.md](spec/archive/qa-audit-and-staging-hardening.md) |
-| Recurring Task Update Scopes   | [docs/spec/archive/recurring-task-update-scopes.md](spec/archive/recurring-task-update-scopes.md)     |
+| Document | Description |
+|----------|-------------|
+| [Deployment Overview](deployment/) | Pipeline overview, branch model |
+| [CI Quality Gates](deployment/ci.md) | GitHub Actions workflow and required status checks |
+| [Environments](deployment/environments.md) | Staging, production, secrets, env matrix, runtime checklist |
+| [Cron Jobs](deployment/cron.md) | Vercel Cron configuration, HOUSING_BATCH pipeline |
+| [Troubleshooting](deployment/troubleshooting.md) | Staging diagnostics, failure runbook |
+| [Branch Protection](deployment/branch-protection.md) | Git branch model, rulesets, GitHub settings |
 
-> Rule of thumb: `docs/spec/current/` tracks planned/in-flight implementation work; `docs/` captures durable references; `docs/spec/archive/` stores completed specs.
+### Quality
 
-## Style Guides
+Testing conventions, coverage tooling, and diagnostics.
 
-| Guide                                   | Description                     |
-| --------------------------------------- | ------------------------------- |
-| [General](style-guide/general.md)       | Cross-language principles       |
+| Document | Description |
+|----------|-------------|
+| [Testing](quality/testing.md) | Vitest, Playwright, coverage, co-location conventions |
+
+### Style Guides
+
+Code style rules enforced across the project.
+
+| Guide | Description |
+|-------|-------------|
+| [General](style-guide/general.md) | Cross-language principles |
 | [TypeScript](style-guide/typescript.md) | TypeScript rules (Google style) |
 | [JavaScript](style-guide/javascript.md) | JavaScript rules (Google style) |
-| [HTML/CSS](style-guide/html-css.md)     | Markup and styling rules        |
+| [HTML/CSS](style-guide/html-css.md) | Markup and styling rules |
+
+## Adding New Topics
+
+New topic directories are welcome under `docs/` when a subject area grows beyond a single file. Each topic document should link upward to the relevant `spec/` file(s) it elaborates on (architecture, behavior, platform, product, or tech-stack).
