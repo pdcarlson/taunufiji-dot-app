@@ -62,15 +62,15 @@ This document is the durable behavioral reference for the Housing module.
 5. Admin approves -> `approved`.
 6. Next recurring instance is generated.
 7. If missed deadline, task transitions to `expired` and fine behavior is triggered.
-   - Assignments use `is_fine`: set `false` when the row is expired with a pending ledger fine; set `true` only after `awardPoints` succeeds. Hourly cron runs `pendingFinesJob` to retry fines when the ledger call failed after expiry.
+   - Assignments use `is_fine`: set `false` when the row is expired with a pending ledger fine; set `true` only after `awardPoints` succeeds. Each housing scheduled batch run executes `pendingFinesJob` to retry fines when the ledger call failed after expiry.
    - Missed-duty fine ledger rows embed the task id in `reason` (`[task:<id>]`) so `expireOverdueDutyTask` and `pendingFinesJob` can skip `awardPoints` when a matching fine already exists (avoids double charges if `is_fine` was not persisted).
 8. Overdue transition is canonicalized through shared expiry logic and may run from:
    - cron (`expireDutiesJob`) as the primary scheduled path, and
    - dashboard maintenance as a fallback path for assigned-user views.
 
-### Hourly pipeline: overdue duties, fines, and ledger
+### Scheduled housing batch: overdue duties, fines, and ledger
 
-The ordered hourly sequence is implemented in `HousingTimeDrivenPipeline.runFullHourlyCycle` (`lib/application/services/jobs/housing-time-driven.pipeline.ts`):
+The full ordered sequence runs on the platform-scheduled batch (daily on current Vercel Hobby config), implemented in `HousingTimeDrivenPipeline.runFullHousingScheduledCycle` (`lib/application/services/jobs/housing-time-driven.pipeline.ts`):
 
 1. **Unlock** (`UnlockTasksJob`)
 2. **Recurring notify** (`NotifyRecurringJob`)

@@ -5,7 +5,7 @@ import { MockFactory } from "@/lib/test/mock-factory";
 import type { IPointsService } from "@/lib/domain/ports/services/points.service.port";
 import type { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
 
-describe("CronService.runHourly", () => {
+describe("CronService.runHousingScheduledBatch", () => {
   const taskRepository = MockFactory.createTaskRepository();
   const ledgerRepository = MockFactory.createLedgerRepository();
   const pointsService = {
@@ -17,7 +17,10 @@ describe("CronService.runHourly", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(HousingTimeDrivenPipeline, "runFullHourlyCycle").mockResolvedValue({
+    vi.spyOn(
+      HousingTimeDrivenPipeline,
+      "runFullHousingScheduledCycle",
+    ).mockResolvedValue({
       unlocked: 1,
       recurring_notified: 1,
       urgent: 1,
@@ -27,7 +30,7 @@ describe("CronService.runHourly", () => {
     });
   });
 
-  it("delegates to HousingTimeDrivenPipeline.runFullHourlyCycle and returns its stats", async () => {
+  it("delegates to HousingTimeDrivenPipeline.runFullHousingScheduledCycle and returns its stats", async () => {
     const cronService = new CronService(
       HousingTimeDrivenPipeline,
       taskRepository,
@@ -36,7 +39,7 @@ describe("CronService.runHourly", () => {
       ledgerRepository,
     );
 
-    const result = await cronService.runHourly();
+    const result = await cronService.runHousingScheduledBatch();
 
     expect(result).toEqual({
       unlocked: 1,
@@ -46,7 +49,9 @@ describe("CronService.runHourly", () => {
       skipped_unassigned: 0,
       errors: [],
     });
-    expect(HousingTimeDrivenPipeline.runFullHourlyCycle).toHaveBeenCalledWith(
+    expect(
+      HousingTimeDrivenPipeline.runFullHousingScheduledCycle,
+    ).toHaveBeenCalledWith(
       taskRepository,
       pointsService,
       scheduleService,

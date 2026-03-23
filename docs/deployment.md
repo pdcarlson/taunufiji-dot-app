@@ -230,30 +230,30 @@ This is often **cold start** or heavy SSR on the first hit after idle.
      "${BASE_URL%/}/api/cron"
    ```
 
-2. Interpret preflight status before running `job=HOURLY`:
-   - When the server returns `400` with `INVALID_JOB`, auth and runtime cron config are aligned (safe to run HOURLY).
+2. Interpret preflight status before running `job=HOUSING_BATCH`:
+   - When the server returns `400` with `INVALID_JOB`, auth and runtime cron config are aligned (safe to run the housing batch).
    - If you receive `401` with `UNAUTHORIZED`, the bearer value does not match deployed runtime `CRON_SECRET` (header must be exactly `Authorization: Bearer <CRON_SECRET>` per [Vercel cron docs](https://vercel.com/docs/cron-jobs/manage-cron-jobs)).
    - When `500` shows `CRON_SECRET_MISSING` in `error.details.reason` (response `error.code` is `SERVER_CONFIG_ERROR`), the deployed runtime is missing `CRON_SECRET` in the hosting environment.
    - When `500` indicates `JOB_EXECUTION_FAILED`, runtime dependencies failed during execution; inspect app logs.
 3. In **Vercel** for the target deployment environment (Preview/staging or Production), verify `CRON_SECRET` is present and non-empty and `NEXT_PUBLIC_APP_URL` matches the deployed site URL for that environment.
 4. **Redeploy** after changing environment variables if the platform does not hot-reload them for existing deployments (Vercel typically requires a new deployment for env changes to take effect).
-5. To run the HOURLY job manually against a URL you control:
+5. To run the housing scheduled batch manually against a URL you control:
 
    ```bash
    curl --silent --show-error -X GET \
      -H "Authorization: Bearer ${CRON_SECRET}" \
-     "${BASE_URL%/}/api/cron?job=HOURLY"
+     "${BASE_URL%/}/api/cron?job=HOUSING_BATCH"
    ```
 
 6. Confirm endpoint auth contract is Bearer header (`Authorization: Bearer <CRON_SECRET>`), not query-string `key`.
 
 ## Cron Jobs
 
-- **Scheduler**: [Vercel Cron](https://vercel.com/docs/cron-jobs) via root `vercel.json`: GET `/api/cron?job=HOURLY` **once per day** at **`0 6 * * *`** (minute `0` of hour `6`, every day, **UTC**).
+- **Scheduler**: [Vercel Cron](https://vercel.com/docs/cron-jobs) via root `vercel.json`: GET `/api/cron?job=HOUSING_BATCH` **once per day** at **`0 6 * * *`** (minute `0` of hour `6`, every day, **UTC**).
   - **Hobby plan**: Vercel allows at most one invocation per day for cron; the expression must not run more frequently than daily.
   - **Hobby timing**: Invocations are distributed within the scheduled **hour** (roughly any time from `06:00:00` through `06:59:59` UTC), not necessarily on the minute — see [Cron jobs accuracy](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-jobs-accuracy).
   - **Why 06:00 UTC**: Duties go overdue at **midnight Eastern**. We target **~1:00 AM Eastern** so a run that lands early in the allowed window still falls **after** midnight. **Note:** cron expressions are **UTC-only**. `06:00` UTC is **1:00 AM Eastern Standard Time** and **2:00 AM Eastern Daylight Time**; during EDT the same UTC hour corresponds to **2:00–2:59 AM** local on the **same** Eastern calendar day (still after local midnight that day).
 - **Which deployment**: Per Vercel’s documentation, cron invokes the project’s **production deployment URL** only — preview deployments are not targeted by scheduled cron.
-- **`job=HOURLY`**: Logical batch name for hourly-cadence work (unlock, notify, expire) that remains safe to run more often than once per hour.
+- **`job=HOUSING_BATCH`**: Full housing time-driven pipeline (unlock, notify, urgent window, expire, fine retries, expired notify, ensure future). On Hobby this is invoked **once per day** by Vercel; the handler is idempotent enough for occasional manual re-runs if needed.
 - **Auth**: Set `CRON_SECRET` on the Vercel project; Vercel sends it as `Authorization: Bearer <CRON_SECRET>` when invoking the route. The handler compares the header to `Bearer ${CRON_SECRET}` as in Vercel’s recommended pattern. Do not pass the secret as a query parameter.
 - **Manual / local testing**: Hit the route with curl (or the deployment URL in a browser will not send the secret — use curl). Vercel attaches `vercel-cron/1.0` as the user agent for platform-triggered runs.

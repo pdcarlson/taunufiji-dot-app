@@ -134,7 +134,7 @@ _Problem: Fairness and manual overhead in chore assignment._
 
 The Housing module uses a weighted Round-Robin algorithm to assign duties.
 
-- **Cron Architecture**: The `/api/cron` route (Vercel Cron, see `vercel.json`) runs the housing time-driven pipeline (unlock, notify, expire, etc.).
+- **Cron Architecture**: The `/api/cron` route (Vercel Cron, see `vercel.json`) invokes `job=HOUSING_BATCH` on the production deployment to run the full housing time-driven pipeline (unlock, notify, expire, etc.) on a **daily** schedule on Hobby.
 - **State Machine**: Tasks move through a strict lifecycle: `Scheduled -> Open -> Pending Review -> Approved/Rejected`.
 - **Optimistic UI**: Client components utilize `router.refresh()` for mutations, providing near-instant feedback while preserving server state consistency.
 

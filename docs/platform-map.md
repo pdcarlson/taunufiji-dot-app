@@ -9,7 +9,7 @@ This page exists so nobody confuses **where the app runs** with **where data and
 | **File storage (library uploads)** | **AWS S3** | Credentials in **Vercel** env. |
 | **Discord (roles, DMs, slash commands)** | **Discord API** | Bot token and role IDs in **Vercel** env. Command registration: `npm run discord:register` (manual). |
 | **CI (lint, test, build)** | **GitHub Actions** | `ci.yml` — quality gates only; it does **not** deploy the Next.js app. |
-| **Scheduled jobs hitting `/api/cron`** | **Vercel Cron** | `vercel.json` — GET to **production** deployment; Vercel sends `Authorization: Bearer` using project `CRON_SECRET`. |
+| **Scheduled jobs hitting `/api/cron`** | **Vercel Cron** | `vercel.json` — GET `/api/cron?job=HOUSING_BATCH` to **production** deployment (once daily on current config); Vercel sends `Authorization: Bearer` using project `CRON_SECRET`. |
 
 ## Git branches (do not mix with “staging” the environment)
 

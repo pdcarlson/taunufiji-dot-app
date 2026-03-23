@@ -13,7 +13,7 @@ const ERROR_CODES = {
 } as const;
 
 const CRON_JOBS = {
-  HOURLY: "HOURLY",
+  HOUSING_BATCH: "HOUSING_BATCH",
   EXPIRE_DUTIES: "EXPIRE_DUTIES",
   ENSURE_FUTURE_TASKS: "ENSURE_FUTURE_TASKS",
 } as const;
@@ -95,8 +95,8 @@ export async function GET(req: Request) {
     const { cronService } = getContainer();
 
     switch (job) {
-      case CRON_JOBS.HOURLY:
-        result = await cronService.runHourly();
+      case CRON_JOBS.HOUSING_BATCH:
+        result = await cronService.runHousingScheduledBatch();
         break;
       case CRON_JOBS.EXPIRE_DUTIES:
         result = await cronService.expireDuties();

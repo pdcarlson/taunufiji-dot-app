@@ -8,7 +8,7 @@ import { calculateNextInstance } from "@/lib/utils/scheduler";
  *   schedule, `create` duty rows, `updateSchedule` for `last_generated_at`). Callers must not pass a repository
  *   that swallows errors silently.
  * @returns Resolves to `void`. On unexpected repository failures, logs `🔥 EnsureFutureTasksJob Failed` and
- *   does not rethrow (hourly cron continues). Per-schedule failures (e.g. cannot compute next instance) log and
+ *   does not rethrow (scheduled housing batch continues). Per-schedule failures (e.g. cannot compute next instance) log and
  *   `continue` to the next schedule.
  */
 export const ensureFutureTasksJob = async (
