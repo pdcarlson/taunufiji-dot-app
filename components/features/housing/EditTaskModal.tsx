@@ -224,8 +224,10 @@ export default function EditTaskModal({
     if (!canDelete) return;
     const scopeLabelMap: Record<RecurringMutationScope, string> = {
       this_instance: "this assignment row only",
-      this_and_future: "this assignment row and future assignment rows",
-      entire_series: "the schedule and all assignment rows (series ends)",
+      this_and_future:
+        "this and future assignment rows and the recurring schedule template (the schedule is deactivated so no new instances are generated)",
+      entire_series:
+        "all assignment rows in this series and the recurring schedule template (schedule deactivated; series ends)",
     };
     const label =
       isRecurring && task.schedule_id
@@ -246,9 +248,9 @@ export default function EditTaskModal({
         const successMessage =
           isRecurring && task.schedule_id
             ? mutationScope === "entire_series"
-              ? "Recurring series deleted and schedule deactivated"
+              ? "Schedule deactivated and all series assignment rows removed"
               : mutationScope === "this_and_future"
-                ? "Task and future recurring instances deleted"
+                ? "Schedule deactivated; this and future assignment rows removed"
                 : "Recurring task instance deleted"
             : "Task deleted";
         toast.success(successMessage);
@@ -490,9 +492,11 @@ export default function EditTaskModal({
               <p className="text-[10px] text-stone-500 mt-1.5 leading-relaxed">
                 Recurring duties use one schedule row (template) and many
                 assignment rows (instances). &quot;This row only&quot; changes
-                just this due date&apos;s assignment; wider scopes also update
-                the schedule so future generated instances match. Deleting the
-                entire series deactivates the schedule before removing rows.
+                just this due date&apos;s assignment. Broader save scopes update
+                the schedule template so future generated rows match. Deleting
+                with &quot;this + future&quot; or &quot;entire series&quot;
+                deactivates the recurring schedule (no new instances) and
+                removes the corresponding assignment rows.
               </p>
             </div>
           )}

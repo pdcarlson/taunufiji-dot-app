@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { HousingTask } from "@/lib/domain/entities";
-import TaskCard from "./TaskCard";
+import { TaskCard } from "./TaskCard";
 import { CollapsedDutyCard } from "./cards/variants/CollapsedDutyCard";
 import { Card, CardContent } from "@/components/ui/Card";
 import { ClipboardList } from "lucide-react";
@@ -15,7 +15,7 @@ interface MyDutiesWidgetProps {
   variant?: "default" | "wide" | "minimal";
 }
 
-export default function MyDutiesWidget({
+export function MyDutiesWidget({
   initialTasks,
   userId,
   profileId,

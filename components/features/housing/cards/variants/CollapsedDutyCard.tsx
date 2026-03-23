@@ -1,10 +1,7 @@
 import { HousingTask } from "@/lib/domain/entities";
 import { ChevronRight, Zap, RefreshCw, Briefcase } from "lucide-react";
 import { TimeDisplay } from "../TimeDisplay";
-import {
-  isAwaitingExpiryTransition,
-  isAssigneeNotCompletable,
-} from "@/lib/utils/housing-assignee-task-state";
+import { isAwaitingExpiryTransition } from "@/lib/utils/housing-assignee-task-state";
 
 interface CollapsedDutyCardProps {
   task: HousingTask;
@@ -23,7 +20,6 @@ export function CollapsedDutyCard({
   const isOneOff = task.type === "one_off";
   const dutyLimbo =
     isDuty && task.status === "pending" && isAwaitingExpiryTransition(task);
-  const notCompletable = isAssigneeNotCompletable(task);
 
   return (
     <div
@@ -64,7 +60,7 @@ export function CollapsedDutyCard({
             title="Pending"
           />
         )}
-        {notCompletable && task.status === "expired" && (
+        {task.status === "expired" && (
           <span
             className="text-[10px] font-bold uppercase tracking-wide text-stone-600 bg-stone-100 border border-stone-200 px-1.5 py-0.5 rounded"
             title="Not completable"

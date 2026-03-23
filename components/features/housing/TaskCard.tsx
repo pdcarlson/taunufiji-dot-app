@@ -42,7 +42,7 @@ export function TaskCardSkeleton() {
 }
 
 // DISPATCHER COMPONENT
-export default function TaskCard(props: TaskCardProps) {
+export function TaskCard(props: TaskCardProps) {
   const { task, viewMode = "action", variant = "square" } = props;
 
   // 1. LOCKED / COOLDOWN

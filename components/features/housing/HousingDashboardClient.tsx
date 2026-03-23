@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { HousingTask, Member } from "@/lib/domain/entities";
-import TaskCard from "./TaskCard";
+import { TaskCard } from "./TaskCard";
 
 import { DutyRoster } from "./DutyRoster";
 import ProofReviewModal from "./ProofReviewModal";
@@ -18,7 +18,7 @@ import {
   getAllActiveTasksAction,
   getAllMembersAction,
 } from "@/lib/presentation/actions/housing/query.actions";
-import MyDutiesWidget from "./MyDutiesWidget";
+import { MyDutiesWidget } from "./MyDutiesWidget";
 // Note: We use useAuth for getToken and isHousingAdmin
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -73,7 +73,16 @@ export default function HousingDashboardClient({
         getAllMembersAction(jwt),
       ]);
 
-      if (tasksRes) setTasks(tasksRes);
+      if (tasksRes) {
+        setTasks(tasksRes);
+        setEditingTask((prev) => {
+          if (!prev) {
+            return null;
+          }
+          const found = tasksRes.find((t: HousingTask) => t.id === prev.id);
+          return found ?? null;
+        });
+      }
       if (membersRes) setMembers(membersRes);
 
       if (options?.notifySuccess) {
