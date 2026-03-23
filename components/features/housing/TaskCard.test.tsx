@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import TaskCard from "./TaskCard";
+import { TaskCard } from "./TaskCard";
 import { HousingTask } from "@/lib/domain/entities";
 
 // Mock dependencies

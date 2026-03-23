@@ -65,8 +65,25 @@ This document is the durable behavioral reference for the Housing module.
    - Assignments use `is_fine`: set `false` when the row is expired with a pending ledger fine; set `true` only after `awardPoints` succeeds. Hourly cron runs `pendingFinesJob` to retry fines when the ledger call failed after expiry.
    - Missed-duty fine ledger rows embed the task id in `reason` (`[task:<id>]`) so `expireOverdueDutyTask` and `pendingFinesJob` can skip `awardPoints` when a matching fine already exists (avoids double charges if `is_fine` was not persisted).
 8. Overdue transition is canonicalized through shared expiry logic and may run from:
-   - cron (`ExpireDutiesJob`) as the primary scheduled path, and
+   - cron (`expireDutiesJob`) as the primary scheduled path, and
    - dashboard maintenance as a fallback path for assigned-user views.
+
+### Hourly pipeline: overdue duties, fines, and ledger
+
+The ordered hourly sequence is implemented in `HousingTimeDrivenPipeline.runFullHourlyCycle` (`lib/application/services/jobs/housing-time-driven.pipeline.ts`):
+
+1. **Unlock** (`UnlockTasksJob`)
+2. **Recurring notify** (`NotifyRecurringJob`)
+3. **Urgent notify** (`NotifyUrgentJob`)
+4. **Expire overdue duties** (`expireDutiesJob` → `expireOverdueDutyTask` per eligible row) — must run **before** expired notifications so tasks are `expired` first
+5. **Pending fine retries** (`pendingFinesJob`) — retries missed-duty debits when expiry left `is_fine` false after a failed `awardPoints`
+6. **Notify expired** (`NotifyExpiredJob`)
+7. **Ensure future tasks** (`ensureFutureTasksJob`)
+
+- **What “expire” does** (`expireDutiesJob` → `expireOverdueDutyTask`): loads overdue mandatory work (`open` or `pending` without `proof_s3_key`), sets `status: expired`, attempts the missed-duty fine via `awardPoints` (with `fineTaskId` for ledger dedup), and for schedule-backed duties calls `triggerNextInstance`.
+- **Domain events**: expiry does **not** publish a `TaskEvents` message; downstream work is synchronous in the pipeline and maintenance. That avoids dead “event-driven” handlers and duplicate `triggerNextInstance` calls.
+- **Task metadata**: `is_fine` on assignments tracks whether the missed-duty fine was persisted; the ledger row remains the record of the debit (`amount` positive with `is_debit: true` per `PointsService`).
+- **Idempotency**: `expireDutiesJob` does not revisit already-`expired` rows; `pendingFinesJob` picks up rows that stayed `expired` with `is_fine` false. `PointsService.awardPoints` skips duplicate debits when a fine for the same `fineTaskId` or `[task:<id>]` marker already exists in the ledger.
 
 ## 3.2 One-Off Duty Flow
 

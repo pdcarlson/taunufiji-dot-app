@@ -96,24 +96,43 @@ The app may introduce new persisted values for `assignments.notification_level` 
 
 ## Staging Runtime Diagnostics
 
-Use the diagnostics script from the repo root:
+The script loads `.env.local` when present (same staging keys as the app: Appwrite, AWS placeholders if required by schema, Discord bot + guild + housing channel + `DISCORD_ROLE_ID_*` role IDs). It validates env with `serverEnvSchema` before running checks.
+
+From the repo root:
 
 ```bash
 npm run diagnose:staging
 ```
 
-What it verifies:
+Exit code `0` prints a line per check with pass/fail; exit code `1` if validation fails or any check fails.
+
+What it verifies today:
 
 - Appwrite admin access to critical collections (`users`, `assignments`)
 - Discord guild reachability with bot token
 - Discord housing channel reachability
 - Configured housing role IDs exist in the target guild
-- Cron endpoint auth contract and HOURLY dispatch health (manual run path)
-- Housing expiry notification dependencies (`DISCORD_HOUSING_CHANNEL_ID`, bot DM capability)
 
 If this command fails, do not promote staging to production until the failing checks are resolved.
 
 ## Staging Troubleshooting Runbook
+
+### Symptom: Appwrite Sites shows “Timed out waiting for runtime” (`runtime_timeout`)
+
+This is a **cold-start / runtime-ready** timeout at the edge (not your route handler finishing slowly). With SSR Next.js on low CPU/RAM, the first request after idle can exceed the platform budget even when the site **build** succeeded.
+
+1. **Confirm builds are healthy**: In the Appwrite Console, open the site → **Deployments** → **Logs** for a “small” vs “large” deployment. Failed installs or missing output usually show in **build** logs. The console **Total size** column maps to API fields `sourceSize`, `buildSize`, and `totalSize` on each deployment ([Deployment model](https://appwrite.io/docs/references/cloud/models/deployment)): **source** = uploaded repo snapshot, **build** = build output, **total** = both. A drop in **total** often means a reporting or packaging change—not necessarily a broken deploy.
+2. **Compare deployments via API** (requires `.env.local` with **cloud** `NEXT_PUBLIC_APPWRITE_ENDPOINT`, not localhost):
+
+   ```bash
+   npm run inspect:appwrite-sites
+   APPWRITE_SITE_ID="<site id>" npm run inspect:appwrite-sites
+   APPWRITE_SITE_ID="<site id>" npm run inspect:appwrite-sites -- --deployment="<deployment id>" --log-tail=8000
+   ```
+
+   The API key must have permission to read Sites. Use `--deployment=` to print full deployment JSON and a tail of `buildLogs`.
+3. **Warm the runtime** after deploy: hit a **static** URL first (served from CDN without running React), e.g. `https://<your-staging-host>/health.txt`, then load `/login` or the dashboard. **`/` is not a good probe**—it redirects to `/dashboard` and pulls in heavy server work.
+4. **Site request logs**: Console → Site → **Logs** shows per-request status and duration; filter by path or `deploymentId` to see whether timeouts correlate with a specific deployment.
 
 ### Symptom: “Failed to assign duty” / task creation fails
 

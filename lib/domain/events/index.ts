@@ -15,7 +15,6 @@ export {
   type TaskUnassignedEvent,
   type TaskUnlockedEvent,
   type TaskUrgentEvent,
-  type TaskExpiredEvent,
   type TaskReassignedEvent,
   type TaskUpdatedEvent,
   type TaskEventMap,

@@ -11,6 +11,13 @@
 - **CI**: Each job runs `npm ci` with `actions/setup-node` npm cache (no `node_modules` artifact — zip round-trip breaks `node_modules/.bin` symlinks and caused `next`/`vitest`/`eslint` not found on runners).
 - **UI**: `EditTaskModal` is a named export; import as `{ EditTaskModal }`.
 
+## 2026-03-23: Housing domain events and staging diagnostics
+
+- **Dead event path removed**: `TaskEvents.TASK_EXPIRED` and `TaskExpiredHandler` were never published; overdue expiry and `triggerNextInstance` already run inside `expireOverdueDutyTask` (cron + maintenance). Removed the unused enum value, payload type, handler, and `initDomainEvents` wiring so the bus only reflects events that actually fire.
+- **`npm run diagnose:staging`**: Fixed failure when dynamic-importing `getAdminClient()` pulled in `server-only` `env` (Next.js client/server boundary error under `tsx`). Diagnostics now build the Appwrite admin client from `process.env` via `createAppwriteAdminClientFromEnv` (`lib/infrastructure/persistence/appwrite-admin-factory.ts`).
+- **Server env schema**: Extended `serverEnvSchema` with `DISCORD_ROLE_ID_*` keys so the same validation used by the diagnose script matches the Discord role checks it runs.
+- **Docs**: Clarified in `docs/architecture.md` that duty expiry is pipeline-driven, not bus-driven; `docs/behavior.md` documents the hourly pipeline including `pendingFinesJob` and fine/idempotency behavior.
+
 ## 2026-03-22: Housing recurring admin — schedule vs assignment consistency
 
 - **Recurring edits**: `ScheduleService` updates `housing_schedules` **before** `housing_assignments` for this-and-future and entire-series task edits so hourly cron cannot emit a new instance from stale schedule metadata mid-mutation.

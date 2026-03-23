@@ -6,7 +6,7 @@ import { getDashboardStatsAction } from "@/lib/presentation/actions/dashboard.ac
 import { getMyTasksAction } from "@/lib/presentation/actions/housing/tasks.actions";
 import GreetingCard from "./GreetingCard";
 import LeaderboardWidget from "@/components/features/leaderboard/widgets/LeaderboardWidget";
-import MyDutiesWidget from "@/components/features/housing/MyDutiesWidget";
+import { MyDutiesWidget } from "@/components/features/housing/MyDutiesWidget";
 import PointsLedger from "./PointsLedger";
 import AdHocRequestCard from "@/components/features/housing/AdHocRequestCard";
 import { HousingTask } from "@/lib/domain/types/task";

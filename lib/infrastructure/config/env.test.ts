@@ -13,6 +13,9 @@ const SERVER_ENV_KEYS = [
   "DISCORD_BOT_TOKEN",
   "DISCORD_GUILD_ID",
   "DISCORD_HOUSING_CHANNEL_ID",
+  "DISCORD_ROLE_ID_BROTHER",
+  "DISCORD_ROLE_ID_CABINET",
+  "DISCORD_ROLE_ID_HOUSING_CHAIR",
   "CRON_SECRET",
 ] as const;
 
@@ -23,6 +26,8 @@ describe("Environment Configuration", () => {
     originalEnv = { ...process.env };
     vi.resetModules();
     SERVER_ENV_KEYS.forEach((key) => delete process.env[key]);
+    // Parent shell or .env.local may set this; tests must control validation explicitly.
+    delete process.env.SKIP_ENV_VALIDATION;
   });
 
   afterEach(() => {
@@ -60,6 +65,9 @@ describe("Environment Configuration", () => {
     process.env.DISCORD_BOT_TOKEN = "test-token";
     process.env.DISCORD_GUILD_ID = "test-guild";
     process.env.DISCORD_HOUSING_CHANNEL_ID = "test-housing";
+    process.env.DISCORD_ROLE_ID_BROTHER = "test-role-brother";
+    process.env.DISCORD_ROLE_ID_CABINET = "test-role-cabinet";
+    process.env.DISCORD_ROLE_ID_HOUSING_CHAIR = "test-role-housing";
     process.env.CRON_SECRET = "test-secret";
 
     const { env } = await import("@/lib/infrastructure/config/env");

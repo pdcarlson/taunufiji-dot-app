@@ -143,30 +143,54 @@ describe("DutyService", () => {
       expect(mockTaskRepo.update).not.toHaveBeenCalled();
     });
 
-    it("hides overdue open and pending duties without proof until expiry is persisted", async () => {
-      const pastDue = new Date(Date.now() - 60_000).toISOString();
+    it("should hide overdue open and pending duty rows without proof (awaiting expiry write)", async () => {
+      const pastDue = "2020-01-01T12:00:00.000Z";
       const tasks = [
         createMockTask({
-          id: "open-overdue",
+          id: "t_pending_ok",
+          status: "pending",
           type: "duty",
-          status: "open",
+          due_at: "2030-01-01T12:00:00.000Z",
+          proof_s3_key: null,
+        }),
+        createMockTask({
+          id: "t_pending_limbo",
+          status: "pending",
+          type: "duty",
           due_at: pastDue,
           proof_s3_key: null,
         }),
         createMockTask({
-          id: "pending-overdue",
+          id: "t_open_limbo",
+          status: "open",
           type: "duty",
-          status: "pending",
           due_at: pastDue,
           proof_s3_key: null,
+        }),
+        createMockTask({
+          id: "t_pending_proof",
+          status: "pending",
+          type: "duty",
+          due_at: pastDue,
+          proof_s3_key: "proof",
         }),
       ];
 
       mockTaskRepo.findByAssignee = vi.fn().mockResolvedValue(tasks);
 
-      const result = await service.getMyTasks("user_1");
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-06-01T12:00:00.000Z"));
+      let result: Awaited<ReturnType<DutyService["getMyTasks"]>>;
+      try {
+        result = await service.getMyTasks("user_1");
+      } finally {
+        vi.useRealTimers();
+      }
 
-      expect(result.documents).toHaveLength(0);
+      expect(result.documents.map((d) => d.id).sort()).toEqual([
+        "t_pending_ok",
+        "t_pending_proof",
+      ]);
     });
   });
   describe("requestAdHocPoints", () => {

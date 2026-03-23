@@ -21,7 +21,7 @@ The heart of the software. Has **no imports from infrastructure, application, or
 Orchestrates business logic and use cases.
 
 - **Services**: `DutyService`, `LedgerService`, `LibraryService`, `ScheduleService`, `AdminService`.
-- **Event Handlers**: Asynchronous listeners for domain events (e.g., `JobCompletedEvent`).
+- **Event Handlers**: Asynchronous listeners for domain events published via `DomainEventBus` (task lifecycle notifications, points on approve/reject). Overdue duty expiry and next-instance generation run in the hourly housing pipeline (`expireOverdueDutyTask`), not via a domain event.
 - **Scheduling**: Cron handlers (`lib/application/services/jobs`) for recurring logic — `UnlockTasksJob`, `NotifyRecurringJob`, `NotifyUrgentJob`, `ExpireDutiesJob`, `NotifyExpiredJob`, `EnsureFutureTasksJob`.
 
 ### 3. Infrastructure Layer (`lib/infrastructure`)
