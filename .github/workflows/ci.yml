@@ -2,9 +2,9 @@ name: Pull Request Checks
 
 on:
   push:
-    branches: [main, staging]
+    branches: [main, staging, production]
   pull_request:
-    branches: [main, staging]
+    branches: [main, staging, production]
 
 # Artifact upload/download of `node_modules` breaks npm's `.bin` symlinks (zip
 # round-trip), which surfaces as `next: not found`, `vitest: not found`, etc.

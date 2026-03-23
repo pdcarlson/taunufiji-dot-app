@@ -12,7 +12,7 @@ Feature Branch → PR (CI Quality Gates) → Merge to main → Appwrite deploys 
 
 ## 1. Quality Gates (`ci.yml`)
 
-**Trigger**: Opening a PR or pushing to `main`/`staging` (legacy `staging` may still be listed until CI is updated in a later stage).
+**Trigger**: Pushes and pull requests targeting **`main`**, **`production`**, or **`staging`** (see `push` / `pull_request` `branches` in `.github/workflows/ci.yml`). Including **`production`** ensures required status checks run for PRs into the release branch and on direct pushes that the branch ruleset allows.
 
 - Installs dependencies (`npm ci`)
 - Lint: `npm run lint`
