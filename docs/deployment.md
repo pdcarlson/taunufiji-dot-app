@@ -56,6 +56,12 @@ Complete this in GitHub so the branch model above matches repo settings. **Doc-o
 
 Use a **fine-grained PAT** with access to this repository. For **organization** repositories, authorize the PAT for SSO: **Settings → Developer settings → Personal access tokens → … → Configure SSO**.
 
+The GitHub CLI reads **`GH_TOKEN`** (or **`GITHUB_TOKEN`**) from the environment. If your tooling only injects a differently named secret (for example **`GITHUB_PERSONAL_ACCESS_TOKEN`** in Cursor Cloud), export it before calling `gh`:
+
+```bash
+export GH_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
+```
+
 **Smoke test** (local shell; do not rely on `GITHUB_TOKEN` inside Actions for admin API calls):
 
 ```bash
@@ -75,11 +81,31 @@ If the UI uses **repository rulesets**, prefer the [rulesets API](https://docs.g
 **Example** (read-only; redact secrets; replace `OWNER/REPO`):
 
 ```bash
-export GH_TOKEN="<fine-grained-pat>"
-gh api repos/pdcarlson/taunufiji-dot-app/rulesets -H "X-GitHub-Api-Version: 2022-11-28"
+export GH_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
+gh api repos/OWNER/REPO/rulesets -H "X-GitHub-Api-Version: 2022-11-28"
 ```
 
-In constrained automation environments where `GH_TOKEN` is **not** set, treat GitHub configuration as **unverified** until a maintainer runs the smoke test successfully or completes the human checklist above.
+**Example** (create or update rulesets — requires `administration: write` on the repository; adjust JSON to match your policy):
+
+```bash
+export GH_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
+gh api --method POST repos/OWNER/REPO/rulesets \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  --input ruleset-payload.json
+```
+
+### Repository rulesets (reference)
+
+This repo uses **branch rulesets** (not legacy branch protection API). As configured for **`main`** and **`production`**:
+
+| Ruleset | Branch | Policy (summary) |
+| ------- | ------ | ---------------- |
+| Protect main (integration) | `refs/heads/main` | Pull request required (**1** approval), required status checks (see below), **block force-push** (`non_fast_forward`) |
+| Protect production (release) | `refs/heads/production` | Pull request required (**2** approvals), same required checks, **block force-push**, **block branch deletion** |
+
+Required status check contexts (from `ci.yml` job ids; `validate-secrets` is optional when skipped): `lint`, `typecheck`, `test`, `coverage-critical`, `e2e-smoke`, `build`, `quality-gate`. **Strict** policy: the merge head must be up to date with the base branch.
+
+Tweak review counts or check contexts in **Settings → Rules** if your team’s bar differs (for example if two approvals on `production` is heavier than the old `main` bar).
 
 ## Secret Management
 
