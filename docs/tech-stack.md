@@ -17,7 +17,7 @@
 ## Integrations
 
 - **Messaging/Identity**: Discord API (for role verification and notifications)
-- **Scheduling**: Next.js API Routes (triggered by GitHub Actions cron)
+- **Scheduling**: Next.js route handlers (`/api/cron`) triggered by [Vercel Cron](https://vercel.com/docs/cron-jobs) (`vercel.json`)
 
 ## Architecture & Patterns
 

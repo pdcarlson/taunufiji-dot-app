@@ -66,4 +66,4 @@ Concrete implementations of domain ports.
 - **Hosting**: **Vercel** builds and serves the Next.js app from the GitHub repo (**Preview** from **`main`** and other branches as configured; **Production** from **`production`** when set as the production branch).
 - **Backend**: **Appwrite** (Auth, Databases) is configured via env vars injected at deploy time; it does not host the web app.
 - **CI**: GitHub Actions runs quality gates (lint, type check, test, build) on pushes and PRs.
-- **Cron**: GitHub Actions triggers `/api/cron?job=HOURLY` every 12 minutes and must send `Authorization: Bearer <CRON_SECRET>` in headers
+- **Cron**: Vercel Cron triggers `/api/cron?job=HOURLY` on the **production** deployment per `vercel.json`; Vercel sends `Authorization: Bearer <CRON_SECRET>` when that env var is set on the project

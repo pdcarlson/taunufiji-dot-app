@@ -1,5 +1,18 @@
 # Project Log
 
+## 2026-03-23: Cron — Hobby plan daily schedule (1 AM Eastern intent)
+
+- **`vercel.json`**: Replaced `*/15 * * * *` with **`0 6 * * *`** (once per day, UTC) to satisfy Vercel Hobby’s maximum frequency and avoid deploy failures.
+- **Docs**: `docs/deployment.md` explains UTC vs Eastern (EST vs EDT), Hobby hourly precision, and why hour `6` UTC targets post-midnight Eastern duties.
+
+## 2026-03-23: Cron — Vercel scheduler (replaces GitHub Actions)
+
+- **`vercel.json`**: Vercel Cron GET `/api/cron?job=HOURLY` once daily at `0 6 * * *` (UTC; ~1 AM Eastern Standard Time; see `docs/deployment.md` for Hobby limits and precision).
+- **Removed**: `.github/workflows/cron.yml` (no replacement GitHub scheduler workflow).
+- **`app/api/cron/route.ts`**: Auth check matches Vercel’s documented pattern (`authorization` header must equal `` `Bearer ${CRON_SECRET}` ``).
+- **`ci.yml`**: Dropped `validate-secrets` job that only enforced GitHub-stored `CRON_SECRET` for Actions cron.
+- **Docs**: `docs/deployment.md`, `docs/platform-map.md`, `docs/architecture.md` updated for Vercel Cron (production URL only per Vercel docs).
+
 ## 2026-03-23: Docs — platform map and confusion audit
 
 - **`docs/platform-map.md`**: Single canonical table for **Vercel (host)** vs **Appwrite (backend)** vs CI/cron; names the `staging` branch vs “staging environment” trap.
@@ -31,7 +44,7 @@
 - **API**: Cron route returns a generic message on execution failure while logging details server-side.
 - **Fines**: Expired duties set `is_fine: false` until `awardPoints` succeeds; `pendingFinesJob` retries on each hourly run. Requires `is_fine` on assignments in Appwrite (already on schema types).
 - **Fine idempotency**: Ledger `reason` ends with `[task:<assignmentId>]`; `PointsTransaction.fineTaskId` triggers a ledger check inside `awardPoints` so concurrent workers cannot double-debit; `hasPersistedMissedDutyFine` pages ledger `findMany` with `offset` until exhausted.
-- **CI**: `quality-gate` runs with `if: always()` and fails if any required job is not `success` (`validate-secrets` may be `skipped` on fork PRs when `github.secret_source != 'Actions'`).
+- **CI**: `quality-gate` runs with `if: always()` and fails if any required job is not `success` (historical note: `validate-secrets` existed briefly for GitHub cron; removed after cron moved to Vercel).
 - **Pipeline**: `recurring_notified` is separate from `unlocked` in cron stats; `HousingTimeDrivenPipeline.runFullHourlyCycle` takes injected services; `ensureFutureTasksJob` receives `ITaskRepository` from the container (no `new AppwriteTaskRepository()` inside the job).
 - **CI**: Each job runs `npm ci` with `actions/setup-node` npm cache (no `node_modules` artifact — zip round-trip breaks `node_modules/.bin` symlinks and caused `next`/`vitest`/`eslint` not found on runners).
 - **UI**: `EditTaskModal` is a named export; import as `{ EditTaskModal }`.

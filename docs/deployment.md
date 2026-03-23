@@ -108,7 +108,7 @@ This repo uses **branch rulesets** (not legacy branch protection API). As config
 | Protect main (integration) | `refs/heads/main` | Pull request required (**1** approval), required status checks (see below), **block force-push** (`non_fast_forward`) |
 | Protect production (release) | `refs/heads/production` | Pull request required (**2** approvals), same required checks, **block force-push**, **block branch deletion** |
 
-Required status check contexts (from `ci.yml` job ids; `validate-secrets` is optional when skipped): `lint`, `typecheck`, `test`, `coverage-critical`, `e2e-smoke`, `build`, `quality-gate`. **Strict** policy: the merge head must be up to date with the base branch.
+Required status check contexts (from `ci.yml` job ids): `lint`, `typecheck`, `test`, `coverage-critical`, `e2e-smoke`, `build`, `quality-gate`. **Strict** policy: the merge head must be up to date with the base branch.
 
 Tweak review counts or check contexts in **Settings → Rules** if your team’s bar differs (for example if two approvals on `production` is heavier than the old `main` bar).
 
@@ -116,7 +116,7 @@ Tweak review counts or check contexts in **Settings → Rules** if your team’s
 
 - **Local development**: `.env.local` file (not committed)
 - **Staging / production (runtime)**: Environment variables in **Vercel** per environment (Preview vs Production). Appwrite **API keys** are created in the **Appwrite Console** per Appwrite project, then stored as secrets in Vercel.
-- **CI**: Minimal secrets in GitHub (only what quality gates need)
+- **CI**: Minimal secrets in GitHub (only what quality gates need). Cron scheduling is **not** driven by GitHub; set `CRON_SECRET` in **Vercel** for runtime cron auth.
 
 ## Environment Matrix (Minimum Required)
 
@@ -218,13 +218,13 @@ This is often **cold start** or heavy SSR on the first hit after idle.
 2. Ensure the user has a housing-admin role for housing mutations.
 3. Check that staging role IDs point to the correct guild roles (not production roles).
 
-### Symptom: Cron workflow fails with `curl (22)` and HTTP `500`
+### Symptom: Cron request fails with `curl` errors or HTTP `4xx` / `5xx`
 
-1. Run a no-redeploy preflight request against the currently deployed URL (from local shell):
+1. Run a preflight request against the deployment you are debugging (from a local shell):
 
    ```bash
-   BASE_URL="<staging-app-url>"
-   CRON_SECRET="<staging-cron-secret>"
+   BASE_URL="<app-url>"
+   CRON_SECRET="<cron-secret-for-that-deployment>"
    curl --silent --show-error \
      -H "Authorization: Bearer ${CRON_SECRET}" \
      "${BASE_URL%/}/api/cron"
@@ -232,24 +232,28 @@ This is often **cold start** or heavy SSR on the first hit after idle.
 
 2. Interpret preflight status before running `job=HOURLY`:
    - When the server returns `400` with `INVALID_JOB`, auth and runtime cron config are aligned (safe to run HOURLY).
-   - If you receive `401` with `UNAUTHORIZED`, the GitHub/CLI secret does not match deployed runtime `CRON_SECRET`.
-   - When `500` indicates `SERVER_CONFIG_ERROR`, the deployed runtime is missing `CRON_SECRET` (hosting env issue).
+   - If you receive `401` with `UNAUTHORIZED`, the bearer value does not match deployed runtime `CRON_SECRET` (header must be exactly `Authorization: Bearer <CRON_SECRET>` per [Vercel cron docs](https://vercel.com/docs/cron-jobs/manage-cron-jobs)).
+   - When `500` shows `CRON_SECRET_MISSING` in `error.details.reason` (response `error.code` is `SERVER_CONFIG_ERROR`), the deployed runtime is missing `CRON_SECRET` in the hosting environment.
    - When `500` indicates `JOB_EXECUTION_FAILED`, runtime dependencies failed during execution; inspect app logs.
-3. In **Vercel** for the target deployment environment (Preview/staging or Production), verify:
-   - `CRON_SECRET` is present and non-empty.
-   - `NEXT_PUBLIC_APP_URL` matches the deployed site URL for that environment.
-4. Confirm GitHub Environment configuration (`staging` or `production`) matches **deployed** runtime values:
-   - variable: `NEXT_PUBLIC_APP_URL`
-   - secret: `CRON_SECRET`
-5. **Redeploy** after changing environment variables if the platform does not hot-reload them for existing deployments (Vercel typically requires a new deployment for env changes to take effect).
-6. Re-run manual cron dispatch after preflight passes:
-   - `gh workflow run cron.yml --ref main -f environment=staging`
-7. Confirm endpoint auth contract is Bearer header (`Authorization: Bearer <CRON_SECRET>`), not query-string `key`.
+3. In **Vercel** for the target deployment environment (Preview/staging or Production), verify `CRON_SECRET` is present and non-empty and `NEXT_PUBLIC_APP_URL` matches the deployed site URL for that environment.
+4. **Redeploy** after changing environment variables if the platform does not hot-reload them for existing deployments (Vercel typically requires a new deployment for env changes to take effect).
+5. To run the HOURLY job manually against a URL you control:
+
+   ```bash
+   curl --silent --show-error -X GET \
+     -H "Authorization: Bearer ${CRON_SECRET}" \
+     "${BASE_URL%/}/api/cron?job=HOURLY"
+   ```
+
+6. Confirm endpoint auth contract is Bearer header (`Authorization: Bearer <CRON_SECRET>`), not query-string `key`.
 
 ## Cron Jobs
 
-- GitHub Actions workflow (`cron.yml`) runs on a `*/12 * * * *` schedule (every 12 minutes). The endpoint call uses `job=HOURLY` as a logical job name — it refers to the batch of hourly-cadence tasks (unlock, notify, expire) that are safe to run more frequently than once per hour.
-- **Scheduled runs** always target the `production` environment (the schedule trigger has no environment input).
-- **Manual runs** (`workflow_dispatch`) allow selecting `production` or `staging` via the `environment` input, which controls which GitHub Environment values are used (`NEXT_PUBLIC_APP_URL` from environment variable, `CRON_SECRET` from environment secret).
-- The cron endpoint authenticates with `Authorization: Bearer <CRON_SECRET>`. Do not pass the secret as a query parameter.
-- The workflow uses connection and wall-clock timeouts (`--connect-timeout`, `--max-time`) on curl calls. The `job=HOURLY` trigger intentionally omits transport-level `--retry` so a retried HTTP request cannot duplicate side effects (notifications). A concurrency group prevents overlapping cron runs.
+- **Scheduler**: [Vercel Cron](https://vercel.com/docs/cron-jobs) via root `vercel.json`: GET `/api/cron?job=HOURLY` **once per day** at **`0 6 * * *`** (minute `0` of hour `6`, every day, **UTC**).
+  - **Hobby plan**: Vercel allows at most one invocation per day for cron; the expression must not run more frequently than daily.
+  - **Hobby timing**: Invocations are distributed within the scheduled **hour** (roughly any time from `06:00:00` through `06:59:59` UTC), not necessarily on the minute — see [Cron jobs accuracy](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-jobs-accuracy).
+  - **Why 06:00 UTC**: Duties go overdue at **midnight Eastern**. We target **~1:00 AM Eastern** so a run that lands early in the allowed window still falls **after** midnight. **Note:** cron expressions are **UTC-only**. `06:00` UTC is **1:00 AM Eastern Standard Time** and **2:00 AM Eastern Daylight Time**; during EDT the same UTC hour corresponds to **2:00–2:59 AM** local on the **same** Eastern calendar day (still after local midnight that day).
+- **Which deployment**: Per Vercel’s documentation, cron invokes the project’s **production deployment URL** only — preview deployments are not targeted by scheduled cron.
+- **`job=HOURLY`**: Logical batch name for hourly-cadence work (unlock, notify, expire) that remains safe to run more often than once per hour.
+- **Auth**: Set `CRON_SECRET` on the Vercel project; Vercel sends it as `Authorization: Bearer <CRON_SECRET>` when invoking the route. The handler compares the header to `Bearer ${CRON_SECRET}` as in Vercel’s recommended pattern. Do not pass the secret as a query parameter.
+- **Manual / local testing**: Hit the route with curl (or the deployment URL in a browser will not send the secret — use curl). Vercel attaches `vercel-cron/1.0` as the user agent for platform-triggered runs.

@@ -9,7 +9,7 @@ This page exists so nobody confuses **where the app runs** with **where data and
 | **File storage (library uploads)** | **AWS S3** | Credentials in **Vercel** env. |
 | **Discord (roles, DMs, slash commands)** | **Discord API** | Bot token and role IDs in **Vercel** env. Command registration: `npm run discord:register` (manual). |
 | **CI (lint, test, build)** | **GitHub Actions** | `ci.yml` — quality gates only; it does **not** deploy the Next.js app. |
-| **Scheduled jobs hitting `/api/cron`** | **GitHub Actions** | `cron.yml` — calls the **deployed** URL with `CRON_SECRET`. |
+| **Scheduled jobs hitting `/api/cron`** | **Vercel Cron** | `vercel.json` — GET to **production** deployment; Vercel sends `Authorization: Bearer` using project `CRON_SECRET`. |
 
 ## Git branches (do not mix with “staging” the environment)
 
@@ -24,7 +24,7 @@ This page exists so nobody confuses **where the app runs** with **where data and
 ## Obsolete mental models (ignore in new work)
 
 - **Appwrite Sites** as the Next.js host — removed; never add deploy docs that imply Appwrite builds or serves this repo’s frontend.
-- **GitHub Actions deploy workflows** for this app’s hosting — not used for Vercel; only `ci.yml` / `cron.yml` remain relevant from Actions.
+- **GitHub Actions deploy workflows** for this app’s hosting — not used for Vercel; only `ci.yml` remains relevant from Actions (quality gates).
 
 ## Where to go next
 
