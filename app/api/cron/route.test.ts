@@ -96,6 +96,26 @@ describe("GET /api/cron", () => {
     });
   }, 15000);
 
+  it("returns 401 when Authorization is not exactly Bearer <CRON_SECRET> (Vercel cron contract)", async () => {
+    const { GET } = await loadRouteFixture();
+
+    const url = "https://example.com/api/cron?job=HOURLY";
+    const headers = new Headers();
+    headers.set("Authorization", "Bearer  test-secret");
+
+    const response = await GET(new Request(url, { method: "GET", headers }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(payload).toMatchObject({
+      success: false,
+      error: {
+        code: "UNAUTHORIZED",
+        details: { category: "AUTH", reason: "AUTH_TOKEN_INVALID" },
+      },
+    });
+  }, 15000);
+
   it("returns 400 when job parameter is missing", async () => {
     const { GET } = await loadRouteFixture();
 

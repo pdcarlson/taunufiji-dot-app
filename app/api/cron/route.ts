@@ -70,11 +70,9 @@ export async function GET(req: Request) {
       );
     }
 
+    // Vercel Cron sends CRON_SECRET as Authorization: Bearer <value> (exact match; see Vercel cron docs).
     const authHeader = req.headers.get("authorization");
-    const token = authHeader?.startsWith("Bearer ")
-      ? authHeader.slice(7).trim()
-      : null;
-    if (!token || token !== CRON_SECRET) {
+    if (authHeader !== `Bearer ${CRON_SECRET}`) {
       console.error("[cron] Unauthorized request", {
         code: ERROR_CODES.unauthorized,
         reason: "AUTH_TOKEN_INVALID",
