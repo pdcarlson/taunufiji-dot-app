@@ -22,7 +22,7 @@ interface DutyRosterProps {
   onEdit?: (task: HousingTask) => void;
 }
 
-export default function DutyRoster({
+export function DutyRoster({
   tasks,
   members,
   isAdmin,
@@ -92,10 +92,11 @@ export default function DutyRoster({
   };
 
   const getStatusBadge = (task: HousingTask) => {
-    const isOverdue =
+    const isOverdueOpenStillListed =
       task.due_at &&
       new Date() > new Date(task.due_at) &&
-      task.status === "open";
+      task.status === "open" &&
+      !isAwaitingExpiryTransition(task);
 
     if (task.status === "approved") {
       return (
@@ -111,21 +112,7 @@ export default function DutyRoster({
         </span>
       );
     }
-    if (isOverdue) {
-      return (
-        <span className="inline-flex items-center gap-1 text-red-600 text-xs font-bold">
-          <AlertCircle className="w-3 h-3" /> Overdue
-        </span>
-      );
-    }
-    if (task.status === "pending" && task.proof_s3_key) {
-      return (
-        <span className="inline-flex items-center gap-1 text-orange-500 text-xs font-bold">
-          <Clock className="w-3 h-3" /> Review
-        </span>
-      );
-    }
-    if (task.status === "pending" && isAwaitingExpiryTransition(task)) {
+    if (isAwaitingExpiryTransition(task)) {
       return (
         <span
           className="inline-flex flex-col gap-0.5 text-amber-800 text-xs font-bold max-w-[200px]"
@@ -137,6 +124,20 @@ export default function DutyRoster({
           <span className="font-normal text-[10px] text-amber-700/90 leading-tight">
             System or admin will close this row; assignees cannot submit proof.
           </span>
+        </span>
+      );
+    }
+    if (isOverdueOpenStillListed) {
+      return (
+        <span className="inline-flex items-center gap-1 text-red-600 text-xs font-bold">
+          <AlertCircle className="w-3 h-3" /> Overdue
+        </span>
+      );
+    }
+    if (task.status === "pending" && task.proof_s3_key) {
+      return (
+        <span className="inline-flex items-center gap-1 text-orange-500 text-xs font-bold">
+          <Clock className="w-3 h-3" /> Review
         </span>
       );
     }

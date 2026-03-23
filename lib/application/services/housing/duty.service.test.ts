@@ -143,7 +143,7 @@ describe("DutyService", () => {
       expect(mockTaskRepo.update).not.toHaveBeenCalled();
     });
 
-    it("should hide overdue pending duty rows without proof (awaiting expiry write)", async () => {
+    it("should hide overdue open and pending duty rows without proof (awaiting expiry write)", async () => {
       const pastDue = "2020-01-01T12:00:00.000Z";
       const tasks = [
         createMockTask({
@@ -161,6 +161,13 @@ describe("DutyService", () => {
           proof_s3_key: null,
         }),
         createMockTask({
+          id: "t_open_limbo",
+          status: "open",
+          type: "duty",
+          due_at: pastDue,
+          proof_s3_key: null,
+        }),
+        createMockTask({
           id: "t_pending_proof",
           status: "pending",
           type: "duty",
@@ -173,8 +180,12 @@ describe("DutyService", () => {
 
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-06-01T12:00:00.000Z"));
-      const result = await service.getMyTasks("user_1");
-      vi.useRealTimers();
+      let result: Awaited<ReturnType<DutyService["getMyTasks"]>>;
+      try {
+        result = await service.getMyTasks("user_1");
+      } finally {
+        vi.useRealTimers();
+      }
 
       expect(result.documents.map((d) => d.id).sort()).toEqual([
         "t_pending_ok",

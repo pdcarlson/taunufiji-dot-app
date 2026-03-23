@@ -182,12 +182,9 @@ export class DutyService implements IDutyService {
         continue;
       }
 
-      // Defensive filter: never present overdue mandatory work without proof as
-      // actionable if maintenance/cron has not persisted the expired transition yet.
-      if (
-        (task.status === "open" || task.status === "pending") &&
-        isAwaitingExpiryTransition(task)
-      ) {
+      // Defensive filter: never present overdue open/pending rows without proof as
+      // actionable until maintenance/cron persists the expired transition.
+      if (isAwaitingExpiryTransition(task)) {
         continue;
       }
 

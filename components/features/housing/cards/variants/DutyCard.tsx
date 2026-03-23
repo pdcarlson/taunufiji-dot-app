@@ -32,7 +32,7 @@ interface DutyCardProps {
   variant?: "square" | "horizontal";
 }
 
-export default function DutyCard({
+export function DutyCard({
   task,
   userId,
   profileId,
@@ -179,11 +179,7 @@ export default function DutyCard({
           (isDuty && task.status === "open")) &&
         !isReview &&
         !(isDuty && task.status === "pending" && awaitingExpiryWrite) &&
-        !(
-          !isDuty &&
-          task.status === "pending" &&
-          isAwaitingExpiryTransition(task)
-        ) && (
+        !(!isDuty && task.status === "pending" && awaitingExpiryWrite) && (
           <div
             className={`flex gap-2 ${btnClass === "w-full" ? "w-full" : "w-auto items-center"}`}
           >
@@ -238,7 +234,7 @@ export default function DutyCard({
         !isDuty &&
         !isReview &&
         task.status === "pending" &&
-        isAwaitingExpiryTransition(task) && (
+        awaitingExpiryWrite && (
           <div
             className={`${btnClass} space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 text-left text-xs text-stone-700`}
           >

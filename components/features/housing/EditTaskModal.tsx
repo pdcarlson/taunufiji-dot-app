@@ -25,6 +25,10 @@ interface EditTaskModalProps {
   onClose: () => void;
   /** Reload dashboard data (runs after failures too so the UI does not look “saved”). */
   onRefresh: () => void | Promise<void>;
+  /**
+   * Called only after a successful save or delete mutation, immediately before the modal closes.
+   * Use to clear parent editing state (e.g. `setEditingTask(null)`).
+   */
   onSuccessClose: () => void;
 }
 
@@ -36,6 +40,15 @@ export default function EditTaskModal({
   onSuccessClose,
 }: EditTaskModalProps) {
   const { getJWT } = useJWT();
+
+  const safeRefreshAfterMutation = async () => {
+    try {
+      await Promise.resolve(onRefresh());
+    } catch (e) {
+      console.error("[EditTaskModal] Dashboard refresh failed after mutation", e);
+    }
+  };
+
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -194,14 +207,14 @@ export default function EditTaskModal({
       }
 
       toast.success("Task updated");
-      await onRefresh();
       onSuccessClose();
       onClose();
+      await safeRefreshAfterMutation();
     } catch (e: unknown) {
       console.error(e);
       const message = e instanceof Error ? e.message : "Failed to update task";
       toast.error(message);
-      await Promise.resolve(onRefresh());
+      await safeRefreshAfterMutation();
     } finally {
       setLoading(false);
     }
@@ -239,18 +252,18 @@ export default function EditTaskModal({
                 : "Recurring task instance deleted"
             : "Task deleted";
         toast.success(successMessage);
-        await onRefresh();
         onSuccessClose();
         onClose();
+        await safeRefreshAfterMutation();
       } else {
         toast.error(result.error || "Delete failed");
-        await Promise.resolve(onRefresh());
+        await safeRefreshAfterMutation();
       }
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to delete";
       toast.error(message);
-      await Promise.resolve(onRefresh());
+      await safeRefreshAfterMutation();
     } finally {
       setLoading(false);
     }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { HousingTask } from "@/lib/domain/entities";
 import TaskCard from "./TaskCard";
-import CollapsedDutyCard from "./cards/variants/CollapsedDutyCard";
+import { CollapsedDutyCard } from "./cards/variants/CollapsedDutyCard";
 import { Card, CardContent } from "@/components/ui/Card";
 import { ClipboardList } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";

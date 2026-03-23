@@ -3,7 +3,7 @@
 import { HousingTask } from "@/lib/domain/entities";
 import LockedCard from "./cards/variants/LockedCard";
 import BountyCard from "./cards/variants/BountyCard";
-import DutyCard from "./cards/variants/DutyCard";
+import { DutyCard } from "./cards/variants/DutyCard";
 import ReviewCard from "./cards/variants/ReviewCard";
 
 interface TaskCardProps {

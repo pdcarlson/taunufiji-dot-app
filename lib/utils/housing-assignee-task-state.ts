@@ -19,10 +19,18 @@ export function isPendingWithoutProof(task: HousingTask): boolean {
   return task.status === "pending" && !task.proof_s3_key;
 }
 
-/** Overdue `pending` with no proof: waiting for cron/maintenance to mark `expired`. */
-export function isAwaitingExpiryTransition(task: HousingTask, now?: Date): boolean {
+/**
+ * Overdue `open` or `pending` with no proof: waiting for cron/maintenance to mark `expired`.
+ */
+export function isAwaitingExpiryTransition(
+  task: HousingTask,
+  now: Date = new Date(),
+): boolean {
+  const actionable =
+    task.status === "open" || task.status === "pending";
   return (
-    isPendingWithoutProof(task) &&
+    actionable &&
+    !task.proof_s3_key &&
     isPastDueAt(task.due_at, now)
   );
 }

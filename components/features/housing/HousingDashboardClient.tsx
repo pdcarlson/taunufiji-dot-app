@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { HousingTask, Member } from "@/lib/domain/entities";
 import TaskCard from "./TaskCard";
 
-import DutyRoster from "./DutyRoster";
+import { DutyRoster } from "./DutyRoster";
 import ProofReviewModal from "./ProofReviewModal";
 import CreateBountyModal from "./CreateBountyModal";
 import CreateScheduleModal from "./CreateScheduleModal";

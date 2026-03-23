@@ -4,6 +4,7 @@ import {
   isAssigneeNotCompletable,
   isAwaitingExpiryTransition,
   isPastDueAt,
+  isPendingWithoutProof,
 } from "./housing-assignee-task-state";
 
 const baseTask: HousingTask = {
@@ -18,6 +19,30 @@ const baseTask: HousingTask = {
 };
 
 describe("housing-assignee-task-state", () => {
+  it("isPendingWithoutProof is true only for pending without proof", () => {
+    expect(
+      isPendingWithoutProof({
+        ...baseTask,
+        status: "pending",
+        proof_s3_key: null,
+      }),
+    ).toBe(true);
+    expect(
+      isPendingWithoutProof({
+        ...baseTask,
+        status: "pending",
+        proof_s3_key: "k",
+      }),
+    ).toBe(false);
+    expect(
+      isPendingWithoutProof({
+        ...baseTask,
+        status: "open",
+        proof_s3_key: null,
+      }),
+    ).toBe(false);
+  });
+
   it("isPastDueAt respects due_at", () => {
     const past = "2020-01-01T12:00:00.000Z";
     expect(isPastDueAt(past, new Date("2025-01-01T00:00:00.000Z"))).toBe(true);
@@ -25,25 +50,24 @@ describe("housing-assignee-task-state", () => {
     expect(isPastDueAt(null)).toBe(false);
   });
 
-  it("isAwaitingExpiryTransition is pending without proof and past due", () => {
+  it("isAwaitingExpiryTransition is open or pending without proof and past due", () => {
     const task = {
       ...baseTask,
       due_at: "2020-01-01T12:00:00.000Z",
       proof_s3_key: null,
     };
-    expect(isAwaitingExpiryTransition(task, new Date("2025-01-01T00:00:00.000Z"))).toBe(
-      true,
-    );
+    const now = new Date("2025-01-01T00:00:00.000Z");
+    expect(isAwaitingExpiryTransition(task, now)).toBe(true);
     expect(
-      isAwaitingExpiryTransition(
-        { ...task, proof_s3_key: "key" },
-        new Date("2025-01-01T00:00:00.000Z"),
-      ),
+      isAwaitingExpiryTransition({ ...task, proof_s3_key: "key" }, now),
     ).toBe(false);
     expect(
+      isAwaitingExpiryTransition({ ...task, status: "open" }, now),
+    ).toBe(true);
+    expect(
       isAwaitingExpiryTransition(
-        { ...task, status: "open" },
-        new Date("2025-01-01T00:00:00.000Z"),
+        { ...task, status: "open", due_at: "2030-01-01T12:00:00.000Z" },
+        now,
       ),
     ).toBe(false);
   });

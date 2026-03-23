@@ -11,7 +11,7 @@ interface CollapsedDutyCardProps {
   onClick: () => void;
 }
 
-export default function CollapsedDutyCard({
+export function CollapsedDutyCard({
   task,
   onClick,
 }: CollapsedDutyCardProps) {
@@ -21,7 +21,8 @@ export default function CollapsedDutyCard({
 
   const isDuty = task.type === "duty" || task.type === "one_off";
   const isOneOff = task.type === "one_off";
-  const dutyLimbo = isDuty && isAwaitingExpiryTransition(task);
+  const dutyLimbo =
+    isDuty && task.status === "pending" && isAwaitingExpiryTransition(task);
   const notCompletable = isAssigneeNotCompletable(task);
 
   return (
