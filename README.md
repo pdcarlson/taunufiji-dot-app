@@ -27,7 +27,9 @@ The system is engineered to solve three specific problems:
 
 The application is built on a **Clean Architecture (Onion)** foundation, prioritizing the separation of business rules from implementation details. This ensures the system remains testable and agnostic to underlying infrastructure changes.
 
-**Where it runs:** the **Next.js** app is hosted on **Vercel** (GitHub-connected). **Appwrite** provides Auth and Databases only — it is not the web host. See **`docs/platform-map.md`** for the full split (Vercel vs Appwrite vs AWS vs Discord vs GitHub Actions).
+**Where it runs:** the **Next.js** app is hosted on **Vercel** (GitHub-connected). **Appwrite** provides Auth and Databases only — it is not the web host. See **[`spec/platform.md`](spec/platform.md)** for the full split (Vercel vs Appwrite vs AWS vs Discord vs GitHub Actions).
+
+**Documentation:** Canonical contracts live in [`spec/`](spec/README.md) (architecture, behavior, platform, product, tech stack). Topic-organized operational docs live in [`docs/`](docs/README.md) (deployment, quality, style guides).
 
 ### 🏗️ Architectural Pattern
 
