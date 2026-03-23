@@ -22,7 +22,7 @@ The GitHub Actions deployment strategy (deploy-staging.yml, deploy-prod.yml) add
 ### Non-Functional
 
 - [x] `ci.yml` remains as quality gate (not modified for deployment)
-- [x] `cron.yml` not modified
+- [x] `cron.yml` not modified *(historical; cron later moved to Vercel — see `vercel.json` and `docs/deployment.md`)*
 
 ## Acceptance Criteria
 
