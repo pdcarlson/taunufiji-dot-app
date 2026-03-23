@@ -228,6 +228,8 @@ export default function EditTaskModal({
       const message =
         error instanceof Error ? error.message : "Failed to delete";
       toast.error(message);
+      onRefresh();
+      onClose();
     } finally {
       setLoading(false);
     }

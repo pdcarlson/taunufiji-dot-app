@@ -48,7 +48,7 @@ export async function processUnlockForTask(
           taskId: task.id,
           error: notificationResult.error,
         });
-        return { unlocked: false, errors };
+        return { unlocked: true, errors };
       }
       await taskRepository.update(task.id, {
         notification_level: "unlocked",

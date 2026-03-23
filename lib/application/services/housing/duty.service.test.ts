@@ -142,6 +142,32 @@ describe("DutyService", () => {
       // CRITICAL: Ensure NO updates were called
       expect(mockTaskRepo.update).not.toHaveBeenCalled();
     });
+
+    it("hides overdue open and pending duties without proof until expiry is persisted", async () => {
+      const pastDue = new Date(Date.now() - 60_000).toISOString();
+      const tasks = [
+        createMockTask({
+          id: "open-overdue",
+          type: "duty",
+          status: "open",
+          due_at: pastDue,
+          proof_s3_key: null,
+        }),
+        createMockTask({
+          id: "pending-overdue",
+          type: "duty",
+          status: "pending",
+          due_at: pastDue,
+          proof_s3_key: null,
+        }),
+      ];
+
+      mockTaskRepo.findByAssignee = vi.fn().mockResolvedValue(tasks);
+
+      const result = await service.getMyTasks("user_1");
+
+      expect(result.documents).toHaveLength(0);
+    });
   });
   describe("requestAdHocPoints", () => {
     it("should create a task and emit submitted event", async () => {

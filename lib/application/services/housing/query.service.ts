@@ -32,12 +32,12 @@ export class QueryService {
 
     const now = new Date();
     return tasks.filter((task) => {
-      const isOverdueOpenWithoutProof =
-        task.status === "open" &&
+      const isOverdueWithoutProof =
+        (task.status === "open" || task.status === "pending") &&
         !!task.due_at &&
         now > new Date(task.due_at) &&
         !task.proof_s3_key;
-      return !isOverdueOpenWithoutProof;
+      return !isOverdueWithoutProof;
     });
   }
 
