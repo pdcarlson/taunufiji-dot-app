@@ -23,6 +23,9 @@ export const serverEnvSchema = z.object({
   DISCORD_BOT_TOKEN: z.string().min(1),
   DISCORD_GUILD_ID: z.string().min(1),
   DISCORD_HOUSING_CHANNEL_ID: z.string().min(1),
+  DISCORD_ROLE_ID_BROTHER: z.string().min(1),
+  DISCORD_ROLE_ID_CABINET: z.string().min(1),
+  DISCORD_ROLE_ID_HOUSING_CHAIR: z.string().min(1),
 
   // Cron
   CRON_SECRET: z.string().min(1).optional(),
@@ -48,6 +51,9 @@ export function readServerEnv(source: NodeJS.ProcessEnv = process.env): {
     DISCORD_BOT_TOKEN: source.DISCORD_BOT_TOKEN,
     DISCORD_GUILD_ID: source.DISCORD_GUILD_ID,
     DISCORD_HOUSING_CHANNEL_ID: source.DISCORD_HOUSING_CHANNEL_ID,
+    DISCORD_ROLE_ID_BROTHER: source.DISCORD_ROLE_ID_BROTHER,
+    DISCORD_ROLE_ID_CABINET: source.DISCORD_ROLE_ID_CABINET,
+    DISCORD_ROLE_ID_HOUSING_CHAIR: source.DISCORD_ROLE_ID_HOUSING_CHAIR,
     CRON_SECRET: source.CRON_SECRET,
   };
 }

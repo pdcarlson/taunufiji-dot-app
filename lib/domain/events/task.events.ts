@@ -41,9 +41,6 @@ export enum TaskEvents {
   /** Task is due soon (< 12 hours) */
   TASK_URGENT = "task.urgent",
 
-  /** Task expired without completion */
-  TASK_EXPIRED = "task.expired",
-
   // =========================================================================
   // Admin Events
   // =========================================================================
@@ -125,14 +122,6 @@ export interface TaskUrgentEvent extends BaseTaskEvent {
 }
 
 /**
- * Task expired without completion
- */
-export interface TaskExpiredEvent extends BaseTaskEvent {
-  userId: string; // Discord ID of the assignee
-  fineAmount: number; // Points deducted
-}
-
-/**
  * Task reassigned to a different user
  */
 export interface TaskReassignedEvent extends BaseTaskEvent {
@@ -163,7 +152,6 @@ export interface TaskEventMap {
   [TaskEvents.TASK_UNASSIGNED]: TaskUnassignedEvent;
   [TaskEvents.TASK_UNLOCKED]: TaskUnlockedEvent;
   [TaskEvents.TASK_URGENT]: TaskUrgentEvent;
-  [TaskEvents.TASK_EXPIRED]: TaskExpiredEvent;
   [TaskEvents.TASK_REASSIGNED]: TaskReassignedEvent;
   [TaskEvents.TASK_UPDATED]: TaskUpdatedEvent;
 }
