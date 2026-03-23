@@ -21,10 +21,7 @@ import {
   unclaimTaskAction, // Note: Import paths might need adjusting if they changed?
   submitProofAction,
 } from "@/lib/presentation/actions/housing/duty.actions";
-import {
-  isAssigneeNotCompletable,
-  isAwaitingExpiryTransition,
-} from "@/lib/utils/housing-assignee-task-state";
+import { isAwaitingExpiryTransition } from "@/lib/utils/housing-assignee-task-state";
 
 interface DutyCardProps {
   task: HousingTask;
@@ -49,7 +46,6 @@ export default function DutyCard({
   const isDuty = task.type === "duty" || task.type === "one_off";
   const isMyTask = task.assigned_to === (profileId || userId);
   const isReview = task.proof_s3_key && task.status === "pending";
-  const assigneeNotCompletable = isMyTask && isAssigneeNotCompletable(task);
   const awaitingExpiryWrite = isAwaitingExpiryTransition(task);
 
   const handleClaim = async () => {
@@ -116,7 +112,7 @@ export default function DutyCard({
     isMyTask &&
     task.status === "pending" &&
     !isReview &&
-    !assigneeNotCompletable
+    !awaitingExpiryWrite
       ? "border-fiji-purple ring-1 ring-fiji-purple/20 bg-purple-50/10"
       : "border-stone-200"
   } ${isReview ? "opacity-60 grayscale-[80%] bg-stone-50" : ""}`;
