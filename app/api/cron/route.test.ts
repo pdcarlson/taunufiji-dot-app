@@ -6,6 +6,10 @@ type CronServiceMock = {
   ensureFutureTasks: ReturnType<typeof vi.fn>;
 };
 
+type ContainerMock = {
+  cronService: CronServiceMock;
+};
+
 type RouteFixtureOptions = {
   cronSecret?: string;
   runHourly?: () => Promise<unknown>;
@@ -30,8 +34,10 @@ async function loadRouteFixture(options: RouteFixtureOptions = {}) {
     },
   }));
 
-  vi.doMock("@/lib/application/services/jobs/cron.service", () => ({
-    CronService: cronServiceMock,
+  const containerMock: ContainerMock = { cronService: cronServiceMock };
+
+  vi.doMock("@/lib/infrastructure/container", () => ({
+    getContainer: () => containerMock,
   }));
 
   const routeModule = await import("./route");
@@ -179,7 +185,7 @@ describe("GET /api/cron", () => {
       success: false,
       error: {
         code: "JOB_EXECUTION_FAILED",
-        message: "explode",
+        message: "Internal server error",
         details: {
           category: "EXECUTION",
           reason: "JOB_THROWN_ERROR",

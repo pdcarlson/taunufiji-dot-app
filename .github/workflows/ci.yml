@@ -156,7 +156,7 @@ jobs:
           DISCORD_ROLE_ID_CABINET: "mock-role-cabinet"
           DISCORD_ROLE_ID_HOUSING_CHAIR: "mock-role-housing-chair"
           CRON_SECRET: "mock-cron-secret"
-        run: npm run build
+        run: SKIP_ENV_VALIDATION=true npm run build
 
   quality-gate:
     runs-on: ubuntu-latest

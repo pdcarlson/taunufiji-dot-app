@@ -145,10 +145,10 @@ If this command fails, do not promote staging to production until the failing ch
    ```
 
 2. Interpret preflight status before running `job=HOURLY`:
-   - `400` with `INVALID_JOB`: auth and runtime cron config are aligned (safe to run HOURLY).
-   - `401` with `UNAUTHORIZED`: GitHub/CLI secret does not match deployed runtime `CRON_SECRET`.
-   - `500` with `SERVER_CONFIG_ERROR`: deployed runtime is missing `CRON_SECRET` (Appwrite env issue).
-   - `500` with `JOB_EXECUTION_FAILED`: runtime dependencies failed during execution path; inspect app logs.
+   - When the server returns `400` with `INVALID_JOB`, auth and runtime cron config are aligned (safe to run HOURLY).
+   - If you receive `401` with `UNAUTHORIZED`, the GitHub/CLI secret does not match deployed runtime `CRON_SECRET`.
+   - When `500` indicates `SERVER_CONFIG_ERROR`, the deployed runtime is missing `CRON_SECRET` (Appwrite env issue).
+   - When `500` indicates `JOB_EXECUTION_FAILED`, runtime dependencies failed during execution; inspect app logs.
 3. In Appwrite Console for the target site (staging or production), verify:
    - `CRON_SECRET` is present and non-empty.
    - `NEXT_PUBLIC_APP_URL` matches the deployed site URL for that environment.
@@ -166,4 +166,4 @@ If this command fails, do not promote staging to production until the failing ch
 - **Scheduled runs** always target the `production` environment (the schedule trigger has no environment input).
 - **Manual runs** (`workflow_dispatch`) allow selecting `production` or `staging` via the `environment` input, which controls which GitHub Environment values are used (`NEXT_PUBLIC_APP_URL` from environment variable, `CRON_SECRET` from environment secret).
 - The cron endpoint authenticates with `Authorization: Bearer <CRON_SECRET>`. Do not pass the secret as a query parameter.
-- The workflow uses retry and timeout safeguards (`--retry`, `--connect-timeout`, `--max-time`) and a concurrency group so overlapping cron runs are prevented.
+- The workflow uses connection and wall-clock timeouts (`--connect-timeout`, `--max-time`) on curl calls. The `job=HOURLY` trigger intentionally omits transport-level `--retry` so a retried HTTP request cannot duplicate side effects (notifications). A concurrency group prevents overlapping cron runs.

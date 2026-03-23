@@ -1,7 +1,5 @@
-import {
-  CronService,
-  CronResult,
-} from "@/lib/application/services/jobs/cron.service";
+import { CronResult } from "@/lib/application/services/jobs/cron.service";
+import { getContainer } from "@/lib/infrastructure/container";
 import { env } from "@/lib/infrastructure/config/env";
 import { NextResponse } from "next/server";
 
@@ -96,15 +94,17 @@ export async function GET(req: Request) {
 
     let result: CronResult | { errors: string[] } | void;
 
+    const { cronService } = getContainer();
+
     switch (job) {
       case CRON_JOBS.HOURLY:
-        result = await CronService.runHourly();
+        result = await cronService.runHourly();
         break;
       case CRON_JOBS.EXPIRE_DUTIES:
-        result = await CronService.expireDuties();
+        result = await cronService.expireDuties();
         break;
       case CRON_JOBS.ENSURE_FUTURE_TASKS:
-        result = await CronService.ensureFutureTasks();
+        result = await cronService.ensureFutureTasks();
         break;
       default:
         console.error("[cron] Invalid job parameter", { job });
@@ -140,7 +140,7 @@ export async function GET(req: Request) {
     return createErrorResponse(
       500,
       ERROR_CODES.jobExecutionFailed,
-      message,
+      "Internal server error",
       job,
       {
         category: "EXECUTION",
