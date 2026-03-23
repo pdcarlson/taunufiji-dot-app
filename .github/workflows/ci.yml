@@ -6,8 +6,11 @@ on:
   pull_request:
     branches: [main, staging]
 
+# `actions: write` is required for upload-artifact / download-artifact; with only
+# `contents: read`, the default GITHUB_TOKEN cannot access workflow artifacts.
 permissions:
   contents: read
+  actions: write
 
 jobs:
   deps:
