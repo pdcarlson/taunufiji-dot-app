@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 type CronServiceMock = {
-  runHourly: ReturnType<typeof vi.fn>;
+  runHousingScheduledBatch: ReturnType<typeof vi.fn>;
   expireDuties: ReturnType<typeof vi.fn>;
   ensureFutureTasks: ReturnType<typeof vi.fn>;
 };
@@ -12,14 +12,16 @@ type ContainerMock = {
 
 type RouteFixtureOptions = {
   cronSecret?: string;
-  runHourly?: () => Promise<unknown>;
+  runHousingScheduledBatch?: () => Promise<unknown>;
   expireDuties?: () => Promise<unknown>;
   ensureFutureTasks?: () => Promise<unknown>;
 };
 
 async function loadRouteFixture(options: RouteFixtureOptions = {}) {
   const cronServiceMock: CronServiceMock = {
-    runHourly: vi.fn(options.runHourly ?? (async () => ({ ok: true }))),
+    runHousingScheduledBatch: vi.fn(
+      options.runHousingScheduledBatch ?? (async () => ({ ok: true })),
+    ),
     expireDuties: vi.fn(options.expireDuties ?? (async () => ({ ok: true }))),
     ensureFutureTasks: vi.fn(
       options.ensureFutureTasks ?? (async () => ({ ok: true })),
@@ -61,7 +63,7 @@ describe("GET /api/cron", () => {
   it("returns 401 when bearer token is missing", async () => {
     const { GET } = await loadRouteFixture();
 
-    const response = await GET(createRequest("HOURLY"));
+    const response = await GET(createRequest("HOUSING_BATCH"));
     const payload = await response.json();
 
     expect(response.status).toBe(401);
@@ -80,7 +82,7 @@ describe("GET /api/cron", () => {
   it("returns 401 when bearer token is invalid", async () => {
     const { GET } = await loadRouteFixture();
 
-    const response = await GET(createRequest("HOURLY", "invalid"));
+    const response = await GET(createRequest("HOUSING_BATCH", "invalid"));
     const payload = await response.json();
 
     expect(response.status).toBe(401);
@@ -99,7 +101,7 @@ describe("GET /api/cron", () => {
   it("returns 401 when Authorization is not exactly Bearer <CRON_SECRET> (Vercel cron contract)", async () => {
     const { GET } = await loadRouteFixture();
 
-    const url = "https://example.com/api/cron?job=HOURLY";
+    const url = "https://example.com/api/cron?job=HOUSING_BATCH";
     const headers = new Headers();
     headers.set("Authorization", "Bearer  test-secret");
 
@@ -157,7 +159,7 @@ describe("GET /api/cron", () => {
   it("returns 500 when CRON_SECRET is not configured", async () => {
     const { GET } = await loadRouteFixture({ cronSecret: "" });
 
-    const response = await GET(createRequest("HOURLY", "test-secret"));
+    const response = await GET(createRequest("HOUSING_BATCH", "test-secret"));
     const payload = await response.json();
 
     expect(response.status).toBe(500);
@@ -173,31 +175,31 @@ describe("GET /api/cron", () => {
     });
   }, 15000);
 
-  it("returns 200 and dispatches HOURLY job", async () => {
-    const hourlyResult = { processed: 7, errors: [] };
+  it("returns 200 and dispatches HOUSING_BATCH job", async () => {
+    const batchResult = { processed: 7, errors: [] };
     const { GET, cronServiceMock } = await loadRouteFixture({
-      runHourly: async () => hourlyResult,
+      runHousingScheduledBatch: async () => batchResult,
     });
 
-    const response = await GET(createRequest("HOURLY", "test-secret"));
+    const response = await GET(createRequest("HOUSING_BATCH", "test-secret"));
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(cronServiceMock.runHourly).toHaveBeenCalledTimes(1);
+    expect(cronServiceMock.runHousingScheduledBatch).toHaveBeenCalledTimes(1);
     expect(payload).toEqual({
       success: true,
-      result: hourlyResult,
+      result: batchResult,
     });
   }, 15000);
 
   it("returns 500 when job execution throws", async () => {
     const { GET } = await loadRouteFixture({
-      runHourly: async () => {
+      runHousingScheduledBatch: async () => {
         throw new Error("explode");
       },
     });
 
-    const response = await GET(createRequest("HOURLY", "test-secret"));
+    const response = await GET(createRequest("HOUSING_BATCH", "test-secret"));
     const payload = await response.json();
 
     expect(response.status).toBe(500);

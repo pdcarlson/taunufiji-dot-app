@@ -1,5 +1,11 @@
 # Project Log
 
+## 2026-03-23: Cron — rename housing job to `HOUSING_BATCH` (scheduled batch semantics)
+
+- **API / config**: `job=HOUSING_BATCH` replaces `HOURLY` for the platform-scheduled housing pipeline; `vercel.json` cron path updated accordingly.
+- **Code**: `CronService.runHousingScheduledBatch`, `HousingTimeDrivenPipeline.runFullHousingScheduledCycle`; logs use `job: "HOUSING_BATCH"`.
+- **Docs**: `docs/deployment.md`, `docs/architecture.md`, `docs/behavior.md`, `docs/platform-map.md`, `docs/tech-stack.md`, `README.md` — wording aligned with **once-per-day** Vercel Hobby scheduling (no “hourly platform trigger” implication).
+
 ## 2026-03-23: Cron — Hobby plan daily schedule (1 AM Eastern intent)
 
 - **`vercel.json`**: Replaced `*/15 * * * *` with **`0 6 * * *`** (once per day, UTC) to satisfy Vercel Hobby’s maximum frequency and avoid deploy failures.

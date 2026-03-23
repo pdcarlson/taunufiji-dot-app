@@ -1,8 +1,8 @@
 /**
  * Cron Service
  *
- * Delegates hourly housing work to {@link HousingTimeDrivenPipeline} so cron and dashboard maintenance
- * cannot drift on ordering or shared rules.
+ * Delegates the scheduled housing batch to {@link HousingTimeDrivenPipeline} so platform cron and
+ * dashboard maintenance cannot drift on ordering or shared rules.
  */
 
 import { HousingTimeDrivenPipeline } from "./housing-time-driven.pipeline";
@@ -33,16 +33,16 @@ export class CronService {
   ) {}
 
   /**
-   * Hourly Cron Job — full time-driven housing pipeline (see `housing-time-driven.pipeline.ts`).
+   * Vercel-scheduled housing batch — full time-driven pipeline (see `housing-time-driven.pipeline.ts`).
    */
-  async runHourly(): Promise<CronResult> {
+  async runHousingScheduledBatch(): Promise<CronResult> {
     console.log("[CronService]", {
-      job: "HOURLY",
+      job: "HOUSING_BATCH",
       phase: "start",
       startedAt: new Date().toISOString(),
     });
 
-    const stats = await this.housingTimeDrivenPipeline.runFullHourlyCycle(
+    const stats = await this.housingTimeDrivenPipeline.runFullHousingScheduledCycle(
       this.taskRepository,
       this.pointsService,
       this.scheduleService,
@@ -50,7 +50,7 @@ export class CronService {
     );
 
     console.log("[CronService]", {
-      job: "HOURLY",
+      job: "HOUSING_BATCH",
       phase: "completed",
       ...stats,
     });
