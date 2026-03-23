@@ -1,5 +1,9 @@
 # Project Log
 
+## 2026-03-23: Git branch model docs (main / production)
+
+- **Docs**: `docs/deployment.md` describes integration on **`main`**, releases on **`production`**, Stage 2 human checklist for default branch and branch protection/rulesets, and maintainer notes for `GH_TOKEN` + `gh api` (including SSO and rulesets API). Aligned `docs/architecture.md` and `docs/tech-stack.md` CD bullets. Cron manual-run example uses `--ref main` for the staging GitHub Environment.
+
 ## 2026-03-23: Housing cron hardening and fine retry
 
 - **Cron workflow**: Removed transport-level `curl --retry` from preflight and `job=HOURLY` calls to avoid duplicate notification side effects; timeouts retained.
