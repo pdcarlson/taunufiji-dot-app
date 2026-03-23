@@ -4,6 +4,8 @@
 
 **Tau Nu Fiji** is a single Next.js 16 application (not a monorepo) serving as the operational platform for a fraternity chapter. It has three core modules — Housing (chore management), Ledger (scholarship points), and Library (academic resources) — all backed by external cloud services (Appwrite, Discord, AWS S3). There are no local databases or Docker containers.
 
+**Hosting vs backend:** The **Next.js app** is built and served on **Vercel** (GitHub-connected). **Appwrite** is **backend only** (Auth, Databases) — it does **not** host this web app. See `docs/platform-map.md` before changing deployment or env docs.
+
 For full product context, see `docs/product.md`. For architecture details, see `docs/architecture.md`.
 
 ---

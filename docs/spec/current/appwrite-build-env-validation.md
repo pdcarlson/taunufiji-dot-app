@@ -6,7 +6,7 @@ in-progress
 
 ## Problem
 
-Appwrite production deployment from `main` failed during `next build` because global server environment validation required Discord role IDs during module import for `/api/images`, even though that route only needs AWS variables. CI did not catch this because build ran with `SKIP_ENV_VALIDATION=true`.
+A **production deployment** (Vercel build from `main` at the time) failed during `next build` because global server environment validation required Discord role IDs during module import for `/api/images`, even though that route only needs AWS variables. CI did not catch this because build ran with `SKIP_ENV_VALIDATION=true`.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ Appwrite production deployment from `main` failed during `next build` because gl
 - [x] Discord role IDs remain strictly validated where role-based logic is used.
 - [x] App layout metadata generation does not import full server env validation.
 - [x] CI build path executes without `SKIP_ENV_VALIDATION=true` and includes complete placeholder env keys.
-- [x] Deployment documentation includes explicit Appwrite environment checklist.
+- [x] Deployment documentation includes explicit **Vercel runtime** environment checklist (Appwrite keys are part of that matrix).
 
 ### Non-Functional
 
@@ -38,12 +38,12 @@ Appwrite production deployment from `main` failed during `next build` because gl
 - Add `discord-roles-env` config module for strict role ID validation and use it in role config.
 - Remove `env` import from `app/layout.tsx` and use `process.env.NODE_ENV` for metadata prefix.
 - Update CI build env matrix with placeholders and remove `SKIP_ENV_VALIDATION=true` from build step.
-- Update deployment docs with Appwrite env checklist and role-ID production note.
+- Update deployment docs with Vercel/runtime env checklist and role-ID production note.
 
 ## Out of Scope
 
 - Rotating existing production secrets.
-- Changing Appwrite branch/deploy wiring.
+- Changing Vercel–Git branch wiring or Appwrite project topology.
 - Refactoring all feature modules to fully scoped env access in this change.
 
 ## Dependencies

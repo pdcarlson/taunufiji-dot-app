@@ -1,5 +1,7 @@
 # Deployment Workflow
 
+**Canonical split:** Vercel hosts the app; Appwrite is the backend. If anything here conflicts with another doc, prefer this file plus [`platform-map.md`](platform-map.md).
+
 ## Pipeline Overview
 
 ```text

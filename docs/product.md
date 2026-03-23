@@ -49,7 +49,7 @@ Access is strictly managed via Discord Role verification.
 
 ## Technical Goals
 
-- **Staging Environment**: Functional staging environment for testing changes before production.
+- **Staging environment**: Preview/staging URL on **Vercel** (typically from **`main`**) against a **staging Appwrite project** — see `docs/platform-map.md` and `docs/deployment.md` (do not assume a `staging` Git branch is the integration branch).
 - **AI-Agent Alignment**: Codebase structured to be navigable and understandable for AI pair-programmers.
 - **CI/CD Maturity**: Standardized build, lint, and test gates for a predictable deployment process.
 

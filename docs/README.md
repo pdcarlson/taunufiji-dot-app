@@ -6,6 +6,7 @@ Project documentation for Tau Nu Fiji — The Digital Chapter.
 
 | Document                                  | Description                                                                  |
 | ----------------------------------------- | ---------------------------------------------------------------------------- |
+| [**Platform map**](platform-map.md)       | **Vercel vs Appwrite vs GitHub** — canonical split so hosting is not confused with backend |
 | [Product Definition](product.md)          | What the product does, who it's for, key modules                             |
 | [Tech Stack](tech-stack.md)               | Frameworks, services, and tooling                                            |
 | [Architecture](architecture.md)           | Clean Architecture layers, patterns, authentication flow                     |

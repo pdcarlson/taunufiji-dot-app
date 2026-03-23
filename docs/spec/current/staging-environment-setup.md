@@ -17,7 +17,7 @@ The current gap is not deployment wiring — it is **runtime confidence**. Stagi
 - [x] `staging` branch may still exist for CI compatibility; integration work targets **`main`** / **`production`**
 - [x] Staging URL is served by **Vercel Preview** (from **`main`** or project domain config), not Appwrite Sites
 - [x] Environment variable validation supports Local/Staging/Production contexts
-- [x] CI quality gates (`ci.yml`) run on pushes and PRs to both `main` and `staging`
+- [x] CI quality gates (`ci.yml`) run on pushes and PRs to **`main`**, **`production`**, and optionally **`staging`** (legacy branch only for CI if still present)
 - [x] Cron workflow supports targeting `staging` environment
 - [x] No hardcoded production URLs or Discord IDs in the codebase
 - [x] Dynamic page titles prefix environment name (e.g., `[STAGING]`)
