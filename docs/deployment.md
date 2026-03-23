@@ -117,6 +117,23 @@ If this command fails, do not promote staging to production until the failing ch
 
 ## Staging Troubleshooting Runbook
 
+### Symptom: Appwrite Sites shows “Timed out waiting for runtime” (`runtime_timeout`)
+
+This is a **cold-start / runtime-ready** timeout at the edge (not your route handler finishing slowly). With SSR Next.js on low CPU/RAM, the first request after idle can exceed the platform budget even when the site **build** succeeded.
+
+1. **Confirm builds are healthy**: In the Appwrite Console, open the site → **Deployments** → **Logs** for a “small” vs “large” deployment. Failed installs or missing output usually show in **build** logs. The console **Total size** column maps to API fields `sourceSize`, `buildSize`, and `totalSize` on each deployment ([Deployment model](https://appwrite.io/docs/references/cloud/models/deployment)): **source** = uploaded repo snapshot, **build** = build output, **total** = both. A drop in **total** often means a reporting or packaging change—not necessarily a broken deploy.
+2. **Compare deployments via API** (requires `.env.local` with **cloud** `NEXT_PUBLIC_APPWRITE_ENDPOINT`, not localhost):
+
+   ```bash
+   npm run inspect:appwrite-sites
+   APPWRITE_SITE_ID="<site id>" npm run inspect:appwrite-sites
+   APPWRITE_SITE_ID="<site id>" npm run inspect:appwrite-sites -- --deployment="<deployment id>" --log-tail=8000
+   ```
+
+   The API key must have permission to read Sites. Use `--deployment=` to print full deployment JSON and a tail of `buildLogs`.
+3. **Warm the runtime** after deploy: hit a **static** URL first (served from CDN without running React), e.g. `https://<your-staging-host>/health.txt`, then load `/login` or the dashboard. **`/` is not a good probe**—it redirects to `/dashboard` and pulls in heavy server work.
+4. **Site request logs**: Console → Site → **Logs** shows per-request status and duration; filter by path or `deploymentId` to see whether timeouts correlate with a specific deployment.
+
 ### Symptom: “Failed to assign duty” / task creation fails
 
 1. Run `npm run diagnose:staging`.

@@ -26,6 +26,8 @@ describe("Environment Configuration", () => {
     originalEnv = { ...process.env };
     vi.resetModules();
     SERVER_ENV_KEYS.forEach((key) => delete process.env[key]);
+    // Parent shell or .env.local may set this; tests must control validation explicitly.
+    delete process.env.SKIP_ENV_VALIDATION;
   });
 
   afterEach(() => {

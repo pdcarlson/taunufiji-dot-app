@@ -13,6 +13,7 @@
     "test:integration": "vitest --run --config vitest.integration.config.ts",
     "test:e2e": "playwright test",
     "diagnose:staging": "tsx scripts/diagnose-staging.ts",
+    "inspect:appwrite-sites": "tsx scripts/inspect-appwrite-site-deployments.ts",
     "discord:register": "tsx scripts/register-discord-commands.ts"
   },
   "dependencies": {
