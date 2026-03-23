@@ -14,6 +14,7 @@ describe("AWS Environment Configuration", () => {
     for (const key of AWS_ENV_KEYS) {
       delete process.env[key];
     }
+    delete process.env.SKIP_ENV_VALIDATION;
   });
 
   afterEach(() => {
