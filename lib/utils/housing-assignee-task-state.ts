@@ -1,7 +1,7 @@
 import { HousingTask } from "@/lib/domain/entities";
 
 /**
- * Assignee-facing task state helpers aligned with `docs/behavior.md`:
+ * Assignee-facing task state helpers aligned with `spec/behavior.md`:
  * overdue mandatory work without proof should not appear user-actionable until expiry is persisted.
  */
 
