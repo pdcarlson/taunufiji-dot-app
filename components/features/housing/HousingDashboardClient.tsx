@@ -64,8 +64,7 @@ export default function HousingDashboardClient({
   const [showBountyModal, setShowBountyModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
-  // Handle manual refresh
-  const handleRefresh = async () => {
+  const loadDashboardData = async (options?: { notifySuccess?: boolean }) => {
     try {
       const jwt = await getToken();
 
@@ -77,12 +76,16 @@ export default function HousingDashboardClient({
       if (tasksRes) setTasks(tasksRes);
       if (membersRes) setMembers(membersRes);
 
-      toast.success("Dashboard Updated");
+      if (options?.notifySuccess) {
+        toast.success("Dashboard Updated");
+      }
     } catch (error) {
       console.error("Refresh failed", error);
       toast.error("Failed to refresh data");
     }
   };
+
+  const handleRefresh = () => loadDashboardData({ notifySuccess: true });
 
   // Filters
   const pendingReviews = isAdmin
@@ -268,10 +271,8 @@ export default function HousingDashboardClient({
           task={editingTask}
           members={members}
           onClose={() => setEditingTask(null)}
-          onRefresh={() => {
-            setEditingTask(null);
-            handleRefresh();
-          }}
+          onRefresh={() => loadDashboardData()}
+          onSuccessClose={() => setEditingTask(null)}
         />
       )}
     </div>
