@@ -3,11 +3,17 @@ import { HousingTask } from "@/lib/domain/types/task";
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
 import { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
+import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
+import {
+  hasPersistedMissedDutyFine,
+  missedDutyFineReason,
+} from "./missed-duty-fine";
 
 type OverdueDutyDependencies = {
   taskRepository: ITaskRepository;
   pointsService: IPointsService;
   scheduleService: IScheduleService;
+  ledgerRepository: ILedgerRepository;
 };
 
 type OverdueDutyResult = {
@@ -31,7 +37,8 @@ export async function expireOverdueDutyTask(
   task: HousingTask,
   dependencies: OverdueDutyDependencies,
 ): Promise<OverdueDutyResult> {
-  const { taskRepository, pointsService, scheduleService } = dependencies;
+  const { taskRepository, pointsService, scheduleService, ledgerRepository } =
+    dependencies;
   const errors: string[] = [];
 
   if (NON_EXPIRABLE_TYPES.includes(task.type)) {
@@ -69,13 +76,23 @@ export async function expireOverdueDutyTask(
   let fined = false;
   if (task.assigned_to) {
     try {
-      await pointsService.awardPoints(task.assigned_to, {
-        amount: -Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY),
-        reason: `Missed Duty: ${task.title}`,
-        category: "fine",
-      });
-      await taskRepository.update(task.id, { is_fine: true });
-      fined = true;
+      const alreadyFined = await hasPersistedMissedDutyFine(
+        ledgerRepository,
+        task.assigned_to,
+        task.id,
+      );
+      if (alreadyFined) {
+        await taskRepository.update(task.id, { is_fine: true });
+        fined = true;
+      } else {
+        await pointsService.awardPoints(task.assigned_to, {
+          amount: -Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY),
+          reason: missedDutyFineReason(task.title, task.id),
+          category: "fine",
+        });
+        await taskRepository.update(task.id, { is_fine: true });
+        fined = true;
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       errors.push(`Fine failed for ${task.id}: ${message}`);

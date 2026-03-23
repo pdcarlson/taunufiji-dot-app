@@ -250,35 +250,48 @@ describe("ScheduleService deleteTaskThisAndFuture", () => {
   });
 
   it("deactivates schedule before deleting rows to avoid cron resurrection", async () => {
-    const task: Pick<HousingTask, "id" | "schedule_id" | "due_at"> = {
+    const task = baseTask({
       id: "task-1",
       schedule_id: "schedule-1",
       due_at: "2026-03-10T03:59:00.000Z",
+    });
+
+    const scheduleForDelete: HousingSchedule = {
+      id: "schedule-1",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      title: "Series",
+      description: "",
+      recurrence_rule: "7",
+      points_value: 0,
+      assigned_to: null,
+      active: true,
+      last_generated_at: null,
+      lead_time_hours: 24,
     };
 
-    taskRepository.findScheduleById = vi.fn().mockResolvedValue({
-      id: "schedule-1",
-      active: true,
-    } as HousingSchedule);
+    taskRepository.findScheduleById = vi
+      .fn()
+      .mockResolvedValue(scheduleForDelete);
     taskRepository.updateSchedule = vi.fn().mockResolvedValue(undefined);
     taskRepository.findMany = vi
       .fn()
       .mockResolvedValueOnce([
-        {
+        baseTask({
           id: "task-1",
           due_at: "2026-03-10T03:59:00.000Z",
           status: "open",
-        },
-        {
+        }),
+        baseTask({
           id: "task-2",
           due_at: "2026-03-17T03:59:00.000Z",
           status: "open",
-        },
-      ] as unknown as HousingTask[])
+        }),
+      ])
       .mockResolvedValueOnce([]);
     taskRepository.delete = vi.fn().mockResolvedValue(undefined);
 
-    await service.deleteTaskThisAndFuture(task as HousingTask, "2026-03-10T03:59:00.000Z");
+    await service.deleteTaskThisAndFuture(task, "2026-03-10T03:59:00.000Z");
 
     expect(taskRepository.updateSchedule).toHaveBeenCalledWith("schedule-1", {
       active: false,

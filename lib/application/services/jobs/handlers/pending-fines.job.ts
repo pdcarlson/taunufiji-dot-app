@@ -1,10 +1,15 @@
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
 import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
 import { HOUSING_CONSTANTS } from "@/lib/constants";
 import {
   fetchAllTaskPages,
   HOUSING_CRON_TASK_PAGE_SIZE,
 } from "../task-query-pagination";
+import {
+  hasPersistedMissedDutyFine,
+  missedDutyFineReason,
+} from "@/lib/application/services/housing/missed-duty-fine";
 
 /**
  * Retries ledger fines for expired duties where `awardPoints` failed after status was persisted.
@@ -12,6 +17,7 @@ import {
 export const pendingFinesJob = async (
   taskRepository: ITaskRepository,
   pointsService: IPointsService,
+  ledgerRepository: ILedgerRepository,
 ): Promise<{ errors: string[] }> => {
   const errors: string[] = [];
 
@@ -41,9 +47,18 @@ export const pendingFinesJob = async (
       }
 
       try {
+        const alreadyFined = await hasPersistedMissedDutyFine(
+          ledgerRepository,
+          task.assigned_to,
+          task.id,
+        );
+        if (alreadyFined) {
+          await taskRepository.update(task.id, { is_fine: true });
+          continue;
+        }
         await pointsService.awardPoints(task.assigned_to, {
           amount: -Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY),
-          reason: `Missed Duty: ${task.title}`,
+          reason: missedDutyFineReason(task.title, task.id),
           category: "fine",
         });
         await taskRepository.update(task.id, { is_fine: true });

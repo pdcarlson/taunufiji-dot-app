@@ -7,6 +7,7 @@
  */
 
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
 import { IDutyService } from "@/lib/domain/ports/services/duty.service.port";
 import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
 import { ScheduleService } from "./schedule.service";
@@ -19,6 +20,7 @@ export class MaintenanceService {
     private readonly dutyService: IDutyService,
     private readonly pointsService: IPointsService,
     private readonly scheduleService: ScheduleService,
+    private readonly ledgerRepository: ILedgerRepository,
   ) {}
 
   /**
@@ -72,6 +74,7 @@ export class MaintenanceService {
               taskRepository: this.taskRepository,
               pointsService: this.pointsService,
               scheduleService: this.scheduleService,
+              ledgerRepository: this.ledgerRepository,
             });
             if (result.errors.length > 0) {
               console.error("[MaintenanceService] Overdue processing errors", {

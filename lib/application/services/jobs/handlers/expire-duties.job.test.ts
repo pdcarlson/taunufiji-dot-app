@@ -15,8 +15,34 @@ vi.mock("@/lib/application/services/housing/overdue-duty.service", () => ({
 
 import { expireDutiesJob } from "./expire-duties.job";
 
+function baseTask(overrides: Partial<HousingTask> = {}): HousingTask {
+  return {
+    id: "task-default",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    title: "T",
+    description: "",
+    status: "open",
+    type: "duty",
+    points_value: 0,
+    schedule_id: null,
+    initial_image_s3_key: null,
+    proof_s3_key: null,
+    assigned_to: null,
+    due_at: null,
+    expires_at: null,
+    unlock_at: null,
+    is_fine: null,
+    notification_level: "unlocked",
+    execution_limit: null,
+    completed_at: null,
+    ...overrides,
+  };
+}
+
 describe("expireDutiesJob", () => {
   let taskRepository: ReturnType<typeof MockFactory.createTaskRepository>;
+  const ledgerRepository = MockFactory.createLedgerRepository();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -32,34 +58,24 @@ describe("expireDutiesJob", () => {
         if (opts.status === "open") {
           if (offset > 0) return [];
           return [
-            {
+            baseTask({
               id: "task-open",
               title: "Kitchen",
-              description: "",
               status: "open",
-              type: "duty",
-              points_value: 0,
               due_at: past,
-              createdAt: "",
-              updatedAt: "",
-            },
-          ] as HousingTask[];
+            }),
+          ];
         }
         if (opts.status === "pending") {
           if (offset > 0) return [];
           return [
-            {
+            baseTask({
               id: "task-pending",
               title: "Hall",
-              description: "",
               status: "pending",
-              type: "duty",
-              points_value: 0,
               due_at: past,
-              createdAt: "",
-              updatedAt: "",
-            },
-          ] as HousingTask[];
+            }),
+          ];
         }
         return [];
       },
@@ -76,6 +92,7 @@ describe("expireDutiesJob", () => {
       taskRepository,
       {} as unknown as IPointsService,
       {} as unknown as IScheduleService,
+      ledgerRepository,
     );
 
     expect(result.errors).toEqual([]);
@@ -84,11 +101,15 @@ describe("expireDutiesJob", () => {
       expect.objectContaining({ id: "task-open" }),
       expect.objectContaining({
         taskRepository,
+        ledgerRepository,
       }),
     );
     expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledWith(
       expect.objectContaining({ id: "task-pending" }),
-      expect.any(Object),
+      expect.objectContaining({
+        taskRepository,
+        ledgerRepository,
+      }),
     );
   });
 });

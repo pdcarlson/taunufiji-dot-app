@@ -10,9 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  deps:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,11 +24,38 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Upload node_modules
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-modules
+          path: node_modules
+          retention-days: 1
+
+  lint:
+    needs: deps
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node-modules
+          path: node_modules
 
       - name: Lint
         run: npm run lint
 
   typecheck:
+    needs: deps
     runs-on: ubuntu-latest
 
     steps:
@@ -40,15 +66,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node-modules
+          path: node_modules
 
       - name: Type check
         run: npx tsc --noEmit
 
   test:
+    needs: deps
     runs-on: ubuntu-latest
 
     steps:
@@ -59,15 +88,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node-modules
+          path: node_modules
 
       - name: Test
         run: npm run test -- --run
 
   coverage-critical:
+    needs: deps
     runs-on: ubuntu-latest
 
     steps:
@@ -78,15 +110,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node-modules
+          path: node_modules
 
       - name: Coverage (Critical Modules)
         run: npm run test:coverage:critical
 
   e2e-smoke:
+    needs: deps
     runs-on: ubuntu-latest
 
     steps:
@@ -97,10 +132,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node-modules
+          path: node_modules
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
@@ -122,6 +159,7 @@ jobs:
           fi
 
   build:
+    needs: deps
     runs-on: ubuntu-latest
 
     steps:
@@ -132,10 +170,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node-modules
+          path: node_modules
 
       - name: Build
         env:

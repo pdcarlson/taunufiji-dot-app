@@ -16,14 +16,14 @@ import {
 } from "@/lib/utils/eastern-time";
 import { RecurringMutationScope } from "@/lib/domain/types/recurring";
 
-interface EditTaskModalProps {
+export interface EditTaskModalProps {
   task: HousingTask;
   members: Member[];
   onClose: () => void;
   onRefresh: () => void;
 }
 
-export default function EditTaskModal({
+export function EditTaskModal({
   task,
   members,
   onClose,

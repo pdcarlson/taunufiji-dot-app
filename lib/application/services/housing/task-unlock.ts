@@ -25,11 +25,15 @@ export async function processUnlockForTask(
     return { unlocked: false, errors };
   }
 
+  let committedOpen = false;
+  let committedNotifiedUnlocked = false;
+
   try {
     await taskRepository.update(task.id, {
       status: "open",
       notification_level: "none",
     });
+    committedOpen = true;
 
     if (task.assigned_to) {
       const notificationResult = await NotificationService.sendNotification(
@@ -53,6 +57,7 @@ export async function processUnlockForTask(
       await taskRepository.update(task.id, {
         notification_level: "unlocked",
       });
+      committedNotifiedUnlocked = true;
     }
 
     console.log("[UnlockTasksJob]", {
@@ -65,6 +70,9 @@ export async function processUnlockForTask(
     const errMsg = `Failed to unlock task ${task.id}: ${error instanceof Error ? error.message : String(error)}`;
     console.error(errMsg);
     errors.push(errMsg);
-    return { unlocked: false, errors };
+    return {
+      unlocked: committedOpen || committedNotifiedUnlocked,
+      errors,
+    };
   }
 }

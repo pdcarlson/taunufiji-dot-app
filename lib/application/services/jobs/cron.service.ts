@@ -9,6 +9,7 @@ import { HousingTimeDrivenPipeline } from "./housing-time-driven.pipeline";
 import { expireDutiesJob } from "./handlers/expire-duties.job";
 import { ensureFutureTasksJob } from "./handlers/ensure-future-tasks.job";
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
 import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
 import { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
 
@@ -28,6 +29,7 @@ export class CronService {
     private readonly taskRepository: ITaskRepository,
     private readonly pointsService: IPointsService,
     private readonly scheduleService: IScheduleService,
+    private readonly ledgerRepository: ILedgerRepository,
   ) {}
 
   /**
@@ -44,6 +46,7 @@ export class CronService {
       this.taskRepository,
       this.pointsService,
       this.scheduleService,
+      this.ledgerRepository,
     );
 
     console.log("[CronService]", {
@@ -63,10 +66,11 @@ export class CronService {
       this.taskRepository,
       this.pointsService,
       this.scheduleService,
+      this.ledgerRepository,
     );
   }
 
   async ensureFutureTasks() {
-    return await ensureFutureTasksJob();
+    return await ensureFutureTasksJob(this.taskRepository);
   }
 }

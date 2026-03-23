@@ -7,6 +7,7 @@ import type { IScheduleService } from "@/lib/domain/ports/services/schedule.serv
 
 describe("CronService.runHourly", () => {
   const taskRepository = MockFactory.createTaskRepository();
+  const ledgerRepository = MockFactory.createLedgerRepository();
   const pointsService = {
     awardPoints: vi.fn(),
   } as unknown as IPointsService;
@@ -32,6 +33,7 @@ describe("CronService.runHourly", () => {
       taskRepository,
       pointsService,
       scheduleService,
+      ledgerRepository,
     );
 
     const result = await cronService.runHourly();
@@ -48,6 +50,7 @@ describe("CronService.runHourly", () => {
       taskRepository,
       pointsService,
       scheduleService,
+      ledgerRepository,
     );
   });
 });

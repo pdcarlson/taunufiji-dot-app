@@ -99,6 +99,7 @@ export function getContainer(): Container {
       dutyService,
       pointsService,
       scheduleService,
+      ledgerRepository,
     );
     const adminService = new AdminService(taskRepository, scheduleService);
     const libraryService = new LibraryService(
@@ -110,6 +111,7 @@ export function getContainer(): Container {
       taskRepository,
       pointsService,
       scheduleService,
+      ledgerRepository,
     );
 
     container = {

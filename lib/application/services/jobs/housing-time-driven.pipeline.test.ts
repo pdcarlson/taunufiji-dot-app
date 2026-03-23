@@ -53,6 +53,7 @@ function deferred<T>() {
 
 describe("HousingTimeDrivenPipeline.runFullHourlyCycle", () => {
   const taskRepository = MockFactory.createTaskRepository();
+  const ledgerRepository = MockFactory.createLedgerRepository();
   const pointsService = {
     awardPoints: vi.fn(),
   } as unknown as IPointsService;
@@ -112,6 +113,7 @@ describe("HousingTimeDrivenPipeline.runFullHourlyCycle", () => {
       taskRepository,
       pointsService,
       scheduleService,
+      ledgerRepository,
     );
 
     await vi.waitFor(() => expect(hoisted.unlockRun).toHaveBeenCalled());

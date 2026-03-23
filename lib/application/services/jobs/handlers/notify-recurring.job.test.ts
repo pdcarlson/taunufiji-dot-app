@@ -27,7 +27,7 @@ const dutyOpenBase: HousingTask = {
 };
 
 function dutyTask(overrides: Partial<HousingTask>): HousingTask {
-  return { ...dutyOpenBase, ...overrides } as unknown as HousingTask;
+  return { ...dutyOpenBase, ...overrides } as HousingTask;
 }
 
 describe("NotifyRecurringJob", () => {

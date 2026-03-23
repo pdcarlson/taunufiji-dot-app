@@ -1,4 +1,5 @@
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
 import { expireOverdueDutyTask } from "@/lib/application/services/housing/overdue-duty.service";
 import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
 import { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
@@ -11,6 +12,7 @@ export const expireDutiesJob = async (
   taskRepository: ITaskRepository,
   pointsService: IPointsService,
   scheduleService: IScheduleService,
+  ledgerRepository: ILedgerRepository,
 ): Promise<{ errors: string[] }> => {
   const errors: string[] = [];
   const now = new Date();
@@ -71,6 +73,7 @@ export const expireDutiesJob = async (
           taskRepository,
           pointsService,
           scheduleService,
+          ledgerRepository,
         });
         errors.push(...result.errors);
         if (result.expired) {

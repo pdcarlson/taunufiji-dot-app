@@ -26,6 +26,7 @@ import { NotifyExpiredJob } from "./handlers/notify-expired.job";
 import { ensureFutureTasksJob } from "./handlers/ensure-future-tasks.job";
 import { IPointsService } from "@/lib/domain/ports/services/points.service.port";
 import { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
+import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
 
 export { HOUSING_CRON_TASK_PAGE_SIZE } from "./task-query-pagination";
 
@@ -43,6 +44,7 @@ export const HousingTimeDrivenPipeline = {
     taskRepository: ITaskRepository,
     pointsService: IPointsService,
     scheduleService: IScheduleService,
+    ledgerRepository: ILedgerRepository,
   ): Promise<HousingTimeDrivenPipelineResult> {
     let unlocked = 0;
     let recurring_notified = 0;
@@ -67,12 +69,14 @@ export const HousingTimeDrivenPipeline = {
       taskRepository,
       pointsService,
       scheduleService,
+      ledgerRepository,
     );
     errors.push(...expireResult.errors);
 
     const pendingFinesResult = await pendingFinesJob(
       taskRepository,
       pointsService,
+      ledgerRepository,
     );
     errors.push(...pendingFinesResult.errors);
 
@@ -81,7 +85,7 @@ export const HousingTimeDrivenPipeline = {
     skipped_unassigned += notifyExpiredResult.skipped_unassigned;
     errors.push(...notifyExpiredResult.errors);
 
-    await ensureFutureTasksJob();
+    await ensureFutureTasksJob(taskRepository);
 
     return {
       unlocked,
@@ -94,11 +98,13 @@ export const HousingTimeDrivenPipeline = {
   },
 
   async runFromContainer(): Promise<HousingTimeDrivenPipelineResult> {
-    const { taskRepository, pointsService, scheduleService } = getContainer();
+    const { taskRepository, pointsService, scheduleService, ledgerRepository } =
+      getContainer();
     return this.runFullHourlyCycle(
       taskRepository,
       pointsService,
       scheduleService,
+      ledgerRepository,
     );
   },
 };

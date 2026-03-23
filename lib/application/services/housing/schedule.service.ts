@@ -69,9 +69,13 @@ function mergeLeadIntoSeriesPatch(
   if (leadTimeHours === undefined) {
     return base;
   }
+  const patchedTask: HousingTask = {
+    ...seriesTask,
+    due_at: base.due_at ?? seriesTask.due_at,
+  };
   return {
     ...base,
-    ...leadTimeFieldsForTask(seriesTask, leadTimeHours, now),
+    ...leadTimeFieldsForTask(patchedTask, leadTimeHours, now),
   };
 }
 

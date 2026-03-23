@@ -1,10 +1,12 @@
-import { AppwriteTaskRepository } from "@/lib/infrastructure/persistence/task.repository";
+import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { calculateNextInstance } from "@/lib/utils/scheduler";
 
-export const ensureFutureTasksJob = async () => {
+export const ensureFutureTasksJob = async (
+  taskRepository: ITaskRepository,
+) => {
   console.log("🛡️ Running EnsureFutureTasksJob (Self-Healing)...");
 
-  const taskRepo = new AppwriteTaskRepository();
+  const taskRepo = taskRepository;
 
   try {
     const schedules = await taskRepo.findActiveSchedules();

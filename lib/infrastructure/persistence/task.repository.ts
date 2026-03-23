@@ -279,11 +279,21 @@ export class AppwriteTaskRepository implements ITaskRepository {
     }
 
     if (options.assignedToPresent) {
-      queries.push(Query.isNotNull("assigned_to"));
+      queries.push(
+        Query.and([
+          Query.isNotNull("assigned_to"),
+          Query.notEqual("assigned_to", ""),
+        ]),
+      );
     }
 
     if (options.scheduleIdPresent) {
-      queries.push(Query.isNotNull("schedule_id"));
+      queries.push(
+        Query.and([
+          Query.isNotNull("schedule_id"),
+          Query.notEqual("schedule_id", ""),
+        ]),
+      );
     }
 
     if (options.proofS3KeyAbsent) {
