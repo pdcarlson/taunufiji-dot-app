@@ -2,6 +2,33 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { UnlockTasksJob } from "./unlock-tasks.job";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
 import { MockFactory } from "@/lib/test/mock-factory";
+import type { HousingTask } from "@/lib/domain/types/task";
+
+const lockedDutyBase: HousingTask = {
+  id: "task-base",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+  title: "T",
+  description: "",
+  status: "locked",
+  type: "duty",
+  points_value: 0,
+  schedule_id: null,
+  initial_image_s3_key: null,
+  proof_s3_key: null,
+  assigned_to: "user-1",
+  due_at: null,
+  expires_at: null,
+  unlock_at: new Date(Date.now() - 60_000).toISOString(),
+  is_fine: null,
+  notification_level: "none",
+  execution_limit: null,
+  completed_at: null,
+};
+
+function lockedTask(overrides: Partial<HousingTask>): HousingTask {
+  return { ...lockedDutyBase, ...overrides } as unknown as HousingTask;
+}
 
 describe("UnlockTasksJob", () => {
   const taskRepository = MockFactory.createTaskRepository();
@@ -15,16 +42,14 @@ describe("UnlockTasksJob", () => {
       const offset = opts.offset ?? 0;
       if (offset > 0) return [];
       return [
-        {
+        lockedTask({
           id: "task-1",
           title: "Kitchen",
-          status: "locked",
-          unlock_at: new Date(Date.now() - 60_000).toISOString(),
           assigned_to: "user-1",
-        },
-      ] as any;
+        }),
+      ];
     });
-    taskRepository.update = vi.fn().mockResolvedValue({} as any);
+    taskRepository.update = vi.fn().mockResolvedValue(lockedDutyBase);
     vi.spyOn(NotificationService, "sendNotification").mockResolvedValue({
       success: true,
     });
@@ -47,16 +72,14 @@ describe("UnlockTasksJob", () => {
       const offset = opts.offset ?? 0;
       if (offset > 0) return [];
       return [
-        {
+        lockedTask({
           id: "task-2",
           title: "Bathroom",
-          status: "locked",
-          unlock_at: new Date(Date.now() - 60_000).toISOString(),
           assigned_to: "user-2",
-        },
-      ] as any;
+        }),
+      ];
     });
-    taskRepository.update = vi.fn().mockResolvedValue({} as any);
+    taskRepository.update = vi.fn().mockResolvedValue(lockedDutyBase);
     vi.spyOn(NotificationService, "sendNotification").mockResolvedValue({
       success: false,
       error: "discord down",
@@ -64,7 +87,7 @@ describe("UnlockTasksJob", () => {
 
     const result = await UnlockTasksJob.run(taskRepository);
 
-    expect(result.unlocked).toBe(0);
+    expect(result.unlocked).toBe(1);
     expect(result.errors).toHaveLength(1);
     expect(taskRepository.update).toHaveBeenCalledTimes(1);
     expect(taskRepository.update).toHaveBeenCalledWith("task-2", {

@@ -3,6 +3,17 @@ import { fetchAllTaskPages, HOUSING_CRON_TASK_PAGE_SIZE } from "./task-query-pag
 import { MockFactory } from "@/lib/test/mock-factory";
 
 describe("fetchAllTaskPages", () => {
+  it("throws when pageSize is not a positive integer", async () => {
+    const taskRepository = MockFactory.createTaskRepository();
+    await expect(
+      fetchAllTaskPages(
+        taskRepository,
+        { status: "open", orderBy: "due_at", orderDirection: "asc" },
+        0,
+      ),
+    ).rejects.toThrow(/fetchAllTaskPages: pageSize must be a positive integer/);
+  });
+
   it("pages until a short page and concatenates in order", async () => {
     const taskRepository = MockFactory.createTaskRepository();
     const pageSize = HOUSING_CRON_TASK_PAGE_SIZE;

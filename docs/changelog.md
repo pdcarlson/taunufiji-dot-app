@@ -1,5 +1,12 @@
 # Project Log
 
+## 2026-03-23: Housing cron hardening and fine retry
+
+- **Cron workflow**: Removed transport-level `curl --retry` from preflight and `job=HOURLY` calls to avoid duplicate notification side effects; timeouts retained.
+- **API**: Cron route returns a generic message on execution failure while logging details server-side.
+- **Fines**: Expired duties set `is_fine: false` until `awardPoints` succeeds; `pendingFinesJob` retries on each hourly run. Requires `is_fine` on assignments in Appwrite (already on schema types).
+- **Pipeline**: `recurring_notified` is separate from `unlocked` in cron stats; `HousingTimeDrivenPipeline.runFullHourlyCycle` takes injected services.
+
 ## 2026-03-22: Housing recurring admin — schedule vs assignment consistency
 
 - **Recurring edits**: `ScheduleService` updates `housing_schedules` **before** `housing_assignments` for this-and-future and entire-series task edits so hourly cron cannot emit a new instance from stale schedule metadata mid-mutation.
@@ -9,7 +16,7 @@
 ## 2026-03-22: Housing time-driven pipeline unification
 
 - **Appwrite note**: `scripts/add-expired-admin-notification-enum.ts` documents how to add `expired_admin` when `notification_level` is an enum; staging uses a **string** attribute so no enum migration was required there.
-- **Single pipeline**: `HousingTimeDrivenPipeline` defines the ordered hourly sequence (unlock → recurring notify → urgent → expire duties → notify expired → ensure future); `CronService.runHourly` delegates to it.
+- **Single pipeline**: `HousingTimeDrivenPipeline` defines the ordered hourly sequence (unlock → recurring notify → urgent → expire duties → pending fine retries → notify expired → ensure future); `CronService` is constructed by the IoC container and delegates `runHourly` to the pipeline.
 - **Maintenance alignment**: Per-user maintenance reuses shared `processUnlockForTask` and `expireOverdueDutyTask`; does not duplicate Discord stages or ensure-future healing.
 - **Cron query correctness**: Jobs page through `findMany` with targeted filters (`due_at`, `unlock_at`, notification filters) so backlogs beyond 100 rows are not skipped; `expireDutiesJob` includes overdue `pending` (no proof) as well as `open`.
 - **Expired notifications**: Added `expired_admin` stage when housing channel succeeds but assignee DM fails; documented primary/secondary behavior in `docs/behavior.md`.

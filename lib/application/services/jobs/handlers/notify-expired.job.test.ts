@@ -2,6 +2,33 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotifyExpiredJob } from "./notify-expired.job";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
 import { MockFactory } from "@/lib/test/mock-factory";
+import type { HousingTask } from "@/lib/domain/types/task";
+
+const expiredTaskBase: HousingTask = {
+  id: "task-base",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+  title: "T",
+  description: "",
+  status: "expired",
+  type: "duty",
+  points_value: 0,
+  schedule_id: null,
+  initial_image_s3_key: null,
+  proof_s3_key: null,
+  assigned_to: null,
+  due_at: null,
+  expires_at: null,
+  unlock_at: null,
+  is_fine: null,
+  notification_level: "urgent",
+  execution_limit: null,
+  completed_at: null,
+};
+
+function expiredTaskFixture(overrides: Partial<HousingTask>): HousingTask {
+  return { ...expiredTaskBase, ...overrides } as unknown as HousingTask;
+}
 
 describe("NotifyExpiredJob", () => {
   const taskRepository = MockFactory.createTaskRepository();
@@ -15,17 +42,14 @@ describe("NotifyExpiredJob", () => {
       const offset = opts.offset ?? 0;
       if (offset > 0) return [];
       return [
-        {
+        expiredTaskFixture({
           id: "task-1",
           title: "Kitchen",
-          type: "duty",
-          status: "expired",
-          notification_level: "urgent",
           assigned_to: "user-1",
-        },
-      ] as any;
+        }),
+      ];
     });
-    taskRepository.update = vi.fn().mockResolvedValue({} as any);
+    taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
     vi.spyOn(NotificationService, "notifyAdmins").mockResolvedValue({
       success: true,
     });
@@ -47,17 +71,14 @@ describe("NotifyExpiredJob", () => {
       const offset = opts.offset ?? 0;
       if (offset > 0) return [];
       return [
-        {
+        expiredTaskFixture({
           id: "task-retry",
           title: "Stairs",
-          type: "duty",
-          status: "expired",
-          notification_level: "urgent",
           assigned_to: "user-3",
-        },
-      ] as any;
+        }),
+      ];
     });
-    taskRepository.update = vi.fn().mockResolvedValue({} as any);
+    taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
     const notifyAdminsSpy = vi
       .spyOn(NotificationService, "notifyAdmins")
       .mockResolvedValue({ success: true });
@@ -78,15 +99,13 @@ describe("NotifyExpiredJob", () => {
       const offset = opts.offset ?? 0;
       if (offset > 0) return [];
       return [
-        {
+        expiredTaskFixture({
           id: "task-retry",
           title: "Stairs",
-          type: "duty",
-          status: "expired",
           notification_level: "expired_admin",
           assigned_to: "user-3",
-        },
-      ] as any;
+        }),
+      ];
     });
     dmSpy.mockResolvedValueOnce({ success: true });
 
@@ -104,17 +123,14 @@ describe("NotifyExpiredJob", () => {
       const offset = opts.offset ?? 0;
       if (offset > 0) return [];
       return [
-        {
+        expiredTaskFixture({
           id: "task-2",
           title: "Bathroom",
-          type: "duty",
-          status: "expired",
-          notification_level: "urgent",
           assigned_to: "user-2",
-        },
-      ] as any;
+        }),
+      ];
     });
-    taskRepository.update = vi.fn().mockResolvedValue({} as any);
+    taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
     vi.spyOn(NotificationService, "notifyAdmins").mockResolvedValue({
       success: false,
       error: "channel missing",

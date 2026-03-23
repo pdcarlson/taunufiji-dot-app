@@ -1,24 +1,24 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-
-const hoisted = vi.hoisted(() => {
-  return {
-    runFromContainer: vi.fn(),
-  };
-});
-
-vi.mock("./housing-time-driven.pipeline", () => ({
-  HousingTimeDrivenPipeline: {
-    runFromContainer: hoisted.runFromContainer,
-  },
-}));
-
 import { CronService } from "./cron.service";
+import { HousingTimeDrivenPipeline } from "./housing-time-driven.pipeline";
+import { MockFactory } from "@/lib/test/mock-factory";
+import type { IPointsService } from "@/lib/domain/ports/services/points.service.port";
+import type { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
 
 describe("CronService.runHourly", () => {
+  const taskRepository = MockFactory.createTaskRepository();
+  const pointsService = {
+    awardPoints: vi.fn(),
+  } as unknown as IPointsService;
+  const scheduleService = {
+    triggerNextInstance: vi.fn(),
+  } as unknown as IScheduleService;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    hoisted.runFromContainer.mockResolvedValue({
-      unlocked: 2,
+    vi.spyOn(HousingTimeDrivenPipeline, "runFullHourlyCycle").mockResolvedValue({
+      unlocked: 1,
+      recurring_notified: 1,
       urgent: 1,
       expired_notified: 1,
       skipped_unassigned: 0,
@@ -26,16 +26,28 @@ describe("CronService.runHourly", () => {
     });
   });
 
-  it("delegates to HousingTimeDrivenPipeline and returns its stats", async () => {
-    const result = await CronService.runHourly();
+  it("delegates to HousingTimeDrivenPipeline.runFullHourlyCycle and returns its stats", async () => {
+    const cronService = new CronService(
+      HousingTimeDrivenPipeline,
+      taskRepository,
+      pointsService,
+      scheduleService,
+    );
+
+    const result = await cronService.runHourly();
 
     expect(result).toEqual({
-      unlocked: 2,
+      unlocked: 1,
+      recurring_notified: 1,
       urgent: 1,
       expired_notified: 1,
       skipped_unassigned: 0,
       errors: [],
     });
-    expect(hoisted.runFromContainer).toHaveBeenCalledTimes(1);
+    expect(HousingTimeDrivenPipeline.runFullHourlyCycle).toHaveBeenCalledWith(
+      taskRepository,
+      pointsService,
+      scheduleService,
+    );
   });
 });

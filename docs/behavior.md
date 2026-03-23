@@ -62,6 +62,7 @@ This document is the durable behavioral reference for the Housing module.
 5. Admin approves -> `approved`.
 6. Next recurring instance is generated.
 7. If missed deadline, task transitions to `expired` and fine behavior is triggered.
+   - Assignments use `is_fine`: set `false` when the row is expired with a pending ledger fine; set `true` only after `awardPoints` succeeds. Hourly cron runs `pendingFinesJob` to retry fines when the ledger call failed after expiry.
 8. Overdue transition is canonicalized through shared expiry logic and may run from:
    - cron (`ExpireDutiesJob`) as the primary scheduled path, and
    - dashboard maintenance as a fallback path for assigned-user views.

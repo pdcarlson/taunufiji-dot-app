@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IPointsService } from "@/lib/domain/ports/services/points.service.port";
-import type { ScheduleService } from "@/lib/application/services/housing/schedule.service";
+import type { IScheduleService } from "@/lib/domain/ports/services/schedule.service.port";
 import type { TaskQueryOptions } from "@/lib/domain/ports/task.repository";
 import type { HousingTask } from "@/lib/domain/types/task";
 import { MockFactory } from "@/lib/test/mock-factory";
@@ -75,7 +75,7 @@ describe("expireDutiesJob", () => {
     const result = await expireDutiesJob(
       taskRepository,
       {} as unknown as IPointsService,
-      {} as unknown as ScheduleService,
+      {} as unknown as IScheduleService,
     );
 
     expect(result.errors).toEqual([]);
