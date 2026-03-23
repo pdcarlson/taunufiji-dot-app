@@ -1,5 +1,7 @@
 # Deployment Workflow
 
+For the **Vercel migration** (inventory, canonical URLs, glossary, staged plan), see [`docs/deployment-migration.md`](./deployment-migration.md).
+
 ## Pipeline Overview
 
 ```text

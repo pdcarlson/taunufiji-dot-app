@@ -1,5 +1,9 @@
 # Project Log
 
+## 2026-03-23: Deployment migration — Stage 1 discovery doc
+
+- **Docs**: Added [`docs/deployment-migration.md`](./deployment-migration.md) — inventory of branches, GitHub Environments, Appwrite Sites references, cron, CSP (`next.config.ts`), and `NEXT_PUBLIC_APP_URL`; canonical staging/production front-end URLs (`https://staging.taunufiji.app`, `https://taunufiji.app`); contradictions vs current docs; proposed stages 2–10. Linked from [`docs/deployment.md`](./deployment.md).
+
 ## 2026-03-23: Housing domain events and staging diagnostics
 
 - **Dead event path removed**: `TaskEvents.TASK_EXPIRED` and `TaskExpiredHandler` were never published; overdue expiry and `triggerNextInstance` already run inside `expireOverdueDutyTask` (cron + maintenance). Removed the unused enum value, payload type, handler, and `initDomainEvents` wiring so the bus only reflects events that actually fire.
