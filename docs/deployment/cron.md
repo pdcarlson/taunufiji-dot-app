@@ -4,10 +4,10 @@
 
 ## Configuration
 
-- **Scheduler**: [Vercel Cron](https://vercel.com/docs/cron-jobs) via root `vercel.json`: GET `/api/cron?job=HOUSING_BATCH` **once per day** at **`0 6 * * *`** (minute `0` of hour `6`, every day, **UTC**).
+- **Scheduler**: [Vercel Cron](https://vercel.com/docs/cron-jobs) via root `vercel.json`: GET `/api/cron?job=HOUSING_BATCH` **once per day** at **`0 18 * * *`** (minute `0` of hour `18`, every day, **UTC**).
   - **Hobby plan**: Vercel allows at most one invocation per day for cron; the expression must not run more frequently than daily.
-  - **Hobby timing**: Invocations are distributed within the scheduled **hour** (roughly any time from `06:00:00` through `06:59:59` UTC), not necessarily on the minute — see [Cron jobs accuracy](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-jobs-accuracy).
-  - **Why 06:00 UTC**: Duties go overdue at **midnight Eastern**. We target **~1:00 AM Eastern** so a run that lands early in the allowed window still falls **after** midnight. **Note:** cron expressions are **UTC-only**. `06:00` UTC is **1:00 AM Eastern Standard Time** and **2:00 AM Eastern Daylight Time**; during EDT the same UTC hour corresponds to **2:00–2:59 AM** local on the **same** Eastern calendar day (still after local midnight that day).
+  - **Hobby timing**: Invocations are distributed within the scheduled **hour** (roughly any time from `18:00:00` through `18:59:59` UTC), not necessarily on the minute — see [Cron jobs accuracy](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-jobs-accuracy).
+  - **Why 18:00 UTC**: Duties go overdue at **midnight Eastern**. A **mid-afternoon** run aligns the housing batch (including **urgent**, sub-12-hour notifications) with the **same calendar day** before duties are due that night. **Note:** cron expressions are **UTC-only**. `18:00` UTC is **1:00 PM Eastern Standard Time** and **2:00 PM Eastern Daylight Time**; during EDT the same UTC hour corresponds to **2:00–2:59 PM** local on the **same** Eastern calendar day.
 
 ## Target Deployment
 
