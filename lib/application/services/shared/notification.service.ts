@@ -119,7 +119,7 @@ export const NotificationService = {
         message = `Task rejected: ${title}${reason ? `. Reason: ${reason}` : ""}`;
         break;
       case "expired":
-        message = `Task expired: ${title}. A fine of -${Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY)} points has been applied.`;
+        message = `Task expired: ${title}. If this was an assigned task (not a bounty), a fine of ${Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY)} dollars will be initiated.`;
         break;
       default:
         message = `Notification: ${title}`;
