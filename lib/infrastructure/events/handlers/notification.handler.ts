@@ -54,26 +54,6 @@ export const NotificationHandler = {
       }
     });
 
-    // Task Claimed → Notify admin channel
-    DomainEventBus.subscribe(TaskEvents.TASK_CLAIMED, async (payload) => {
-      try {
-        logger.log(
-          `[NotificationHandler] Task claimed: ${payload.title} by ${payload.userId}`,
-        );
-        const result = await NotificationService.notifyAdmins(
-          `📋 Task claimed: **${payload.title}** by <@${payload.userId}>`,
-          { taskId: payload.taskId },
-        );
-        logResult("TASK_CLAIMED", "admin_channel", result);
-      } catch (error) {
-        logger.error("[NotificationHandler] TASK_CLAIMED handler failed", {
-          taskId: payload.taskId,
-          userId: payload.userId,
-          error,
-        });
-      }
-    });
-
     // Task Submitted → Notify admins for review
     DomainEventBus.subscribe(TaskEvents.TASK_SUBMITTED, async (payload) => {
       try {
@@ -81,7 +61,7 @@ export const NotificationHandler = {
           `[NotificationHandler] Task submitted: ${payload.title} by ${payload.userId}`,
         );
         const result = await NotificationService.notifyAdmins(
-          `📤 Proof submitted for **${payload.title}** by <@${payload.userId}>. Ready for review.`,
+          `Proof submitted for **${payload.title}** by <@${payload.userId}>. Ready for review.`,
           { taskId: payload.taskId },
         );
         logResult("TASK_SUBMITTED", "admin_channel", result);
