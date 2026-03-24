@@ -79,3 +79,35 @@ This repo uses **branch rulesets** (not legacy branch protection API). As config
 Required status check contexts (from `ci.yml` job ids): `lint`, `typecheck`, `test`, `coverage-critical`, `e2e-smoke`, `build`, `quality-gate`. **Strict** policy: the merge head must be up to date with the base branch.
 
 Tweak review counts or check contexts in **Settings → Rules** if your team's bar differs (for example if two approvals on `production` is heavier than the old `main` bar).
+
+### Release promotion and branch sync
+
+**Policy (this repository):** After every successful merge **`main` → `production`**, open a follow-up pull request **`production` → `main`** (back-merge) and merge it through the normal **`main`** rules. That keeps **`main`** a **superset** of **`production`**’s history so the next promotion PR stays compatible with **strict “branch up to date”** rules.
+
+**Why this is required:** A typical GitHub **merge** of `main` into `production` creates a **merge commit on `production` only**. **`main` does not contain that commit.** The next PR with base **`production`** and head **`main`** then fails “head not up to date with base” until **`main`** has absorbed **`production`**’s tip (via back-merge or an equivalent merge).
+
+**Release checklist (human):**
+
+1. Merge feature work into **`main`** (integration).
+2. Open **PR `main` → `production`**, pass checks and approvals, merge (production deploy per [Environments](environments.md)).
+3. Open **PR `production` → `main`**, pass checks and approval, merge (back-merge).
+
+**Deadlock recovery:** If branches are **mutually ahead** (each has commits the other lacks) and GitHub’s **Update branch** on a **`production` → `main`** PR fails (for example **repository rule violations** when the API tries to update the protected **`production`** ref), use a **sync branch**:
+
+```bash
+git fetch origin
+git checkout -b sync/backmerge-production-to-main origin/production
+git merge origin/main -m "chore(git): merge main into production tip for back-merge sync"
+git push -u origin sync/backmerge-production-to-main
+```
+
+Then open **PR `sync/backmerge-production-to-main` → `main`**. After it merges, continue with step 3 above (or merge an existing **`production` → `main`** PR if it becomes mergeable).
+
+**Inspect divergence:**
+
+```bash
+git fetch origin
+git log --oneline --left-right --cherry-pick origin/main...origin/production
+```
+
+**Alternatives (not the default here):** squash-only merges into **`production`**, fast-forward-only promotion, or deploying production from **`main`** / tags with Vercel deployment protection instead of a second long-lived branch—each changes history or hosting assumptions; see [README](README.md) for the current **`main` / `production`** split.
