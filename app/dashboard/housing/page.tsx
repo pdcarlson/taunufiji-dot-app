@@ -1,4 +1,4 @@
-import HousingDashboardClient from "@/components/features/housing/HousingDashboardClient";
+import { HousingDashboardClient } from "@/components/features/housing/HousingDashboardClient";
 
 // ⚠️ FORCE DYNAMIC: This page MUST fetch fresh data on every request.
 // This fixes the "Ghost Entry" bug where deleted tasks persist due to Next.js static caching.

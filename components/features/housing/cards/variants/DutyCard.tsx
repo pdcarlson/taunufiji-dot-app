@@ -64,6 +64,16 @@ export function DutyCard({
   const uploadControlDisabled =
     loading || pastDueBlocksNonDutyUpload || uploadDisabledForDutyAwaitingExpiry;
 
+  const statusAllowsUpload =
+    task.status === "pending" ||
+    task.status === "rejected" ||
+    (isDuty && task.status === "open");
+  const showUploadBlock =
+    isMyTask &&
+    statusAllowsUpload &&
+    !isReview &&
+    !awaitingExpiryWrite;
+
   const handleClaim = async () => {
     if (isDuty) return;
     setLoading(true);
@@ -188,14 +198,7 @@ export function DutyCard({
           </div>
         )}
 
-      {isMyTask &&
-        (task.status === "pending" ||
-          task.status === "rejected" ||
-          (isDuty && task.status === "open")) &&
-        !isReview &&
-        !(isDuty && task.status === "pending" && awaitingExpiryWrite) &&
-        !(!isDuty && task.status === "pending" && awaitingExpiryWrite) &&
-        !(isDuty && task.status === "open" && awaitingExpiryWrite) && (
+      {showUploadBlock && (
           <div
             className={`flex gap-2 ${btnClass === "w-full" ? "w-full" : "w-auto items-center"}`}
           >

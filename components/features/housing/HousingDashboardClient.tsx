@@ -22,12 +22,12 @@ import { MyDutiesWidget } from "./MyDutiesWidget";
 // Note: We use useAuth for getToken and isHousingAdmin
 import { useAuth } from "@/components/providers/AuthProvider";
 
-interface HousingDashboardClientProps {
+export interface HousingDashboardClientProps {
   initialTasks?: HousingTask[];
   initialMembers?: Member[];
 }
 
-export default function HousingDashboardClient({
+export function HousingDashboardClient({
   initialTasks = [],
   initialMembers = [],
 }: HousingDashboardClientProps) {

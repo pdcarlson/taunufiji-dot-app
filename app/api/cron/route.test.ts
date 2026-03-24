@@ -1,13 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
+import type { CronService } from "@/lib/application/services/jobs/cron.service";
 
 type CronServiceMock = {
   runHousingScheduledBatch: ReturnType<typeof vi.fn>;
   expireDuties: ReturnType<typeof vi.fn>;
   ensureFutureTasks: ReturnType<typeof vi.fn>;
-};
-
-type ContainerMock = {
-  cronService: CronServiceMock;
 };
 
 type RouteFixtureOptions = {
@@ -30,20 +27,13 @@ async function loadRouteFixture(options: RouteFixtureOptions = {}) {
 
   vi.resetModules();
 
-  vi.doMock("@/lib/infrastructure/config/env", () => ({
-    env: {
-      CRON_SECRET: options.cronSecret ?? "test-secret",
-    },
-  }));
+  const { createCronGetHandler } = await import("./route");
+  const GET = createCronGetHandler({
+    cronService: cronServiceMock as unknown as CronService,
+    cronSecret: options.cronSecret ?? "test-secret",
+  });
 
-  const containerMock: ContainerMock = { cronService: cronServiceMock };
-
-  vi.doMock("@/lib/infrastructure/container", () => ({
-    getContainer: () => containerMock,
-  }));
-
-  const routeModule = await import("./route");
-  return { GET: routeModule.GET, cronServiceMock };
+  return { GET, cronServiceMock };
 }
 
 function createRequest(job?: string, authToken?: string) {
@@ -189,6 +179,42 @@ describe("GET /api/cron", () => {
 
     expect(response.status).toBe(200);
     expect(cronServiceMock.runHousingScheduledBatch).toHaveBeenCalledTimes(1);
+    expect(payload).toEqual({
+      success: true,
+      result: batchResult,
+    });
+  }, 15000);
+
+  it("returns 200 and dispatches EXPIRE_DUTIES job", async () => {
+    const batchResult = { expired: 3, errors: [] as string[] };
+    const { GET, cronServiceMock } = await loadRouteFixture({
+      expireDuties: async () => batchResult,
+    });
+
+    const response = await GET(createRequest("EXPIRE_DUTIES", "test-secret"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(cronServiceMock.expireDuties).toHaveBeenCalledTimes(1);
+    expect(payload).toEqual({
+      success: true,
+      result: batchResult,
+    });
+  }, 15000);
+
+  it("returns 200 and dispatches ENSURE_FUTURE_TASKS job", async () => {
+    const batchResult = { ensured: 2 };
+    const { GET, cronServiceMock } = await loadRouteFixture({
+      ensureFutureTasks: async () => batchResult,
+    });
+
+    const response = await GET(
+      createRequest("ENSURE_FUTURE_TASKS", "test-secret"),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(cronServiceMock.ensureFutureTasks).toHaveBeenCalledTimes(1);
     expect(payload).toEqual({
       success: true,
       result: batchResult,

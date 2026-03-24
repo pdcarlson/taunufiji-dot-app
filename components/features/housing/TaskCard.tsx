@@ -19,7 +19,11 @@ interface TaskCardProps {
   variant?: "square" | "horizontal";
 }
 
-// SKELETON
+/**
+ * Placeholder pulse layout matching {@link TaskCard} dimensions while data loads.
+ *
+ * @returns A static skeleton block with no interactive elements.
+ */
 export function TaskCardSkeleton() {
   return (
     <div className="bg-white border border-stone-200 rounded-xl p-5 flex flex-col h-[200px] animate-pulse">
