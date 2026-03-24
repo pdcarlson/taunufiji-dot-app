@@ -33,7 +33,7 @@
 ## Tooling & Quality
 
 - **Language**: TypeScript (Strict Mode)
-- **Testing**: Vitest (Unit & Integration) with jsdom, Playwright (E2E smoke)
+- **Testing**: Vitest (Unit & Integration) with jsdom, `@testing-library/react` and `@testing-library/dom`, Playwright (E2E smoke)
 - **Linting**: ESLint (flat config, `eslint.config.mjs`)
 - **CI**: GitHub Actions (`ci.yml` — quality gates)
 - **CD**: **Vercel** + GitHub (Preview from **`main`** / feature branches as configured; Production from **`production`**). Appwrite is backend-only (not app hosting).
