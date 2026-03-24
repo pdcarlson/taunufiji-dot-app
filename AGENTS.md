@@ -1,26 +1,48 @@
 # AGENTS.md
 
+Instructions for AI coding agents and automated contributors working in this repository. Humans may also use it as a quick orientation; canonical detail lives in `spec/` and `docs/`.
+
 ## Project Overview
 
 **Tau Nu Fiji** is a single Next.js 16 application (not a monorepo) serving as the operational platform for a fraternity chapter. It has three core modules — Housing (chore management), Ledger (scholarship points), and Library (academic resources) — all backed by external cloud services (Appwrite, Discord, AWS S3). There are no local databases or Docker containers.
 
-For full product context, see `docs/product.md`. For architecture details, see `docs/architecture.md`.
+**Hosting vs backend:** The **Next.js app** is built and served on **Vercel** (GitHub-connected). **Appwrite** is **backend only** (Auth, Databases) — it does **not** host this web app. See `spec/platform.md` before changing deployment or env docs.
+
+For full product context, see `spec/product.md`. For architecture details, see `spec/architecture.md`.
+
+---
+
+## Documentation Model
+
+The project uses a two-tier documentation structure:
+
+### `spec/` — Canonical Contracts
+
+Root-level directory containing the project's source of truth. These are authoritative documents that define what the system is, how it works, and where it runs.
+
+| File | Purpose |
+|------|---------|
+| `spec/architecture.md` | Clean Architecture layers, patterns, authentication flow |
+| `spec/behavior.md` | Housing module lifecycle, state transitions, edge-case matrix |
+| `spec/platform.md` | Vercel vs Appwrite vs GitHub — canonical platform split |
+| `spec/product.md` | Product definition, target audience, core modules, UX guidelines |
+| `spec/tech-stack.md` | Frameworks, services, tooling |
+
+### `docs/` — Topic-Organized Documentation
+
+Granular, operational documentation organized by topic. Every `docs/<topic>/` document links upward to the relevant `spec/` file(s).
+
+| Directory | Purpose |
+|-----------|---------|
+| `docs/deployment/` | CI, environments, cron, troubleshooting, branch protection |
+| `docs/quality/` | Testing conventions, coverage, diagnostics |
+| `docs/style-guide/` | Code style rules (TypeScript, JavaScript, HTML/CSS) |
+
+See `spec/README.md` for the full index of contracts. See `docs/README.md` for the full topic index.
 
 ---
 
 ## Skills
-
-### Skill: Spec-Driven Development
-
-**When to use**: Before implementing any non-trivial feature, refactor, or infrastructure change.
-
-Read `docs/spec/README.md` for the full guide and template. Key rules:
-
-1. **Always check for an existing spec** in `docs/spec/current/` before starting work. If one exists, follow it.
-2. **Create a new spec** if none exists and the change is non-trivial (touches 3+ files or takes more than a few hours). Use the template in `docs/spec/README.md`.
-3. **Update the spec** if requirements change during implementation.
-4. **Move to `docs/spec/archive/`** when the work ships, with all acceptance criteria checked off.
-5. **Reference the spec** in PR descriptions and commit messages.
 
 ### Skill: Code Style
 
@@ -37,7 +59,7 @@ Full style guides are in `docs/style-guide/`. Key rules to always follow:
 
 **When to use**: When modifying any code in `lib/`.
 
-The codebase follows Clean Architecture (Onion) with strict layer boundaries. See `docs/architecture.md` for details.
+The codebase follows Clean Architecture (Onion) with strict layer boundaries. See `spec/architecture.md` for details.
 
 **Rules**:
 
@@ -53,26 +75,36 @@ The codebase follows Clean Architecture (Onion) with strict layer boundaries. Se
 
 **Always run the full quality gate locally before pushing or opening a PR** so CI does not fail. Do not wait for the PR to run CI to discover failures.
 
+CI uses **Node.js 20** (`actions/setup-node` in `.github/workflows/ci.yml`). Match that locally when debugging version-specific issues.
+
 Run these checks (matching CI in `.github/workflows/ci.yml`):
 
 ```bash
-npm run lint              # ESLint — must have 0 errors (warnings OK)
-npx tsc --noEmit          # TypeScript strict mode — must pass
-npm run test -- --run     # Vitest — all tests must pass
-SKIP_ENV_VALIDATION=true npm run build  # Next.js build — must succeed
+npm run lint                           # ESLint — must have 0 errors (warnings OK)
+npx tsc --noEmit                       # TypeScript strict mode — must pass
+npm run test -- --run                  # Vitest — all tests must pass
+npm run test:coverage:critical         # Critical-module coverage thresholds (see vitest.critical.config.ts)
+npx playwright install --with-deps chromium   # once per machine, if browsers missing
+npm run test:e2e                     # Playwright smoke (Chromium)
+SKIP_ENV_VALIDATION=true npm run build # Next.js build — must succeed
 ```
 
-**Coverage target**: >80% for new code. All new services and domain logic must have corresponding test files.
+**Coverage target**: >80% for new code. All new services and domain logic must have corresponding test files. CI additionally enforces the critical-module gate via `test:coverage:critical`.
 
 ### Skill: Testing
 
 **When to use**: When writing new code or modifying existing code.
 
-- **Framework**: Vitest with jsdom. Config in `vitest.config.ts`, setup in `vitest.setup.ts`.
+- **Unit & integration**: Vitest with jsdom. Config in `vitest.config.ts`, setup in `vitest.setup.ts`.
+- **E2E smoke**: Playwright with Chromium (`playwright.config.ts`, `tests/e2e/`). Run `npm run test:e2e`; first run may need `npx playwright install --with-deps chromium`.
 - **Mocking**: `vitest.setup.ts` provides mock env vars and mocks `server-only`. Tests run without external services.
 - **Convention**: Test files are co-located with source files (e.g., `duty.service.test.ts` next to `duty.service.ts`).
 - **Pattern**: Mock infrastructure via domain ports/interfaces. Use constructor injection to pass mocks.
 - Run non-interactively: `npm run test -- --run`
+- **Critical coverage**: `npm run test:coverage:critical` — same thresholds as CI for designated modules (see `vitest.critical.config.ts`).
+- **Staging diagnostics** (optional, hits real services): `npm run diagnose:staging` — see `docs/deployment/troubleshooting.md` for interpretation.
+
+For full testing docs, see `docs/quality/testing.md`.
 
 ### Skill: Commit Messages
 
@@ -87,7 +119,7 @@ Examples:
 ```text
 feat(housing): add ad-hoc point request flow
 fix(auth): resolve infinite redirect loop on login
-docs(spec): add staging environment setup spec
+docs(spec): update architecture contract
 test(ledger): add points service edge case coverage
 chore(deps): update next to 16.1.6
 ```
@@ -98,23 +130,25 @@ chore(deps): update next to 16.1.6
 
 When making changes to the codebase, update documentation as needed:
 
-| What changed                                   | Update                                                                       |
+| What changed | Update |
 | ---------------------------------------------- | ---------------------------------------------------------------------------- |
-| New feature or module                          | Create spec in `docs/spec/current/`, update `docs/product.md` if user-facing |
-| Architecture or patterns                       | Update `docs/architecture.md`                                                |
-| Tech stack (new dependency, framework upgrade) | Update `docs/tech-stack.md`                                                  |
-| Deployment or CI/CD                            | Update `docs/deployment.md`                                                  |
-| Significant completed work                     | Add entry to `docs/changelog.md`                                             |
-| UI/UX guidelines                               | Update `docs/product.md`                                                     |
+| Architecture or patterns | Update `spec/architecture.md` |
+| Housing behavior or lifecycle | Update `spec/behavior.md` |
+| Platform or hosting changes | Update `spec/platform.md` |
+| New feature or module (user-facing) | Update `spec/product.md` |
+| Tech stack (new dependency, framework upgrade) | Update `spec/tech-stack.md` |
+| Deployment or CI/CD | Update `docs/deployment/` |
+| Testing conventions or coverage | Update `docs/quality/testing.md` |
+| UI/UX guidelines | Update `spec/product.md` |
 
 ## Branch Workflow
 
-Use `staging` as the integration branch for all active development work.
+Use **`main`** as the integration branch and **`production`** as the protected release branch (see `docs/deployment/`).
 
-1. If currently on `staging` and beginning a new task, create a feature branch: `feature/<descriptive-name>`.
+1. If currently on **`main`** or **`production`** and beginning a new task, create a feature branch: `c/<short-topic>` or `feature/<descriptive-name>`.
 2. If already on a feature branch for the current task, continue working on that branch.
-3. Open pull requests from feature branches to `staging`.
-4. Do not commit directly to `staging` or `main`.
+3. Open pull requests from feature branches into **`main`**; promote **`main` → `production`** after QA.
+4. Do not commit directly to **`production`** without following team policy (and never bypass required checks).
 
 ---
 
@@ -124,18 +158,18 @@ Use `staging` as the integration branch for all active development work.
 
 The **default** agent profile receives staging and read-only credentials only. Production write access and full-repo GitHub access require explicit elevation (see Elevation below).
 
-| Variable                          | Available by default | Notes                                       |
+| Variable | Available by default | Notes |
 | --------------------------------- | -------------------- | ------------------------------------------- |
-| `NEXT_PUBLIC_APPWRITE_ENDPOINT`   | Yes                  | Points to the Appwrite instance             |
-| `NEXT_PUBLIC_APPWRITE_PROJECT_ID` | Yes                  | Project ID                                  |
-| `APPWRITE_API_KEY`                | Yes                  | Server-side API key (staging when used)     |
-| `APPWRITE_STAGING_API_KEY`        | Yes                  | Staging project API key                     |
-| `APPWRITE_PRODUCTION_API_KEY`     | No (elevated)        | Production project API key — elevation only |
-| `AWS_*`                           | Yes                  | S3 credentials for library storage          |
-| `DISCORD_*`                       | Yes                  | Full Discord bot credentials and role IDs   |
-| `CRON_SECRET`                     | Yes                  | Cron endpoint auth                          |
-| `GITHUB_READONLY_TOKEN`           | Yes                  | Read-only GitHub PAT (if configured)        |
-| `GITHUB_PERSONAL_ACCESS_TOKEN`    | No (elevated)        | Full repo access PAT — elevation only       |
+| `NEXT_PUBLIC_APPWRITE_ENDPOINT` | Yes | Points to the Appwrite instance |
+| `NEXT_PUBLIC_APPWRITE_PROJECT_ID` | Yes | Project ID |
+| `APPWRITE_API_KEY` | Yes | Server-side API key (staging when used) |
+| `APPWRITE_STAGING_API_KEY` | Yes | Staging project API key |
+| `APPWRITE_PRODUCTION_API_KEY` | No (elevated) | Production project API key — elevation only |
+| `AWS_*` | Yes | S3 credentials for library storage |
+| `DISCORD_*` | Yes | Full Discord bot credentials and role IDs |
+| `CRON_SECRET` | Yes | Cron endpoint auth |
+| `GITHUB_READONLY_TOKEN` | Yes | Read-only GitHub PAT (if configured) |
+| `GITHUB_PERSONAL_ACCESS_TOKEN` | No (elevated) | Full repo access PAT — elevation only |
 
 By default the agent has access to the **staging** Appwrite project and, if provided, a read-only GitHub token. Use staging for all testing; never delete production data.
 

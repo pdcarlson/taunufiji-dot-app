@@ -1,25 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
-
-type CronServiceMock = {
-  runHourly: ReturnType<typeof vi.fn>;
-  expireDuties: ReturnType<typeof vi.fn>;
-  ensureFutureTasks: ReturnType<typeof vi.fn>;
-};
-
-type ContainerMock = {
-  cronService: CronServiceMock;
-};
+import type { CronServicePort } from "./route";
 
 type RouteFixtureOptions = {
   cronSecret?: string;
-  runHourly?: () => Promise<unknown>;
+  runHousingScheduledBatch?: () => Promise<unknown>;
   expireDuties?: () => Promise<unknown>;
   ensureFutureTasks?: () => Promise<unknown>;
 };
 
 async function loadRouteFixture(options: RouteFixtureOptions = {}) {
-  const cronServiceMock: CronServiceMock = {
-    runHourly: vi.fn(options.runHourly ?? (async () => ({ ok: true }))),
+  const cronServiceMock: CronServicePort = {
+    runHousingScheduledBatch: vi.fn(
+      options.runHousingScheduledBatch ?? (async () => ({ ok: true })),
+    ),
     expireDuties: vi.fn(options.expireDuties ?? (async () => ({ ok: true }))),
     ensureFutureTasks: vi.fn(
       options.ensureFutureTasks ?? (async () => ({ ok: true })),
@@ -28,20 +21,13 @@ async function loadRouteFixture(options: RouteFixtureOptions = {}) {
 
   vi.resetModules();
 
-  vi.doMock("@/lib/infrastructure/config/env", () => ({
-    env: {
-      CRON_SECRET: options.cronSecret ?? "test-secret",
-    },
-  }));
+  const { createCronGetHandler } = await import("./route");
+  const GET = createCronGetHandler({
+    cronService: cronServiceMock,
+    cronSecret: options.cronSecret ?? "test-secret",
+  });
 
-  const containerMock: ContainerMock = { cronService: cronServiceMock };
-
-  vi.doMock("@/lib/infrastructure/container", () => ({
-    getContainer: () => containerMock,
-  }));
-
-  const routeModule = await import("./route");
-  return { GET: routeModule.GET, cronServiceMock };
+  return { GET, cronServiceMock };
 }
 
 function createRequest(job?: string, authToken?: string) {
@@ -61,7 +47,7 @@ describe("GET /api/cron", () => {
   it("returns 401 when bearer token is missing", async () => {
     const { GET } = await loadRouteFixture();
 
-    const response = await GET(createRequest("HOURLY"));
+    const response = await GET(createRequest("HOUSING_BATCH"));
     const payload = await response.json();
 
     expect(response.status).toBe(401);
@@ -80,7 +66,7 @@ describe("GET /api/cron", () => {
   it("returns 401 when bearer token is invalid", async () => {
     const { GET } = await loadRouteFixture();
 
-    const response = await GET(createRequest("HOURLY", "invalid"));
+    const response = await GET(createRequest("HOUSING_BATCH", "invalid"));
     const payload = await response.json();
 
     expect(response.status).toBe(401);
@@ -92,6 +78,26 @@ describe("GET /api/cron", () => {
           category: "AUTH",
           reason: "AUTH_TOKEN_INVALID",
         },
+      },
+    });
+  }, 15000);
+
+  it("returns 401 when Authorization is not exactly Bearer <CRON_SECRET> (Vercel cron contract)", async () => {
+    const { GET } = await loadRouteFixture();
+
+    const url = "https://example.com/api/cron?job=HOUSING_BATCH";
+    const headers = new Headers();
+    headers.set("Authorization", "Bearer  test-secret");
+
+    const response = await GET(new Request(url, { method: "GET", headers }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(payload).toMatchObject({
+      success: false,
+      error: {
+        code: "UNAUTHORIZED",
+        details: { category: "AUTH", reason: "AUTH_TOKEN_INVALID" },
       },
     });
   }, 15000);
@@ -116,7 +122,7 @@ describe("GET /api/cron", () => {
   }, 15000);
 
   it("returns 400 when job parameter is invalid", async () => {
-    const { GET } = await loadRouteFixture();
+    const { GET, cronServiceMock } = await loadRouteFixture();
 
     const response = await GET(createRequest("NOT_A_REAL_JOB", "test-secret"));
     const payload = await response.json();
@@ -132,12 +138,47 @@ describe("GET /api/cron", () => {
         },
       },
     });
+    expect(cronServiceMock.runHousingScheduledBatch).not.toHaveBeenCalled();
+    expect(cronServiceMock.expireDuties).not.toHaveBeenCalled();
+    expect(cronServiceMock.ensureFutureTasks).not.toHaveBeenCalled();
+  }, 15000);
+
+  it("returns 400 when job is constructor (no inherited key bypass)", async () => {
+    const { GET, cronServiceMock } = await loadRouteFixture();
+
+    const response = await GET(createRequest("constructor", "test-secret"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toMatchObject({
+      success: false,
+      error: { code: "INVALID_JOB" },
+    });
+    expect(cronServiceMock.runHousingScheduledBatch).not.toHaveBeenCalled();
+    expect(cronServiceMock.expireDuties).not.toHaveBeenCalled();
+    expect(cronServiceMock.ensureFutureTasks).not.toHaveBeenCalled();
+  }, 15000);
+
+  it("returns 400 when job is toString (no inherited key bypass)", async () => {
+    const { GET, cronServiceMock } = await loadRouteFixture();
+
+    const response = await GET(createRequest("toString", "test-secret"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toMatchObject({
+      success: false,
+      error: { code: "INVALID_JOB" },
+    });
+    expect(cronServiceMock.runHousingScheduledBatch).not.toHaveBeenCalled();
+    expect(cronServiceMock.expireDuties).not.toHaveBeenCalled();
+    expect(cronServiceMock.ensureFutureTasks).not.toHaveBeenCalled();
   }, 15000);
 
   it("returns 500 when CRON_SECRET is not configured", async () => {
     const { GET } = await loadRouteFixture({ cronSecret: "" });
 
-    const response = await GET(createRequest("HOURLY", "test-secret"));
+    const response = await GET(createRequest("HOUSING_BATCH", "test-secret"));
     const payload = await response.json();
 
     expect(response.status).toBe(500);
@@ -153,31 +194,67 @@ describe("GET /api/cron", () => {
     });
   }, 15000);
 
-  it("returns 200 and dispatches HOURLY job", async () => {
-    const hourlyResult = { processed: 7, errors: [] };
+  it("returns 200 and dispatches HOUSING_BATCH job", async () => {
+    const batchResult = { processed: 7, errors: [] };
     const { GET, cronServiceMock } = await loadRouteFixture({
-      runHourly: async () => hourlyResult,
+      runHousingScheduledBatch: async () => batchResult,
     });
 
-    const response = await GET(createRequest("HOURLY", "test-secret"));
+    const response = await GET(createRequest("HOUSING_BATCH", "test-secret"));
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(cronServiceMock.runHourly).toHaveBeenCalledTimes(1);
+    expect(cronServiceMock.runHousingScheduledBatch).toHaveBeenCalledTimes(1);
     expect(payload).toEqual({
       success: true,
-      result: hourlyResult,
+      result: batchResult,
+    });
+  }, 15000);
+
+  it("returns 200 and dispatches EXPIRE_DUTIES job", async () => {
+    const batchResult = { expired: 3, errors: [] as string[] };
+    const { GET, cronServiceMock } = await loadRouteFixture({
+      expireDuties: async () => batchResult,
+    });
+
+    const response = await GET(createRequest("EXPIRE_DUTIES", "test-secret"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(cronServiceMock.expireDuties).toHaveBeenCalledTimes(1);
+    expect(payload).toEqual({
+      success: true,
+      result: batchResult,
+    });
+  }, 15000);
+
+  it("returns 200 and dispatches ENSURE_FUTURE_TASKS job", async () => {
+    const batchResult = { ensured: 2 };
+    const { GET, cronServiceMock } = await loadRouteFixture({
+      ensureFutureTasks: async () => batchResult,
+    });
+
+    const response = await GET(
+      createRequest("ENSURE_FUTURE_TASKS", "test-secret"),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(cronServiceMock.ensureFutureTasks).toHaveBeenCalledTimes(1);
+    expect(payload).toEqual({
+      success: true,
+      result: batchResult,
     });
   }, 15000);
 
   it("returns 500 when job execution throws", async () => {
     const { GET } = await loadRouteFixture({
-      runHourly: async () => {
+      runHousingScheduledBatch: async () => {
         throw new Error("explode");
       },
     });
 
-    const response = await GET(createRequest("HOURLY", "test-secret"));
+    const response = await GET(createRequest("HOUSING_BATCH", "test-secret"));
     const payload = await response.json();
 
     expect(response.status).toBe(500);

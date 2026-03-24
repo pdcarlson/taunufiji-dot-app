@@ -17,7 +17,7 @@
 ## Integrations
 
 - **Messaging/Identity**: Discord API (for role verification and notifications)
-- **Scheduling**: Next.js API Routes (triggered by GitHub Actions cron)
+- **Scheduling**: Next.js route handlers (`/api/cron?job=…`) triggered by [Vercel Cron](https://vercel.com/docs/cron-jobs) (`vercel.json`); production schedule uses `job=HOUSING_BATCH` once per day (see [docs/deployment/cron.md](../docs/deployment/cron.md)).
 
 ## Architecture & Patterns
 
@@ -36,4 +36,4 @@
 - **Testing**: Vitest (Unit & Integration) with jsdom, Playwright (E2E smoke)
 - **Linting**: ESLint (flat config, `eslint.config.mjs`)
 - **CI**: GitHub Actions (`ci.yml` — quality gates)
-- **CD**: Direct Appwrite/GitHub Integration (branch-based: `staging` and `main`)
+- **CD**: **Vercel** + GitHub (Preview from **`main`** / feature branches as configured; Production from **`production`**). Appwrite is backend-only (not app hosting).

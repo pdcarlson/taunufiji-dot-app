@@ -21,7 +21,7 @@ The heart of the software. Has **no imports from infrastructure, application, or
 Orchestrates business logic and use cases.
 
 - **Services**: `DutyService`, `LedgerService`, `LibraryService`, `ScheduleService`, `AdminService`.
-- **Event Handlers**: Asynchronous listeners for domain events (e.g., `JobCompletedEvent`).
+- **Event Handlers**: Asynchronous listeners for domain events published via `DomainEventBus` (task lifecycle notifications, points on approve/reject). Overdue duty expiry and next-instance generation run in the scheduled housing batch pipeline (`expireOverdueDutyTask`), not via a domain event.
 - **Scheduling**: Cron handlers (`lib/application/services/jobs`) for recurring logic — `UnlockTasksJob`, `NotifyRecurringJob`, `NotifyUrgentJob`, `ExpireDutiesJob`, `NotifyExpiredJob`, `EnsureFutureTasksJob`.
 
 ### 3. Infrastructure Layer (`lib/infrastructure`)
@@ -63,7 +63,9 @@ Concrete implementations of domain ports.
 
 ## Deployment Architecture
 
-- **Staging**: Appwrite watches `staging` branch → auto-deploys to Staging Site
-- **Production**: Appwrite watches `main` branch → auto-deploys to Production Site
-- **CI**: GitHub Actions runs quality gates (lint, type check, test, build) on PRs
-- **Cron**: GitHub Actions triggers `/api/cron?job=HOURLY` every 12 minutes and must send `Authorization: Bearer <CRON_SECRET>` in headers
+- **Hosting**: **Vercel** builds and serves the Next.js app from the GitHub repo (**Preview** from **`main`** and other branches as configured; **Production** from **`production`** when set as the production branch).
+- **Backend**: **Appwrite** (Auth, Databases) is configured via env vars injected at deploy time; it does not host the web app.
+- **CI**: GitHub Actions runs quality gates (lint, type check, test, build) on pushes and PRs.
+- **Cron**: Vercel Cron triggers `/api/cron?job=HOUSING_BATCH` on the **production** deployment per `vercel.json` (once daily on the current schedule); Vercel sends `Authorization: Bearer <CRON_SECRET>` when that env var is set on the project.
+
+For the full platform split (Vercel vs Appwrite vs AWS vs Discord vs GitHub), see [Platform](platform.md). For deployment procedures, see [docs/deployment/](../docs/deployment/).

@@ -3,7 +3,8 @@
  *
  * Per-user fallback when cron has not run yet: unlock eligible tasks, expire overdue duties (same path as
  * `expireOverdueDutyTask` / cron), and unclaim expired bounties. Does **not** duplicate recurring/urgent/expired
- * Discord notifications or `ensureFutureTasksJob` — those stay in the hourly cron pipeline (`housing-time-driven.pipeline.ts`).
+ * Discord notifications or `ensureFutureTasksJob` — those stay in the platform-scheduled housing batch
+ * (`housing-time-driven.pipeline.ts`).
  */
 
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";

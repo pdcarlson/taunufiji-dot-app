@@ -3,7 +3,7 @@
 import { HousingTask } from "@/lib/domain/entities";
 import LockedCard from "./cards/variants/LockedCard";
 import BountyCard from "./cards/variants/BountyCard";
-import DutyCard from "./cards/variants/DutyCard";
+import { DutyCard } from "./cards/variants/DutyCard";
 import ReviewCard from "./cards/variants/ReviewCard";
 
 interface TaskCardProps {
@@ -19,7 +19,11 @@ interface TaskCardProps {
   variant?: "square" | "horizontal";
 }
 
-// SKELETON
+/**
+ * Placeholder pulse layout matching {@link TaskCard} dimensions while data loads.
+ *
+ * @returns A static skeleton block with no interactive elements.
+ */
 export function TaskCardSkeleton() {
   return (
     <div className="bg-white border border-stone-200 rounded-xl p-5 flex flex-col h-[200px] animate-pulse">
@@ -41,8 +45,13 @@ export function TaskCardSkeleton() {
   );
 }
 
-// DISPATCHER COMPONENT
-export default function TaskCard(props: TaskCardProps) {
+/**
+ * Dispatches to the correct housing card variant (locked, review, bounty, or duty) from a single entry point.
+ *
+ * @param props - {@link TaskCardProps} bundle for the task row, auth, and optional admin/review hooks.
+ * @returns The appropriate card subtree for the task state and view mode.
+ */
+export function TaskCard(props: TaskCardProps) {
   const { task, viewMode = "action", variant = "square" } = props;
 
   // 1. LOCKED / COOLDOWN

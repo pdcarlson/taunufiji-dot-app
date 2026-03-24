@@ -11,8 +11,9 @@
  * 6. **Ensure future tasks** — Self-heal missing future instances for active schedules last so new rows reflect
  *    current schedule state and do not race earlier expiry/generation steps.
  *
- * Cron runs the full sequence. Per-user maintenance reuses steps 1, 4 (subset), and bounty unclaim only —
- * notifications and global ensure-future stay on cron to avoid duplicate Discord noise and duplicate healing.
+ * The platform-scheduled batch (daily on current Vercel Hobby config) runs the full sequence. Per-user
+ * maintenance reuses steps 1, 4 (subset), and bounty unclaim only — notifications and global ensure-future
+ * stay on the scheduled batch to avoid duplicate Discord noise and duplicate healing.
  */
 
 import { getContainer } from "@/lib/infrastructure/container";
@@ -40,7 +41,7 @@ export interface HousingTimeDrivenPipelineResult {
 }
 
 export const HousingTimeDrivenPipeline = {
-  async runFullHourlyCycle(
+  async runFullHousingScheduledCycle(
     taskRepository: ITaskRepository,
     pointsService: IPointsService,
     scheduleService: IScheduleService,
@@ -100,7 +101,7 @@ export const HousingTimeDrivenPipeline = {
   async runFromContainer(): Promise<HousingTimeDrivenPipelineResult> {
     const { taskRepository, pointsService, scheduleService, ledgerRepository } =
       getContainer();
-    return this.runFullHourlyCycle(
+    return this.runFullHousingScheduledCycle(
       taskRepository,
       pointsService,
       scheduleService,

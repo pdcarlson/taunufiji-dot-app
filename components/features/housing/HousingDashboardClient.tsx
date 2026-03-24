@@ -2,9 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { HousingTask, Member } from "@/lib/domain/entities";
-import TaskCard from "./TaskCard";
+import { TaskCard } from "./TaskCard";
 
-import DutyRoster from "./DutyRoster";
+import { DutyRoster } from "./DutyRoster";
 import ProofReviewModal from "./ProofReviewModal";
 import CreateBountyModal from "./CreateBountyModal";
 import CreateScheduleModal from "./CreateScheduleModal";
@@ -18,16 +18,22 @@ import {
   getAllActiveTasksAction,
   getAllMembersAction,
 } from "@/lib/presentation/actions/housing/query.actions";
-import MyDutiesWidget from "./MyDutiesWidget";
+import { MyDutiesWidget } from "./MyDutiesWidget";
 // Note: We use useAuth for getToken and isHousingAdmin
 import { useAuth } from "@/components/providers/AuthProvider";
 
-interface HousingDashboardClientProps {
+/**
+ * Server-prefetched housing dashboard payload for the client shell.
+ *
+ * @property initialTasks - Active tasks from the server; defaults to an empty list when omitted.
+ * @property initialMembers - Chapter members from the server; defaults to an empty list when omitted.
+ */
+export interface HousingDashboardClientProps {
   initialTasks?: HousingTask[];
   initialMembers?: Member[];
 }
 
-export default function HousingDashboardClient({
+export function HousingDashboardClient({
   initialTasks = [],
   initialMembers = [],
 }: HousingDashboardClientProps) {
@@ -64,8 +70,7 @@ export default function HousingDashboardClient({
   const [showBountyModal, setShowBountyModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
-  // Handle manual refresh
-  const handleRefresh = async () => {
+  const loadDashboardData = async (options?: { notifySuccess?: boolean }) => {
     try {
       const jwt = await getToken();
 
@@ -74,15 +79,30 @@ export default function HousingDashboardClient({
         getAllMembersAction(jwt),
       ]);
 
-      if (tasksRes) setTasks(tasksRes);
+      if (tasksRes) {
+        setTasks(tasksRes);
+        setEditingTask((prev) => {
+          if (!prev) {
+            return null;
+          }
+          const found = tasksRes.find((t: HousingTask) => t.id === prev.id);
+          return found ?? null;
+        });
+      }
       if (membersRes) setMembers(membersRes);
 
-      toast.success("Dashboard Updated");
+      if (options?.notifySuccess) {
+        toast.success("Dashboard Updated");
+      }
     } catch (error) {
       console.error("Refresh failed", error);
       toast.error("Failed to refresh data");
     }
   };
+
+  const handleRefresh = () => loadDashboardData({ notifySuccess: true });
+
+  const closeEditTaskModal = () => setEditingTask(null);
 
   // Filters
   const pendingReviews = isAdmin
@@ -267,11 +287,9 @@ export default function HousingDashboardClient({
         <EditTaskModal
           task={editingTask}
           members={members}
-          onClose={() => setEditingTask(null)}
-          onRefresh={() => {
-            setEditingTask(null);
-            handleRefresh();
-          }}
+          onClose={closeEditTaskModal}
+          onRefresh={() => loadDashboardData()}
+          onSuccessClose={closeEditTaskModal}
         />
       )}
     </div>

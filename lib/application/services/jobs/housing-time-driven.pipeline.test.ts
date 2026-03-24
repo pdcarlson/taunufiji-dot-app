@@ -51,7 +51,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-describe("HousingTimeDrivenPipeline.runFullHourlyCycle", () => {
+describe("HousingTimeDrivenPipeline.runFullHousingScheduledCycle", () => {
   const taskRepository = MockFactory.createTaskRepository();
   const ledgerRepository = MockFactory.createLedgerRepository();
   const pointsService = {
@@ -109,7 +109,7 @@ describe("HousingTimeDrivenPipeline.runFullHourlyCycle", () => {
     );
     hoisted.ensureFutureRun.mockReturnValue(d7.promise.then(() => undefined));
 
-    const pipelinePromise = HousingTimeDrivenPipeline.runFullHourlyCycle(
+    const pipelinePromise = HousingTimeDrivenPipeline.runFullHousingScheduledCycle(
       taskRepository,
       pointsService,
       scheduleService,

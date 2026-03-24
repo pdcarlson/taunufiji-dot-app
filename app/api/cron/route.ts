@@ -1,4 +1,3 @@
-import { CronResult } from "@/lib/application/services/jobs/cron.service";
 import { getContainer } from "@/lib/infrastructure/container";
 import { env } from "@/lib/infrastructure/config/env";
 import { NextResponse } from "next/server";
@@ -12,13 +11,37 @@ const ERROR_CODES = {
   jobExecutionFailed: "JOB_EXECUTION_FAILED",
 } as const;
 
-const CRON_JOBS = {
-  HOURLY: "HOURLY",
+export const CRON_JOBS = {
+  HOUSING_BATCH: "HOUSING_BATCH",
   EXPIRE_DUTIES: "EXPIRE_DUTIES",
   ENSURE_FUTURE_TASKS: "ENSURE_FUTURE_TASKS",
 } as const;
 
-const ALLOWED_JOBS = Object.values(CRON_JOBS);
+type CronJobName = (typeof CRON_JOBS)[keyof typeof CRON_JOBS];
+
+/** Narrow cron surface for `/api/cron`; `Promise<unknown>` so production `CronService` and Vitest mocks both assign. */
+export type CronServicePort = {
+  runHousingScheduledBatch: () => Promise<unknown>;
+  expireDuties: () => Promise<unknown>;
+  ensureFutureTasks: () => Promise<unknown>;
+};
+
+const JOB_HANDLERS: Record<
+  CronJobName,
+  (cronService: CronServicePort) => Promise<unknown>
+> = {
+  [CRON_JOBS.HOUSING_BATCH]: (cronService) =>
+    cronService.runHousingScheduledBatch(),
+  [CRON_JOBS.EXPIRE_DUTIES]: (cronService) => cronService.expireDuties(),
+  [CRON_JOBS.ENSURE_FUTURE_TASKS]: (cronService) =>
+    cronService.ensureFutureTasks(),
+};
+
+const ALLOWED_JOBS = Object.keys(JOB_HANDLERS) as CronJobName[];
+
+function isAllowedCronJob(job: string): job is CronJobName {
+  return Object.prototype.hasOwnProperty.call(JOB_HANDLERS, job);
+}
 
 type CronErrorDetails = {
   category: "CONFIGURATION" | "AUTH" | "VALIDATION" | "EXECUTION";
@@ -45,68 +68,58 @@ function createErrorResponse(
   );
 }
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const job = searchParams.get("job");
+export type CronGetHandlerDeps = {
+  cronService: CronServicePort;
+  cronSecret: string | undefined;
+};
 
-  try {
-    // Bearer-token auth keeps this endpoint restricted to trusted schedulers.
-    const CRON_SECRET = env.CRON_SECRET;
+/** Factory for tests and alternate wiring; production uses {@link GET}. */
+export function createCronGetHandler(deps: CronGetHandlerDeps) {
+  return async function GET(req: Request) {
+    const { searchParams } = new URL(req.url);
+    const job = searchParams.get("job");
 
-    if (!CRON_SECRET) {
-      console.error("[cron] Server configuration error", {
-        code: ERROR_CODES.serverConfig,
-        reason: "CRON_SECRET_MISSING",
-      });
-      return createErrorResponse(
-        500,
-        ERROR_CODES.serverConfig,
-        "Server configuration error",
-        job,
-        {
-          category: "CONFIGURATION",
+    try {
+      const CRON_SECRET = deps.cronSecret;
+
+      if (!CRON_SECRET) {
+        console.error("[cron] Server configuration error", {
+          code: ERROR_CODES.serverConfig,
           reason: "CRON_SECRET_MISSING",
-        },
-      );
-    }
+        });
+        return createErrorResponse(
+          500,
+          ERROR_CODES.serverConfig,
+          "Server configuration error",
+          job,
+          {
+            category: "CONFIGURATION",
+            reason: "CRON_SECRET_MISSING",
+          },
+        );
+      }
 
-    const authHeader = req.headers.get("authorization");
-    const token = authHeader?.startsWith("Bearer ")
-      ? authHeader.slice(7).trim()
-      : null;
-    if (!token || token !== CRON_SECRET) {
-      console.error("[cron] Unauthorized request", {
-        code: ERROR_CODES.unauthorized,
-        reason: "AUTH_TOKEN_INVALID",
-        job,
-      });
-      return createErrorResponse(
-        401,
-        ERROR_CODES.unauthorized,
-        "Unauthorized",
-        job,
-        {
-          category: "AUTH",
+      // Vercel Cron sends CRON_SECRET as Authorization: Bearer <value> (exact match; see Vercel cron docs).
+      const authHeader = req.headers.get("authorization");
+      if (authHeader !== `Bearer ${CRON_SECRET}`) {
+        console.error("[cron] Unauthorized request", {
+          code: ERROR_CODES.unauthorized,
           reason: "AUTH_TOKEN_INVALID",
-        },
-      );
-    }
+          job,
+        });
+        return createErrorResponse(
+          401,
+          ERROR_CODES.unauthorized,
+          "Unauthorized",
+          job,
+          {
+            category: "AUTH",
+            reason: "AUTH_TOKEN_INVALID",
+          },
+        );
+      }
 
-    let result: CronResult | { errors: string[] } | void;
-
-    const { cronService } = getContainer();
-
-    switch (job) {
-      case CRON_JOBS.HOURLY:
-        result = await cronService.runHourly();
-        break;
-      case CRON_JOBS.EXPIRE_DUTIES:
-        result = await cronService.expireDuties();
-        break;
-      case CRON_JOBS.ENSURE_FUTURE_TASKS:
-        result = await cronService.ensureFutureTasks();
-        break;
-      default:
+      if (!job || !isAllowedCronJob(job)) {
         console.error("[cron] Invalid job parameter", { job });
         return createErrorResponse(
           400,
@@ -118,34 +131,55 @@ export async function GET(req: Request) {
             reason: "INVALID_JOB_PARAMETER",
           },
         );
-    }
+      }
 
-    console.log("[cron] Job completed", {
-      job,
-      allowedJobs: ALLOWED_JOBS,
-      hasResult: result !== undefined,
-      resultType: typeof result,
-      completedAt: new Date().toISOString(),
-    });
+      const runJob = JOB_HANDLERS[job];
+      const result = await runJob(deps.cronService);
 
-    return NextResponse.json({ success: true, result });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Unknown error";
-    console.error("[cron] Job failed", {
-      code: ERROR_CODES.jobExecutionFailed,
-      reason: "JOB_THROWN_ERROR",
-      job,
-      message,
-    });
-    return createErrorResponse(
-      500,
-      ERROR_CODES.jobExecutionFailed,
-      "Internal server error",
-      job,
-      {
-        category: "EXECUTION",
+      console.log("[cron] Job completed", {
+        job,
+        allowedJobs: ALLOWED_JOBS,
+        hasResult: result !== undefined,
+        resultType: typeof result,
+        completedAt: new Date().toISOString(),
+      });
+
+      return NextResponse.json({ success: true, result });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Unknown error";
+      console.error("[cron] Job failed", {
+        code: ERROR_CODES.jobExecutionFailed,
         reason: "JOB_THROWN_ERROR",
-      },
-    );
-  }
+        job,
+        message,
+      });
+      return createErrorResponse(
+        500,
+        ERROR_CODES.jobExecutionFailed,
+        "Internal server error",
+        job,
+        {
+          category: "EXECUTION",
+          reason: "JOB_THROWN_ERROR",
+        },
+      );
+    }
+  };
+}
+
+/**
+ * GET `/api/cron` — runs a named scheduled job with bearer auth.
+ *
+ * - **Query `job`:** `HOUSING_BATCH`, `EXPIRE_DUTIES`, or `ENSURE_FUTURE_TASKS`.
+ * - **Header:** `Authorization` must be exactly `Bearer <CRON_SECRET>` (same value as server `CRON_SECRET`). If `CRON_SECRET` is unset, responds **500**.
+ * - **200** — `{ success: true, result }`
+ * - **400** — missing or unknown `job`
+ * - **401** — missing or invalid bearer token
+ * - **500** — configuration error or uncaught handler failure
+ */
+export async function GET(req: Request) {
+  return createCronGetHandler({
+    cronService: getContainer().cronService,
+    cronSecret: env.CRON_SECRET,
+  })(req);
 }

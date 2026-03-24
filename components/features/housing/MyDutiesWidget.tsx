@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { HousingTask } from "@/lib/domain/entities";
-import TaskCard from "./TaskCard";
-import CollapsedDutyCard from "./cards/variants/CollapsedDutyCard";
+import { TaskCard } from "./TaskCard";
+import { CollapsedDutyCard } from "./cards/variants/CollapsedDutyCard";
 import { Card, CardContent } from "@/components/ui/Card";
 import { ClipboardList } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -15,7 +15,16 @@ interface MyDutiesWidgetProps {
   variant?: "default" | "wide" | "minimal";
 }
 
-export default function MyDutiesWidget({
+/**
+ * Sidebar-style widget listing the current member’s assigned duties with expand/collapse or list layouts.
+ *
+ * @param initialTasks - Tasks already filtered to the viewer’s assignments.
+ * @param userId - Authenticated user id passed through to task actions.
+ * @param profileId - Optional Discord id used when matching assignee on tasks.
+ * @param variant - `"default"` full card shell, `"wide"` horizontal rows, or `"minimal"` compact header + list.
+ * @returns Empty state, accordion-style stack, or wide list of duty cards.
+ */
+export function MyDutiesWidget({
   initialTasks,
   userId,
   profileId,

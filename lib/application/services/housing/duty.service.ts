@@ -10,6 +10,7 @@ import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents } from "@/lib/domain/events";
 import { IDutyService } from "@/lib/domain/ports/services/duty.service.port";
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
+import { isAwaitingExpiryTransition } from "@/lib/utils/housing-assignee-task-state";
 
 export class DutyService implements IDutyService {
   constructor(private readonly taskRepository: ITaskRepository) {}
@@ -181,14 +182,9 @@ export class DutyService implements IDutyService {
         continue;
       }
 
-      // Defensive filter: never present overdue duty rows as actionable if
-      // maintenance/cron has not persisted the expired transition yet.
-      const isOpenOrPendingWithoutProof =
-        (task.status === "open" || task.status === "pending") &&
-        !!task.due_at &&
-        new Date() > new Date(task.due_at) &&
-        !task.proof_s3_key;
-      if (isOpenOrPendingWithoutProof) {
+      // Defensive filter: never present overdue open/pending rows without proof as
+      // actionable until maintenance/cron persists the expired transition.
+      if (isAwaitingExpiryTransition(task)) {
         continue;
       }
 

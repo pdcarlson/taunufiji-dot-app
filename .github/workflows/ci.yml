@@ -2,9 +2,9 @@ name: Pull Request Checks
 
 on:
   push:
-    branches: [main, staging]
+    branches: [main, staging, production]
   pull_request:
-    branches: [main, staging]
+    branches: [main, staging, production]
 
 # Artifact upload/download of `node_modules` breaks npm's `.bin` symlinks (zip
 # round-trip), which surfaces as `next: not found`, `vitest: not found`, etc.
@@ -111,20 +111,6 @@ jobs:
       - name: E2E Smoke Tests
         run: npm run test:e2e
 
-  validate-secrets:
-    if: ${{ github.secret_source == 'Actions' }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Validate GitHub Secrets
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          if [ -z "$CRON_SECRET" ]; then
-            echo "CRON_SECRET is missing in GitHub Secrets!"
-            exit 1
-          fi
-
   build:
     runs-on: ubuntu-latest
 
@@ -171,7 +157,6 @@ jobs:
       - test
       - coverage-critical
       - e2e-smoke
-      - validate-secrets
       - build
     steps:
       - name: Enforce upstream job success
@@ -181,7 +166,6 @@ jobs:
           TEST_RESULT: ${{ needs.test.result }}
           COVERAGE_RESULT: ${{ needs.coverage-critical.result }}
           E2E_RESULT: ${{ needs.e2e-smoke.result }}
-          SECRETS_RESULT: ${{ needs.validate-secrets.result }}
           BUILD_RESULT: ${{ needs.build.result }}
         run: |
           set -euo pipefail
@@ -192,13 +176,9 @@ jobs:
             "test:${TEST_RESULT}" \
             "coverage-critical:${COVERAGE_RESULT}" \
             "e2e-smoke:${E2E_RESULT}" \
-            "validate-secrets:${SECRETS_RESULT}" \
             "build:${BUILD_RESULT}"; do
             name="${pair%%:*}"
             result="${pair#*:}"
-            if [ "$name" = "validate-secrets" ] && [ "$result" = "skipped" ]; then
-              continue
-            fi
             if [ "$result" != "success" ]; then
               echo "::error::Job $name finished with result=$result (expected success)"
               failed=1

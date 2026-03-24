@@ -20,7 +20,13 @@ export interface EditTaskModalProps {
   task: HousingTask;
   members: Member[];
   onClose: () => void;
-  onRefresh: () => void;
+  /** Reload dashboard data (runs after failures too so the UI does not look “saved”). */
+  onRefresh: () => void | Promise<void>;
+  /**
+   * Called only after a successful save or delete mutation, immediately before the modal closes.
+   * Use to clear parent editing state (e.g. `setEditingTask(null)`).
+   */
+  onSuccessClose: () => void;
 }
 
 export function EditTaskModal({
@@ -28,8 +34,18 @@ export function EditTaskModal({
   members,
   onClose,
   onRefresh,
+  onSuccessClose,
 }: EditTaskModalProps) {
   const { getJWT } = useJWT();
+
+  const safeRefreshAfterMutation = async () => {
+    try {
+      await Promise.resolve(onRefresh());
+    } catch (e) {
+      console.error("[EditTaskModal] Dashboard refresh failed after mutation", e);
+    }
+  };
+
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -176,12 +192,13 @@ export function EditTaskModal({
       }
 
       toast.success("Task updated");
-      onRefresh();
-      onClose();
+      onSuccessClose();
+      await safeRefreshAfterMutation();
     } catch (e: unknown) {
       console.error(e);
       const message = e instanceof Error ? e.message : "Failed to update task";
       toast.error(message);
+      await safeRefreshAfterMutation();
     } finally {
       setLoading(false);
     }
@@ -190,9 +207,11 @@ export function EditTaskModal({
   const handleDelete = async () => {
     if (!canDelete) return;
     const scopeLabelMap: Record<RecurringMutationScope, string> = {
-      this_instance: "this instance",
-      this_and_future: "this and future",
-      entire_series: "the entire series",
+      this_instance: "this assignment row only",
+      this_and_future:
+        "this and future assignment rows and the recurring schedule template (the schedule is deactivated so no new instances are generated)",
+      entire_series:
+        "all assignment rows in this series and the recurring schedule template (schedule deactivated; series ends)",
     };
     const label =
       isRecurring && task.schedule_id
@@ -213,23 +232,23 @@ export function EditTaskModal({
         const successMessage =
           isRecurring && task.schedule_id
             ? mutationScope === "entire_series"
-              ? "Recurring series deleted and schedule deactivated"
+              ? "Schedule deactivated and all series assignment rows removed"
               : mutationScope === "this_and_future"
-                ? "Task and future recurring instances deleted"
+                ? "Schedule deactivated; this and future assignment rows removed"
                 : "Recurring task instance deleted"
             : "Task deleted";
         toast.success(successMessage);
-        onRefresh();
-        onClose();
+        onSuccessClose();
+        await safeRefreshAfterMutation();
       } else {
         toast.error(result.error || "Delete failed");
+        await safeRefreshAfterMutation();
       }
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to delete";
       toast.error(message);
-      onRefresh();
-      onClose();
+      await safeRefreshAfterMutation();
     } finally {
       setLoading(false);
     }
@@ -433,7 +452,7 @@ export function EditTaskModal({
                 htmlFor="mutationScopeSelect"
                 className="block text-xs font-bold uppercase text-stone-500 mb-1"
               >
-                Apply Changes To
+                Apply changes to
               </label>
               <select
                 id="mutationScopeSelect"
@@ -443,10 +462,25 @@ export function EditTaskModal({
                 }
                 className="w-full text-sm text-stone-700 border border-stone-200 rounded-lg p-2 focus:border-fiji-purple outline-none"
               >
-                <option value="this_instance">This instance</option>
-                <option value="this_and_future">This + future</option>
-                <option value="entire_series">Entire series</option>
+                <option value="this_instance">
+                  This assignment row only (schedule unchanged)
+                </option>
+                <option value="this_and_future">
+                  This row and future rows (also updates the schedule template)
+                </option>
+                <option value="entire_series">
+                  All rows in this series + schedule template
+                </option>
               </select>
+              <p className="text-[10px] text-stone-500 mt-1.5 leading-relaxed">
+                Recurring duties use one schedule row (template) and many
+                assignment rows (instances). &quot;This row only&quot; changes
+                just this due date&apos;s assignment. Broader save scopes update
+                the schedule template so future generated rows match. Deleting
+                with &quot;this + future&quot; or &quot;entire series&quot;
+                deactivates the recurring schedule (no new instances) and
+                removes the corresponding assignment rows.
+              </p>
             </div>
           )}
 

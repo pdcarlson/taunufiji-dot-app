@@ -11,6 +11,7 @@ import {
   UploadCloud,
   XCircle,
   CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import { TimeDisplay } from "../TimeDisplay";
 import { Loader } from "@/components/ui/Loader";
@@ -20,6 +21,7 @@ import {
   unclaimTaskAction, // Note: Import paths might need adjusting if they changed?
   submitProofAction,
 } from "@/lib/presentation/actions/housing/duty.actions";
+import { isAwaitingExpiryTransition } from "@/lib/utils/housing-assignee-task-state";
 
 interface DutyCardProps {
   task: HousingTask;
@@ -30,7 +32,17 @@ interface DutyCardProps {
   variant?: "square" | "horizontal";
 }
 
-export default function DutyCard({
+/**
+ * Renders assignee-facing actions for a duty, one-off, or claimed bounty (square or horizontal layout).
+ *
+ * @param task - Housing row to display and act on.
+ * @param userId - Authenticated Appwrite user id.
+ * @param profileId - Optional Discord-linked profile id used as assignee key when set.
+ * @param getJWT - Resolves a JWT for server actions.
+ * @param variant - Card density: `"square"` (default) or `"horizontal"`.
+ * @returns The interactive duty or bounty card UI.
+ */
+export function DutyCard({
   task,
   userId,
   profileId,
@@ -44,6 +56,23 @@ export default function DutyCard({
   const isDuty = task.type === "duty" || task.type === "one_off";
   const isMyTask = task.assigned_to === (profileId || userId);
   const isReview = task.proof_s3_key && task.status === "pending";
+  const awaitingExpiryWrite = isAwaitingExpiryTransition(task);
+  const uploadDisabledForDutyAwaitingExpiry =
+    isDuty && awaitingExpiryWrite;
+  const pastDueBlocksNonDutyUpload =
+    !!task.due_at && new Date() > new Date(task.due_at) && !isDuty;
+  const uploadControlDisabled =
+    loading || pastDueBlocksNonDutyUpload || uploadDisabledForDutyAwaitingExpiry;
+
+  const statusAllowsUpload =
+    task.status === "pending" ||
+    task.status === "rejected" ||
+    (isDuty && task.status === "open");
+  const showUploadBlock =
+    isMyTask &&
+    statusAllowsUpload &&
+    !isReview &&
+    !awaitingExpiryWrite;
 
   const handleClaim = async () => {
     if (isDuty) return;
@@ -106,7 +135,10 @@ export default function DutyCard({
   };
 
   const containerClasses = `relative bg-white border rounded-xl p-5 transition-all shadow-sm hover:shadow-md h-full group ${
-    isMyTask && task.status === "pending" && !isReview
+    isMyTask &&
+    task.status === "pending" &&
+    !isReview &&
+    !awaitingExpiryWrite
       ? "border-fiji-purple ring-1 ring-fiji-purple/20 bg-purple-50/10"
       : "border-stone-200"
   } ${isReview ? "opacity-60 grayscale-[80%] bg-stone-50" : ""}`;
@@ -132,27 +164,56 @@ export default function DutyCard({
         </button>
       )}
 
-      {/* Upload / Unclaim (My Task) */}
+      {/* Duty: not completable (expired persisted, or overdue pending without proof) */}
+      {isMyTask && isDuty && !isReview && task.status === "expired" && (
+        <div
+          className={`${btnClass} rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-left text-xs text-amber-900`}
+        >
+          <p className="font-bold flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            Not completable
+          </p>
+          <p className="mt-1 text-amber-800/90 leading-snug">
+            This task missed its deadline and is closed. Contact a housing admin
+            if this looks wrong.
+          </p>
+        </div>
+      )}
+
       {isMyTask &&
-        (task.status === "pending" ||
-          task.status === "rejected" ||
-          (isDuty && task.status === "open")) &&
-        !isReview && (
+        isDuty &&
+        !isReview &&
+        awaitingExpiryWrite && (
+          <div
+            className={`${btnClass} rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-left text-xs text-amber-900`}
+          >
+            <p className="font-bold flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              Awaiting system update
+            </p>
+            <p className="mt-1 text-amber-800/90 leading-snug">
+              This duty is past its due date and can no longer be completed here.
+              The system or a housing admin will mark it expired shortly.
+            </p>
+          </div>
+        )}
+
+      {showUploadBlock && (
           <div
             className={`flex gap-2 ${btnClass === "w-full" ? "w-full" : "w-auto items-center"}`}
           >
             <label
               className={`${btnClass === "w-full" ? "flex-1" : "px-4"} bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow hover:-translate-y-0.5 active:translate-y-0 ${
-                loading || (task.due_at && new Date() > new Date(task.due_at))
+                uploadControlDisabled
                   ? "opacity-50 pointer-events-none grayscale"
                   : ""
               }`}
             >
               {loading ? (
                 <Loader size="sm" className="text-white" />
-              ) : task.due_at && new Date() > new Date(task.due_at) ? (
+              ) : pastDueBlocksNonDutyUpload ? (
                 <>
-                  <Clock className="w-4 h-4" /> Expired
+                  <Clock className="w-4 h-4" /> Past due
                 </>
               ) : (
                 <>
@@ -164,10 +225,7 @@ export default function DutyCard({
                 className="hidden"
                 accept="image/*"
                 onChange={handleUpload}
-                disabled={
-                  loading ||
-                  (!!task.due_at && new Date() > new Date(task.due_at))
-                }
+                disabled={uploadControlDisabled}
               />
             </label>
             {!isDuty && (
@@ -180,6 +238,30 @@ export default function DutyCard({
                 <XCircle className="w-5 h-5" />
               </button>
             )}
+          </div>
+        )}
+
+      {isMyTask &&
+        !isDuty &&
+        !isReview &&
+        task.status === "pending" &&
+        awaitingExpiryWrite && (
+          <div
+            className={`${btnClass} space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 text-left text-xs text-stone-700`}
+          >
+            <p className="font-bold text-stone-800">Past due — not completable</p>
+            <p className="leading-snug text-stone-600">
+              This bounty can no longer be completed. You can unclaim to return
+              it to the pool.
+            </p>
+            <button
+              type="button"
+              onClick={handleUnclaim}
+              disabled={loading}
+              className="w-full rounded border border-red-200 bg-white py-2 text-xs font-bold text-red-600 hover:bg-red-50"
+            >
+              Unclaim bounty
+            </button>
           </div>
         )}
 

@@ -27,6 +27,10 @@ The system is engineered to solve three specific problems:
 
 The application is built on a **Clean Architecture (Onion)** foundation, prioritizing the separation of business rules from implementation details. This ensures the system remains testable and agnostic to underlying infrastructure changes.
 
+**Where it runs:** the **Next.js** app is hosted on **Vercel** (GitHub-connected). **Appwrite** provides Auth and Databases only — it is not the web host. See **[`spec/platform.md`](spec/platform.md)** for the full split (Vercel vs Appwrite vs AWS vs Discord vs GitHub Actions).
+
+**Documentation:** Canonical contracts live in [`spec/`](spec/README.md) (architecture, behavior, platform, product, tech stack). Topic-organized operational docs live in [`docs/`](docs/README.md) (deployment, quality, style guides).
+
 ### 🏗️ Architectural Pattern
 
 The system implements **Clean Architecture**, strictly enforcing the Dependency Rule. Inner layers (Domain) are independent of outer layers (Infrastructure/Presentation).
@@ -132,7 +136,7 @@ _Problem: Fairness and manual overhead in chore assignment._
 
 The Housing module uses a weighted Round-Robin algorithm to assign duties.
 
-- **Cron Architecture**: A Next.js API Route (`/api/cron/housing`) triggers the `ScheduleService`.
+- **Cron Architecture**: The `/api/cron` route (Vercel Cron, see `vercel.json`) invokes `job=HOUSING_BATCH` on the production deployment to run the full housing time-driven pipeline (unlock, notify, expire, etc.) on a **daily** schedule on Hobby.
 - **State Machine**: Tasks move through a strict lifecycle: `Scheduled -> Open -> Pending Review -> Approved/Rejected`.
 - **Optimistic UI**: Client components utilize `router.refresh()` for mutations, providing near-instant feedback while preserving server state consistency.
 
