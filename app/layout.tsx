@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { Toaster } from "react-hot-toast";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 import { APP_NAME, APP_DESCRIPTION, BASE_URL } from "@/lib/constants";
@@ -63,6 +64,7 @@ export default function RootLayout({
           <Toaster position="bottom-center" />
           {children}
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );

@@ -66,7 +66,7 @@ This document is the durable behavioral reference for the Housing module. It def
 
 ### Scheduled housing batch: overdue duties, fines, and ledger
 
-The full ordered sequence runs on the platform-scheduled batch (daily on current Vercel Hobby config), implemented in `HousingTimeDrivenPipeline.runFullHousingScheduledCycle` (`lib/application/services/jobs/housing-time-driven.pipeline.ts`):
+The full ordered sequence runs when `HousingTimeDrivenPipeline.runFullHousingScheduledCycle` executes (platform cron or equivalent—see [docs/deployment/](../docs/deployment/) for current schedule configuration). **Update `docs/deployment/` when changing deployment or CI/CD cadence.** Implemented in `lib/application/services/jobs/housing-time-driven.pipeline.ts`:
 
 1. **Unlock** (`UnlockTasksJob`)
 2. **Recurring notify** (`NotifyRecurringJob`)

@@ -5,6 +5,11 @@ import { HousingTask } from "@/lib/domain/entities";
  * overdue mandatory work without proof should not appear user-actionable until expiry is persisted.
  */
 
+/**
+ * Whether the due timestamp is in the past.
+ * Falsy `dueAt` is treated as not past due so ad-hoc or malformed rows are not forced through
+ * overdue/expiry paths (see `spec/behavior.md` — overdue logic applies only when a real due time exists).
+ */
 export function isPastDueAt(
   dueAt: string | null | undefined,
   now: Date = new Date(),
@@ -15,6 +20,11 @@ export function isPastDueAt(
   return now > new Date(dueAt);
 }
 
+/**
+ * Pending review with no proof uploaded yet — the window where cron may still expire the row if the
+ * deadline passes (`spec/behavior.md`), and where assignee UIs should prompt for proof instead of treating
+ * the chore as done.
+ */
 export function isPendingWithoutProof(task: HousingTask): boolean {
   return task.status === "pending" && !task.proof_s3_key;
 }

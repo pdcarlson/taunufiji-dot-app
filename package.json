@@ -20,6 +20,7 @@
     "@aws-sdk/s3-request-presigner": "^3.515.0",
     "@hookform/resolvers": "latest",
     "@radix-ui/react-slot": "^1.2.4",
+    "@vercel/analytics": "^2.0.1",
     "appwrite": "^21.5.0",
     "clsx": "latest",
     "date-fns": "latest",

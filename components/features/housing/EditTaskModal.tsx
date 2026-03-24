@@ -193,7 +193,6 @@ export function EditTaskModal({
 
       toast.success("Task updated");
       onSuccessClose();
-      onClose();
       await safeRefreshAfterMutation();
     } catch (e: unknown) {
       console.error(e);
@@ -240,7 +239,6 @@ export function EditTaskModal({
             : "Task deleted";
         toast.success(successMessage);
         onSuccessClose();
-        onClose();
         await safeRefreshAfterMutation();
       } else {
         toast.error(result.error || "Delete failed");

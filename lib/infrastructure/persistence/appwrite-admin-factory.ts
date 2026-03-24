@@ -5,6 +5,13 @@
  */
 import { Client } from "node-appwrite";
 
+/**
+ * Builds a server-side Appwrite client using endpoint, project id, and API key from the given env map.
+ *
+ * @param source - Environment map to read from; defaults to `process.env`.
+ * @returns Configured `Client` with key authentication.
+ * @throws If any of `NEXT_PUBLIC_APPWRITE_ENDPOINT`, `NEXT_PUBLIC_APPWRITE_PROJECT_ID`, or `APPWRITE_API_KEY` is missing.
+ */
 export function createAppwriteAdminClientFromEnv(
   source: NodeJS.ProcessEnv = process.env,
 ): Client {

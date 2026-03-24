@@ -22,12 +22,18 @@ import { MyDutiesWidget } from "./MyDutiesWidget";
 // Note: We use useAuth for getToken and isHousingAdmin
 import { useAuth } from "@/components/providers/AuthProvider";
 
-interface HousingDashboardClientProps {
+/**
+ * Server-prefetched housing dashboard payload for the client shell.
+ *
+ * @property initialTasks - Active tasks from the server; defaults to an empty list when omitted.
+ * @property initialMembers - Chapter members from the server; defaults to an empty list when omitted.
+ */
+export interface HousingDashboardClientProps {
   initialTasks?: HousingTask[];
   initialMembers?: Member[];
 }
 
-export default function HousingDashboardClient({
+export function HousingDashboardClient({
   initialTasks = [],
   initialMembers = [],
 }: HousingDashboardClientProps) {
@@ -95,6 +101,8 @@ export default function HousingDashboardClient({
   };
 
   const handleRefresh = () => loadDashboardData({ notifySuccess: true });
+
+  const closeEditTaskModal = () => setEditingTask(null);
 
   // Filters
   const pendingReviews = isAdmin
@@ -279,9 +287,9 @@ export default function HousingDashboardClient({
         <EditTaskModal
           task={editingTask}
           members={members}
-          onClose={() => setEditingTask(null)}
+          onClose={closeEditTaskModal}
           onRefresh={() => loadDashboardData()}
-          onSuccessClose={() => setEditingTask(null)}
+          onSuccessClose={closeEditTaskModal}
         />
       )}
     </div>
