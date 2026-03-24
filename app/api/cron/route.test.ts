@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CronServicePort } from "./route";
+import type { CronServicePort } from "./cron-get-handler";
 
 type RouteFixtureOptions = {
   cronSecret?: string;
@@ -21,7 +21,7 @@ async function loadRouteFixture(options: RouteFixtureOptions = {}) {
 
   vi.resetModules();
 
-  const { createCronGetHandler } = await import("./route");
+  const { createCronGetHandler } = await import("./cron-get-handler");
   const GET = createCronGetHandler({
     cronService: cronServiceMock,
     cronSecret: options.cronSecret ?? "test-secret",
@@ -251,6 +251,33 @@ describe("GET /api/cron", () => {
     const { GET } = await loadRouteFixture({
       runHousingScheduledBatch: async () => {
         throw new Error("explode");
+      },
+    });
+
+    const response = await GET(createRequest("HOUSING_BATCH", "test-secret"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(payload).toMatchObject({
+      success: false,
+      error: {
+        code: "JOB_EXECUTION_FAILED",
+        message: "Internal server error",
+        details: {
+          category: "EXECUTION",
+          reason: "JOB_THROWN_ERROR",
+        },
+      },
+    });
+  }, 15000);
+
+  it("returns 500 when resolveCronService throws (container wiring inside try)", async () => {
+    vi.resetModules();
+    const { createCronGetHandler } = await import("./cron-get-handler");
+    const GET = createCronGetHandler({
+      cronSecret: "test-secret",
+      resolveCronService: () => {
+        throw new Error("container init failed");
       },
     });
 
