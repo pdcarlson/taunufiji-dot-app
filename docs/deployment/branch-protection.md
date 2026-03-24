@@ -71,14 +71,35 @@ gh api --method PUT repos/OWNER/REPO/rulesets/RULESET_ID \
 
 This repo uses **branch rulesets** (not legacy branch protection API). As configured for **`main`** and **`production`**:
 
-| Ruleset | Branch | Policy (summary) |
-| ------- | ------ | ---------------- |
-| Protect main (integration) | `refs/heads/main` | Pull request required (**1** approval), required status checks (see below), **block force-push** (`non_fast_forward`) |
-| Protect production (release) | `refs/heads/production` | Pull request required (**2** approvals), same required checks, **block force-push**, **block branch deletion** |
+| Ruleset                      | Branch                  | Policy (summary)                                                                                                      |
+| ---------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Protect main (integration)   | `refs/heads/main`       | Pull request required (**1** approval), required status checks (see below), **block force-push** (`non_fast_forward`) |
+| Protect production (release) | `refs/heads/production` | Pull request required (**2** approvals), same required checks, **block force-push**, **block branch deletion**        |
 
 Required status check contexts (from `ci.yml` job ids): `lint`, `typecheck`, `test`, `coverage-critical`, `e2e-smoke`, `build`, `quality-gate`. **Strict** policy: the merge head must be up to date with the base branch.
 
 Tweak review counts or check contexts in **Settings → Rules** if your team's bar differs (for example if two approvals on `production` is heavier than the old `main` bar).
+
+### CODEOWNERS and required code owner review
+
+This repository includes [`.github/CODEOWNERS`](../../.github/CODEOWNERS) so a **default owner** is assigned for all paths. To require that owner’s approval on pull requests, enable **Require a pull request before merging** → **Require review from Code Owners** on the relevant ruleset (for example targeting **`main`**). Adjust the file if your team uses more owners or path-specific rules.
+
+**Organization vs personal repository:** GitHub’s ruleset rule **Required reviewers** (specific teams) **requires an organization** and teams. On **user-owned** repositories, **CODEOWNERS** plus **require code owner review** is the usual way to require maintainer approval without team-based rules.
+
+### CodeRabbit (or similar) vs “two approvals”
+
+GitHub’s **required number of approving reviews** counts **approving reviews**. Automated tools may or may not count as an approval depending on how they integrate. A more reliable combination is:
+
+- **One human approval** (for example via **CODEOWNERS** + **require code owner review** on `main`).
+- **Optional automation gate** via **Require status checks to pass before merging**: if the tool publishes a **check run** (e.g. CodeRabbit), add that check name to the ruleset alongside the CI jobs from `ci.yml`. That gives a **bot gate + human gate** without relying on the bot’s review counting as approval.
+
+If the tool only comments and does not publish a check, treat it as advisory unless you add a separate workflow.
+
+### Restrict who can merge to `production`
+
+To limit **who can land commits on `production`** (including completing a merge from a pull request), use a ruleset that includes **Restrict updates** so that **only users with bypass permissions** can push to `refs/heads/production`. Grant **bypass** only to the release maintainer(s) who should merge promotion PRs; **verify** with a test PR from a collaborator account.
+
+Document who has bypass and under what circumstances (for example emergency hotfix) so policy does not drift. **Rulesets** also allow **bypass** for specific users, teams, or GitHub Apps—align that with your org’s admin policy.
 
 ### Release promotion and branch sync
 

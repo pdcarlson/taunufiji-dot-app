@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Instructions for AI coding agents and automated contributors working in this repository. Humans may also use it as a quick orientation; canonical detail lives in `spec/` and `docs/`.
+Instructions for AI coding agents and automated contributors working in this repository. Humans may also use it as a quick orientation; canonical detail lives in `spec/` and `docs/`. For contributor workflow (pull requests, local quality gate), see `CONTRIBUTING.md`.
 
 ## Project Overview
 
@@ -20,23 +20,23 @@ The project uses a two-tier documentation structure:
 
 Root-level directory containing the project's source of truth. These are authoritative documents that define what the system is, how it works, and where it runs.
 
-| File | Purpose |
-|------|---------|
-| `spec/architecture.md` | Clean Architecture layers, patterns, authentication flow |
-| `spec/behavior.md` | Housing module lifecycle, state transitions, edge-case matrix |
-| `spec/platform.md` | Vercel vs Appwrite vs GitHub — canonical platform split |
-| `spec/product.md` | Product definition, target audience, core modules, UX guidelines |
-| `spec/tech-stack.md` | Frameworks, services, tooling |
+| File                   | Purpose                                                          |
+| ---------------------- | ---------------------------------------------------------------- |
+| `spec/architecture.md` | Clean Architecture layers, patterns, authentication flow         |
+| `spec/behavior.md`     | Housing module lifecycle, state transitions, edge-case matrix    |
+| `spec/platform.md`     | Vercel vs Appwrite vs GitHub — canonical platform split          |
+| `spec/product.md`      | Product definition, target audience, core modules, UX guidelines |
+| `spec/tech-stack.md`   | Frameworks, services, tooling                                    |
 
 ### `docs/` — Topic-Organized Documentation
 
 Granular, operational documentation organized by topic. Every `docs/<topic>/` document links upward to the relevant `spec/` file(s).
 
-| Directory | Purpose |
-|-----------|---------|
-| `docs/deployment/` | CI, environments, cron, troubleshooting, branch protection |
-| `docs/quality/` | Testing conventions, coverage, diagnostics |
-| `docs/style-guide/` | Code style rules (TypeScript, JavaScript, HTML/CSS) |
+| Directory           | Purpose                                                    |
+| ------------------- | ---------------------------------------------------------- |
+| `docs/deployment/`  | CI, environments, cron, troubleshooting, branch protection |
+| `docs/quality/`     | Testing conventions, coverage, diagnostics                 |
+| `docs/style-guide/` | Code style rules (TypeScript, JavaScript, HTML/CSS)        |
 
 See `spec/README.md` for the full index of contracts. See `docs/README.md` for the full topic index.
 
@@ -130,16 +130,18 @@ chore(deps): update next to 16.1.6
 
 When making changes to the codebase, update documentation as needed:
 
-| What changed | Update |
-| ---------------------------------------------- | ---------------------------------------------------------------------------- |
-| Architecture or patterns | Update `spec/architecture.md` |
-| Housing behavior or lifecycle | Update `spec/behavior.md` |
-| Platform or hosting changes | Update `spec/platform.md` |
-| New feature or module (user-facing) | Update `spec/product.md` |
-| Tech stack (new dependency, framework upgrade) | Update `spec/tech-stack.md` |
-| Deployment or CI/CD | Update `docs/deployment/` |
-| Testing conventions or coverage | Update `docs/quality/testing.md` |
-| UI/UX guidelines | Update `spec/product.md` |
+| What changed                                   | Update                                                                                                                  |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Architecture or patterns                       | Update `spec/architecture.md`                                                                                           |
+| Housing behavior or lifecycle                  | Update `spec/behavior.md`                                                                                               |
+| Platform or hosting changes                    | Update `spec/platform.md`                                                                                               |
+| New feature or module (user-facing)            | Update `spec/product.md`                                                                                                |
+| Tech stack (new dependency, framework upgrade) | Update `spec/tech-stack.md`                                                                                             |
+| Deployment or CI/CD                            | Update `docs/deployment/`                                                                                               |
+| Testing conventions or coverage                | Update `docs/quality/testing.md`                                                                                        |
+| UI/UX guidelines                               | Update `spec/product.md`                                                                                                |
+| Contributor onboarding / PR workflow           | Update `CONTRIBUTING.md`                                                                                                |
+| New or renamed server env vars                 | Update `.env.example`, `lib/infrastructure/config/server-env-schema.ts`, and `docs/deployment/environments.md` (matrix) |
 
 ## Branch Workflow
 
@@ -158,20 +160,22 @@ Use **`main`** as the integration branch and **`production`** as the protected r
 
 The **default** agent profile receives staging and read-only credentials only. Production write access and full-repo GitHub access require explicit elevation (see Elevation below).
 
-| Variable | Available by default | Notes |
+| Variable                          | Available by default | Notes                                       |
 | --------------------------------- | -------------------- | ------------------------------------------- |
-| `NEXT_PUBLIC_APPWRITE_ENDPOINT` | Yes | Points to the Appwrite instance |
-| `NEXT_PUBLIC_APPWRITE_PROJECT_ID` | Yes | Project ID |
-| `APPWRITE_API_KEY` | Yes | Server-side API key (staging when used) |
-| `APPWRITE_STAGING_API_KEY` | Yes | Staging project API key |
-| `APPWRITE_PRODUCTION_API_KEY` | No (elevated) | Production project API key — elevation only |
-| `AWS_*` | Yes | S3 credentials for library storage |
-| `DISCORD_*` | Yes | Full Discord bot credentials and role IDs |
-| `CRON_SECRET` | Yes | Cron endpoint auth |
-| `GITHUB_READONLY_TOKEN` | Yes | Read-only GitHub PAT (if configured) |
-| `GITHUB_PERSONAL_ACCESS_TOKEN` | No (elevated) | Full repo access PAT — elevation only |
+| `NEXT_PUBLIC_APPWRITE_ENDPOINT`   | Yes                  | Points to the Appwrite instance             |
+| `NEXT_PUBLIC_APPWRITE_PROJECT_ID` | Yes                  | Project ID                                  |
+| `APPWRITE_API_KEY`                | Yes                  | Server-side API key (staging when used)     |
+| `APPWRITE_STAGING_API_KEY`        | Yes                  | Staging project API key                     |
+| `APPWRITE_PRODUCTION_API_KEY`     | No (elevated)        | Production project API key — elevation only |
+| `AWS_*`                           | Yes                  | S3 credentials for library storage          |
+| `DISCORD_*`                       | Yes                  | Full Discord bot credentials and role IDs   |
+| `CRON_SECRET`                     | Yes                  | Cron endpoint auth                          |
+| `GITHUB_READONLY_TOKEN`           | Yes                  | Read-only GitHub PAT (if configured)        |
+| `GITHUB_PERSONAL_ACCESS_TOKEN`    | No (elevated)        | Full repo access PAT — elevation only       |
 
 By default the agent has access to the **staging** Appwrite project and, if provided, a read-only GitHub token. Use staging for all testing; never delete production data.
+
+**Repository template (all keys, placeholders):** copy [`.env.example`](.env.example) to `.env.local` and replace values. Canonical variable list and validation rules live in [`lib/infrastructure/config/server-env-schema.ts`](lib/infrastructure/config/server-env-schema.ts). Human-oriented steps: [`CONTRIBUTING.md`](CONTRIBUTING.md) (Local environment).
 
 To create a working `.env.local` from the default injected secrets (staging only):
 
@@ -208,14 +212,16 @@ If real credentials are not needed (e.g., for lint/test/build only), set `SKIP_E
 
 ### Running the app
 
-- **Dev server**: `npm run dev` (port 3000)
-- **Build**: `SKIP_ENV_VALIDATION=true npm run build`
-- The root `/` route redirects (307) to `/login` — this is expected behavior.
-- Authentication is Discord OAuth via Appwrite. Without valid credentials, the login page renders but the OAuth flow requires a real Appwrite project and Discord app.
+- **Configure env**: Copy [`.env.example`](.env.example) → `.env.local` (see [`CONTRIBUTING.md`](CONTRIBUTING.md) — Local environment). Next.js loads `.env.local` automatically; do not commit it.
+- **Dev server**: `npm run dev` (port **3000**)
+- **Production build** (no real services): `SKIP_ENV_VALIDATION=true npm run build` — matches the quality gate when you cannot supply full credentials.
+- **Full production build** with validation: ensure `.env.local` satisfies [`server-env-schema.ts`](lib/infrastructure/config/server-env-schema.ts), then `npm run build`.
+- The root `/` route redirects (**307**) to `/login` — this is expected behavior.
+- **Authentication** is Discord OAuth via Appwrite. Without valid credentials, the login page renders, but completing OAuth requires a real Appwrite project and Discord application.
 
 ### Gotchas
 
-- The env validation in `lib/infrastructure/config/env.ts` uses `server-only` and will throw at build/dev time unless `SKIP_ENV_VALIDATION=true` is set when real credentials are absent.
+- The env validation in [`lib/infrastructure/config/env.ts`](lib/infrastructure/config/env.ts) uses `server-only` and will throw at build/dev time unless `SKIP_ENV_VALIDATION=true` is set when real credentials are absent. See [`.env.example`](.env.example) for the full variable list.
 - Tests mock `server-only` in `vitest.setup.ts` so they run without any external services.
 - ESLint uses flat config (`eslint.config.mjs`). All rules are warnings — lint passes with 0 errors.
 - The `scripts/` directory is excluded from both ESLint and TypeScript compilation.
