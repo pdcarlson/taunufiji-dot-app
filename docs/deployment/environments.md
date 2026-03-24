@@ -23,20 +23,20 @@
 
 ## Secret Management
 
-- **Local development**: `.env.local` file (not committed)
+- **Local development**: `.env.local` file (not committed). Start from the repo root [`.env.example`](../../.env.example) (all keys with placeholders) and follow [`CONTRIBUTING.md`](../../CONTRIBUTING.md) (Local environment). Validation is defined in `serverEnvSchema` (`lib/infrastructure/config/server-env-schema.ts`).
 - **Staging / production (runtime)**: Environment variables in **Vercel** per environment (Preview vs Production). Appwrite **API keys** are created in the **Appwrite Console** per Appwrite project, then stored as secrets in Vercel.
 - **CI**: Minimal secrets in GitHub (only what quality gates need). Cron scheduling is **not** driven by GitHub; set `CRON_SECRET` in **Vercel** for runtime cron auth.
 
 ## Environment Matrix (Minimum Required)
 
-| Concern       | Variables                                                                              |
-| ------------- | -------------------------------------------------------------------------------------- |
-| App URL       | `NEXT_PUBLIC_APP_URL`                                                                  |
-| Appwrite      | `NEXT_PUBLIC_APPWRITE_ENDPOINT`, `NEXT_PUBLIC_APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY` |
-| Discord Core  | `DISCORD_APP_ID`, `DISCORD_PUBLIC_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_HOUSING_CHANNEL_ID` |
-| Discord Roles | `DISCORD_ROLE_ID_BROTHER`, `DISCORD_ROLE_ID_CABINET`, `DISCORD_ROLE_ID_HOUSING_CHAIR`  |
-| AWS/S3        | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME`          |
-| Cron (optional) | `CRON_SECRET` — set when Vercel cron or authenticated `/api/cron` use is enabled |
+| Concern         | Variables                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------- |
+| App URL         | `NEXT_PUBLIC_APP_URL`                                                                                         |
+| Appwrite        | `NEXT_PUBLIC_APPWRITE_ENDPOINT`, `NEXT_PUBLIC_APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY`                        |
+| Discord Core    | `DISCORD_APP_ID`, `DISCORD_PUBLIC_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_HOUSING_CHANNEL_ID` |
+| Discord Roles   | `DISCORD_ROLE_ID_BROTHER`, `DISCORD_ROLE_ID_CABINET`, `DISCORD_ROLE_ID_HOUSING_CHAIR`                         |
+| AWS/S3          | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME`                                 |
+| Cron (optional) | `CRON_SECRET` — set when Vercel cron or authenticated `/api/cron` use is enabled                              |
 
 In `serverEnvSchema` (`lib/infrastructure/config/server-env-schema.ts`), **`CRON_SECRET` is optional** (Zod `.optional()`). Omit it only when cron is disabled and nothing calls `/api/cron`; otherwise configure a non-empty secret in Vercel (and locally) so the endpoint can authorize requests.
 
