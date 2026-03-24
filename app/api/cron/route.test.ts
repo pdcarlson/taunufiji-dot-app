@@ -1,11 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CronService } from "@/lib/application/services/jobs/cron.service";
-
-type CronServiceMock = {
-  runHousingScheduledBatch: ReturnType<typeof vi.fn>;
-  expireDuties: ReturnType<typeof vi.fn>;
-  ensureFutureTasks: ReturnType<typeof vi.fn>;
-};
+import type { CronServicePort } from "./route";
 
 type RouteFixtureOptions = {
   cronSecret?: string;
@@ -15,7 +9,7 @@ type RouteFixtureOptions = {
 };
 
 async function loadRouteFixture(options: RouteFixtureOptions = {}) {
-  const cronServiceMock: CronServiceMock = {
+  const cronServiceMock: CronServicePort = {
     runHousingScheduledBatch: vi.fn(
       options.runHousingScheduledBatch ?? (async () => ({ ok: true })),
     ),
@@ -29,7 +23,7 @@ async function loadRouteFixture(options: RouteFixtureOptions = {}) {
 
   const { createCronGetHandler } = await import("./route");
   const GET = createCronGetHandler({
-    cronService: cronServiceMock as unknown as CronService,
+    cronService: cronServiceMock,
     cronSecret: options.cronSecret ?? "test-secret",
   });
 
@@ -143,6 +137,38 @@ describe("GET /api/cron", () => {
           reason: "INVALID_JOB_PARAMETER",
         },
       },
+    });
+    expect(cronServiceMock.runHousingScheduledBatch).not.toHaveBeenCalled();
+    expect(cronServiceMock.expireDuties).not.toHaveBeenCalled();
+    expect(cronServiceMock.ensureFutureTasks).not.toHaveBeenCalled();
+  }, 15000);
+
+  it("returns 400 when job is constructor (no inherited key bypass)", async () => {
+    const { GET, cronServiceMock } = await loadRouteFixture();
+
+    const response = await GET(createRequest("constructor", "test-secret"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toMatchObject({
+      success: false,
+      error: { code: "INVALID_JOB" },
+    });
+    expect(cronServiceMock.runHousingScheduledBatch).not.toHaveBeenCalled();
+    expect(cronServiceMock.expireDuties).not.toHaveBeenCalled();
+    expect(cronServiceMock.ensureFutureTasks).not.toHaveBeenCalled();
+  }, 15000);
+
+  it("returns 400 when job is toString (no inherited key bypass)", async () => {
+    const { GET, cronServiceMock } = await loadRouteFixture();
+
+    const response = await GET(createRequest("toString", "test-secret"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toMatchObject({
+      success: false,
+      error: { code: "INVALID_JOB" },
     });
     expect(cronServiceMock.runHousingScheduledBatch).not.toHaveBeenCalled();
     expect(cronServiceMock.expireDuties).not.toHaveBeenCalled();

@@ -22,6 +22,12 @@ import { MyDutiesWidget } from "./MyDutiesWidget";
 // Note: We use useAuth for getToken and isHousingAdmin
 import { useAuth } from "@/components/providers/AuthProvider";
 
+/**
+ * Server-prefetched housing dashboard payload for the client shell.
+ *
+ * @property initialTasks - Active tasks from the server; defaults to an empty list when omitted.
+ * @property initialMembers - Chapter members from the server; defaults to an empty list when omitted.
+ */
 export interface HousingDashboardClientProps {
   initialTasks?: HousingTask[];
   initialMembers?: Member[];

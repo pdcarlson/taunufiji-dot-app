@@ -1,7 +1,3 @@
-import {
-  CronResult,
-  CronService,
-} from "@/lib/application/services/jobs/cron.service";
 import { getContainer } from "@/lib/infrastructure/container";
 import { env } from "@/lib/infrastructure/config/env";
 import { NextResponse } from "next/server";
@@ -23,11 +19,16 @@ export const CRON_JOBS = {
 
 type CronJobName = (typeof CRON_JOBS)[keyof typeof CRON_JOBS];
 
-type CronHandlerResult = CronResult | { errors: string[] } | void;
+/** Narrow cron surface for `/api/cron`; `Promise<unknown>` so production `CronService` and Vitest mocks both assign. */
+export type CronServicePort = {
+  runHousingScheduledBatch: () => Promise<unknown>;
+  expireDuties: () => Promise<unknown>;
+  ensureFutureTasks: () => Promise<unknown>;
+};
 
 const JOB_HANDLERS: Record<
   CronJobName,
-  (cronService: CronService) => Promise<CronHandlerResult>
+  (cronService: CronServicePort) => Promise<unknown>
 > = {
   [CRON_JOBS.HOUSING_BATCH]: (cronService) =>
     cronService.runHousingScheduledBatch(),
@@ -37,6 +38,10 @@ const JOB_HANDLERS: Record<
 };
 
 const ALLOWED_JOBS = Object.keys(JOB_HANDLERS) as CronJobName[];
+
+function isAllowedCronJob(job: string): job is CronJobName {
+  return Object.prototype.hasOwnProperty.call(JOB_HANDLERS, job);
+}
 
 type CronErrorDetails = {
   category: "CONFIGURATION" | "AUTH" | "VALIDATION" | "EXECUTION";
@@ -64,7 +69,7 @@ function createErrorResponse(
 }
 
 export type CronGetHandlerDeps = {
-  cronService: CronService;
+  cronService: CronServicePort;
   cronSecret: string | undefined;
 };
 
@@ -114,7 +119,7 @@ export function createCronGetHandler(deps: CronGetHandlerDeps) {
         );
       }
 
-      if (!job || !(job in JOB_HANDLERS)) {
+      if (!job || !isAllowedCronJob(job)) {
         console.error("[cron] Invalid job parameter", { job });
         return createErrorResponse(
           400,
@@ -128,7 +133,7 @@ export function createCronGetHandler(deps: CronGetHandlerDeps) {
         );
       }
 
-      const runJob = JOB_HANDLERS[job as CronJobName];
+      const runJob = JOB_HANDLERS[job];
       const result = await runJob(deps.cronService);
 
       console.log("[cron] Job completed", {
