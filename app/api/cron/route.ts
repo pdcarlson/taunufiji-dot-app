@@ -37,8 +37,6 @@ const JOB_HANDLERS: Record<
     cronService.ensureFutureTasks(),
 };
 
-const ALLOWED_JOBS = Object.keys(JOB_HANDLERS) as CronJobName[];
-
 function isAllowedCronJob(job: string): job is CronJobName {
   return Object.prototype.hasOwnProperty.call(JOB_HANDLERS, job);
 }
@@ -138,7 +136,6 @@ export function createCronGetHandler(deps: CronGetHandlerDeps) {
 
       console.log("[cron] Job completed", {
         job,
-        allowedJobs: ALLOWED_JOBS,
         hasResult: result !== undefined,
         resultType: typeof result,
         completedAt: new Date().toISOString(),
