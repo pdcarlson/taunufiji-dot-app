@@ -90,6 +90,24 @@ export async function GET(req: Request) {
       );
     }
 
+    if (
+      job !== CRON_JOBS.HOUSING_BATCH &&
+      job !== CRON_JOBS.EXPIRE_DUTIES &&
+      job !== CRON_JOBS.ENSURE_FUTURE_TASKS
+    ) {
+      console.error("[cron] Invalid job parameter", { job });
+      return createErrorResponse(
+        400,
+        ERROR_CODES.invalidJob,
+        "Invalid or missing job parameter",
+        job,
+        {
+          category: "VALIDATION",
+          reason: "INVALID_JOB_PARAMETER",
+        },
+      );
+    }
+
     let result: CronResult | { errors: string[] } | void;
 
     const { cronService } = getContainer();
@@ -104,18 +122,6 @@ export async function GET(req: Request) {
       case CRON_JOBS.ENSURE_FUTURE_TASKS:
         result = await cronService.ensureFutureTasks();
         break;
-      default:
-        console.error("[cron] Invalid job parameter", { job });
-        return createErrorResponse(
-          400,
-          ERROR_CODES.invalidJob,
-          "Invalid or missing job parameter",
-          job,
-          {
-            category: "VALIDATION",
-            reason: "INVALID_JOB_PARAMETER",
-          },
-        );
     }
 
     console.log("[cron] Job completed", {

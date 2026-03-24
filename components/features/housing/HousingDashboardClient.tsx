@@ -96,6 +96,8 @@ export default function HousingDashboardClient({
 
   const handleRefresh = () => loadDashboardData({ notifySuccess: true });
 
+  const closeEditTaskModal = () => setEditingTask(null);
+
   // Filters
   const pendingReviews = isAdmin
     ? tasks.filter((t) => t.status === "pending" && t.proof_s3_key)
@@ -279,9 +281,9 @@ export default function HousingDashboardClient({
         <EditTaskModal
           task={editingTask}
           members={members}
-          onClose={() => setEditingTask(null)}
+          onClose={closeEditTaskModal}
           onRefresh={() => loadDashboardData()}
-          onSuccessClose={() => setEditingTask(null)}
+          onSuccessClose={closeEditTaskModal}
         />
       )}
     </div>

@@ -138,7 +138,7 @@ describe("GET /api/cron", () => {
   }, 15000);
 
   it("returns 400 when job parameter is invalid", async () => {
-    const { GET } = await loadRouteFixture();
+    const { GET, cronServiceMock } = await loadRouteFixture();
 
     const response = await GET(createRequest("NOT_A_REAL_JOB", "test-secret"));
     const payload = await response.json();
@@ -154,6 +154,9 @@ describe("GET /api/cron", () => {
         },
       },
     });
+    expect(cronServiceMock.runHousingScheduledBatch).not.toHaveBeenCalled();
+    expect(cronServiceMock.expireDuties).not.toHaveBeenCalled();
+    expect(cronServiceMock.ensureFutureTasks).not.toHaveBeenCalled();
   }, 15000);
 
   it("returns 500 when CRON_SECRET is not configured", async () => {

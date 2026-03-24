@@ -7,7 +7,7 @@
 ## Pipeline Overview
 
 ```text
-Feature Branch → PR (CI Quality Gates) → Merge to main → Vercel Preview (staging host)
+Feature Branch → PR (CI Quality Gates) → Merge to main → Vercel Preview (preview deployment for PRs and main)
                                                               ↓
                                    Manual QA → Merge to production → Vercel Production
 ```

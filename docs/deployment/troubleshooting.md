@@ -21,7 +21,7 @@ What it verifies today:
 - Discord housing channel reachability
 - Configured housing role IDs exist in the target guild
 
-If this command fails, do not promote staging to production until the failing checks are resolved.
+If this command fails, do not merge **`main` → `production`** (do not ship the Vercel Production deployment) until the failing checks are resolved. This script targets the same staging-oriented credentials as `npm run diagnose:staging` suggests—**`main`** is the integration branch; there is no separate “promote staging branch” step in the documented flow.
 
 ## Staging Troubleshooting Runbook
 

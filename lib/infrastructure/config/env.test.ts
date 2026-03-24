@@ -74,5 +74,8 @@ describe("Environment Configuration", () => {
 
     expect(env.NEXT_PUBLIC_APPWRITE_ENDPOINT).toBe("http://localhost/v1");
     expect(env.DISCORD_HOUSING_CHANNEL_ID).toBe("test-housing");
+    expect(env.DISCORD_ROLE_ID_BROTHER).toBe("test-role-brother");
+    expect(env.DISCORD_ROLE_ID_CABINET).toBe("test-role-cabinet");
+    expect(env.DISCORD_ROLE_ID_HOUSING_CHAIR).toBe("test-role-housing");
   });
 });

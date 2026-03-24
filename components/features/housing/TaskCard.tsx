@@ -41,7 +41,12 @@ export function TaskCardSkeleton() {
   );
 }
 
-// DISPATCHER COMPONENT
+/**
+ * Dispatches to the correct housing card variant (locked, review, bounty, or duty) from a single entry point.
+ *
+ * @param props - {@link TaskCardProps} bundle for the task row, auth, and optional admin/review hooks.
+ * @returns The appropriate card subtree for the task state and view mode.
+ */
 export function TaskCard(props: TaskCardProps) {
   const { task, viewMode = "action", variant = "square" } = props;
 

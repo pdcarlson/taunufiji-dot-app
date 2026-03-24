@@ -32,6 +32,16 @@ interface DutyCardProps {
   variant?: "square" | "horizontal";
 }
 
+/**
+ * Renders assignee-facing actions for a duty, one-off, or claimed bounty (square or horizontal layout).
+ *
+ * @param task - Housing row to display and act on.
+ * @param userId - Authenticated Appwrite user id.
+ * @param profileId - Optional Discord-linked profile id used as assignee key when set.
+ * @param getJWT - Resolves a JWT for server actions.
+ * @param variant - Card density: `"square"` (default) or `"horizontal"`.
+ * @returns The interactive duty or bounty card UI.
+ */
 export function DutyCard({
   task,
   userId,
@@ -47,6 +57,12 @@ export function DutyCard({
   const isMyTask = task.assigned_to === (profileId || userId);
   const isReview = task.proof_s3_key && task.status === "pending";
   const awaitingExpiryWrite = isAwaitingExpiryTransition(task);
+  const uploadDisabledForDutyAwaitingExpiry =
+    isDuty && awaitingExpiryWrite;
+  const pastDueBlocksNonDutyUpload =
+    !!task.due_at && new Date() > new Date(task.due_at) && !isDuty;
+  const uploadControlDisabled =
+    loading || pastDueBlocksNonDutyUpload || uploadDisabledForDutyAwaitingExpiry;
 
   const handleClaim = async () => {
     if (isDuty) return;
@@ -156,7 +172,6 @@ export function DutyCard({
 
       {isMyTask &&
         isDuty &&
-        task.status === "pending" &&
         !isReview &&
         awaitingExpiryWrite && (
           <div
@@ -179,23 +194,21 @@ export function DutyCard({
           (isDuty && task.status === "open")) &&
         !isReview &&
         !(isDuty && task.status === "pending" && awaitingExpiryWrite) &&
-        !(!isDuty && task.status === "pending" && awaitingExpiryWrite) && (
+        !(!isDuty && task.status === "pending" && awaitingExpiryWrite) &&
+        !(isDuty && task.status === "open" && awaitingExpiryWrite) && (
           <div
             className={`flex gap-2 ${btnClass === "w-full" ? "w-full" : "w-auto items-center"}`}
           >
             <label
               className={`${btnClass === "w-full" ? "flex-1" : "px-4"} bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow hover:-translate-y-0.5 active:translate-y-0 ${
-                loading ||
-                (task.due_at && new Date() > new Date(task.due_at) && !isDuty)
+                uploadControlDisabled
                   ? "opacity-50 pointer-events-none grayscale"
                   : ""
               }`}
             >
               {loading ? (
                 <Loader size="sm" className="text-white" />
-              ) : task.due_at &&
-                new Date() > new Date(task.due_at) &&
-                !isDuty ? (
+              ) : pastDueBlocksNonDutyUpload ? (
                 <>
                   <Clock className="w-4 h-4" /> Past due
                 </>
@@ -209,12 +222,7 @@ export function DutyCard({
                 className="hidden"
                 accept="image/*"
                 onChange={handleUpload}
-                disabled={
-                  loading ||
-                  (!!task.due_at &&
-                    new Date() > new Date(task.due_at) &&
-                    !isDuty)
-                }
+                disabled={uploadControlDisabled}
               />
             </label>
             {!isDuty && (
