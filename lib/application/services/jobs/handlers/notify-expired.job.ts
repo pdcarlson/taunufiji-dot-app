@@ -104,6 +104,16 @@ export const NotifyExpiredJob = {
             });
           }
 
+          const afterChannel = await taskRepository.findById(fresh.id);
+          const levelForDm = afterChannel?.notification_level ?? fresh.notification_level;
+          if (levelForDm === "expired") {
+            console.log("[NotifyExpiredJob]", {
+              phase: "skip_already_fully_notified",
+              taskId: fresh.id,
+            });
+            continue;
+          }
+
           const dmResult = await NotificationService.sendNotification(
             fresh.assigned_to,
             "expired",

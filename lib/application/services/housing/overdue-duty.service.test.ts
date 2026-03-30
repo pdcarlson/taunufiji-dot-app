@@ -31,42 +31,87 @@ function dutyTask(overrides: Partial<HousingTask> = {}): HousingTask {
   };
 }
 
+const depsBase = {
+  pointsService: { awardPoints: vi.fn() } as unknown as IPointsService,
+  scheduleService: {
+    triggerNextInstance: vi.fn(),
+  } as unknown as IScheduleService,
+  ledgerRepository: {} as ILedgerRepository,
+};
+
 describe("expireOverdueDutyTask", () => {
-  it("does not expire approved tasks even when scan data is stale", async () => {
+  it("does not expire when live row is approved", async () => {
+    const live = dutyTask({ status: "approved", proof_s3_key: "k" });
     const taskRepository = {
+      findById: vi.fn().mockResolvedValue(live),
+      update: vi.fn(),
+    } as unknown as ITaskRepository;
+    const result = await expireOverdueDutyTask(dutyTask({ status: "open" }), {
+      taskRepository,
+      ...depsBase,
+    });
+    expect(result.expired).toBe(false);
+    expect(taskRepository.update).not.toHaveBeenCalled();
+  });
+
+  it("does not expire when live row is pending with proof", async () => {
+    const live = dutyTask({ status: "pending", proof_s3_key: "proof/key" });
+    const taskRepository = {
+      findById: vi.fn().mockResolvedValue(live),
       update: vi.fn(),
     } as unknown as ITaskRepository;
     const result = await expireOverdueDutyTask(
-      dutyTask({ status: "approved", proof_s3_key: "k" }),
+      dutyTask({ status: "open", proof_s3_key: null }),
       {
         taskRepository,
-        pointsService: { awardPoints: vi.fn() } as unknown as IPointsService,
-        scheduleService: {
-          triggerNextInstance: vi.fn(),
-        } as unknown as IScheduleService,
-        ledgerRepository: {} as ILedgerRepository,
+        ...depsBase,
       },
     );
     expect(result.expired).toBe(false);
     expect(taskRepository.update).not.toHaveBeenCalled();
   });
 
-  it("does not expire pending tasks that already have proof", async () => {
+  it("uses live row for expiry even when snapshot was stale open without proof", async () => {
+    const live = dutyTask({
+      id: "t-live",
+      status: "open",
+      proof_s3_key: null,
+      due_at: "2020-01-01T00:00:00.000Z",
+    });
     const taskRepository = {
-      update: vi.fn(),
+      findById: vi.fn().mockResolvedValue(live),
+      update: vi.fn().mockImplementation(async (_id, patch) => ({
+        ...live,
+        ...patch,
+      })),
     } as unknown as ITaskRepository;
+    const ledgerRepository = {
+      findMany: vi.fn().mockResolvedValue([]),
+    } as unknown as ILedgerRepository;
+    const pointsService = {
+      awardPoints: vi.fn().mockResolvedValue(undefined),
+    } as unknown as IPointsService;
+
     const result = await expireOverdueDutyTask(
-      dutyTask({ status: "pending", proof_s3_key: "proof/key" }),
+      dutyTask({
+        id: "t-live",
+        status: "open",
+        proof_s3_key: null,
+        due_at: "2020-01-01T00:00:00.000Z",
+      }),
       {
         taskRepository,
-        pointsService: { awardPoints: vi.fn() } as unknown as IPointsService,
-        scheduleService: {
-          triggerNextInstance: vi.fn(),
-        } as unknown as IScheduleService,
-        ledgerRepository: {} as ILedgerRepository,
+        pointsService,
+        scheduleService: depsBase.scheduleService,
+        ledgerRepository,
       },
     );
-    expect(result.expired).toBe(false);
-    expect(taskRepository.update).not.toHaveBeenCalled();
+
+    expect(result.expired).toBe(true);
+    expect(taskRepository.findById).toHaveBeenCalledWith("t-live");
+    expect(taskRepository.update).toHaveBeenCalledWith(
+      "t-live",
+      expect.objectContaining({ status: "expired" }),
+    );
   });
 });

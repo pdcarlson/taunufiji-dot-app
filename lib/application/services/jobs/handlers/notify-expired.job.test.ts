@@ -204,16 +204,53 @@ describe("NotifyExpiredJob", () => {
       }),
     );
     taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
-    vi.spyOn(NotificationService, "notifyAdmins").mockResolvedValue({
-      success: true,
-    });
-    vi.spyOn(NotificationService, "sendNotification").mockResolvedValue({
-      success: true,
-    });
+    const notifyAdminsSpy = vi
+      .spyOn(NotificationService, "notifyAdmins")
+      .mockResolvedValue({ success: true });
+    const dmSpy = vi
+      .spyOn(NotificationService, "sendNotification")
+      .mockResolvedValue({ success: true });
 
     const result = await NotifyExpiredJob.run(taskRepository);
 
     expect(result.expired_notified).toBe(0);
+    expect(notifyAdminsSpy).not.toHaveBeenCalled();
+    expect(dmSpy).not.toHaveBeenCalled();
+    expect(taskRepository.update).not.toHaveBeenCalled();
+  });
+
+  it("does not send duplicate DM when re-fetch shows notification_level already expired", async () => {
+    const staleRow = expiredTaskFixture({
+      id: "task-done",
+      title: "Basement",
+      assigned_to: "user-z",
+      notification_level: "expired_admin",
+    });
+    const freshRow = expiredTaskFixture({
+      id: "task-done",
+      title: "Basement",
+      assigned_to: "user-z",
+      notification_level: "expired",
+    });
+    taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
+      const offset = opts.offset ?? 0;
+      if (offset > 0) return [];
+      return [staleRow];
+    });
+    taskRepository.findById = vi.fn().mockResolvedValue(freshRow);
+    taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
+    const notifyAdminsSpy = vi
+      .spyOn(NotificationService, "notifyAdmins")
+      .mockResolvedValue({ success: true });
+    const dmSpy = vi
+      .spyOn(NotificationService, "sendNotification")
+      .mockResolvedValue({ success: true });
+
+    const result = await NotifyExpiredJob.run(taskRepository);
+
+    expect(result.expired_notified).toBe(0);
+    expect(notifyAdminsSpy).not.toHaveBeenCalled();
+    expect(dmSpy).not.toHaveBeenCalled();
     expect(taskRepository.update).not.toHaveBeenCalled();
   });
 });
