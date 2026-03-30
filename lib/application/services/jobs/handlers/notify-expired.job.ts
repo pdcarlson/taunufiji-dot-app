@@ -120,30 +120,41 @@ export const NotifyExpiredJob = {
             continue;
           }
 
+          if (!afterChannel.assigned_to) {
+            console.warn(
+              `[NotifyExpiredJob] Task ${afterChannel.id} ("${afterChannel.title}") lost assignee after channel step — skipping DM, marking notified`,
+            );
+            await taskRepository.update(afterChannel.id, {
+              notification_level: "expired",
+            });
+            skipped_unassigned++;
+            continue;
+          }
+
           const dmResult = await NotificationService.sendNotification(
-            fresh.assigned_to,
+            afterChannel.assigned_to,
             "expired",
             {
-              title: fresh.title,
-              taskId: fresh.id,
+              title: afterChannel.title,
+              taskId: afterChannel.id,
             },
           );
 
           if (!dmResult.success) {
-            const errMsg = `DM to user ${fresh.assigned_to} failed for task ${fresh.id}: ${dmResult.error}`;
+            const errMsg = `DM to user ${afterChannel.assigned_to} failed for task ${afterChannel.id}: ${dmResult.error}`;
             console.error(`[NotifyExpiredJob] ${errMsg}`);
             errors.push(errMsg);
             continue;
           }
 
-          await taskRepository.update(fresh.id, {
+          await taskRepository.update(afterChannel.id, {
             notification_level: "expired",
           });
 
           console.log("[NotifyExpiredJob]", {
             phase: "expired_notified",
-            taskId: fresh.id,
-            assignee: fresh.assigned_to,
+            taskId: afterChannel.id,
+            assignee: afterChannel.assigned_to,
           });
           expired_notified++;
         } catch (error: unknown) {

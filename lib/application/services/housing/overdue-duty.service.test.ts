@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { expireOverdueDutyTask } from "./overdue-duty.service";
 import { missedDutyFineReason } from "./missed-duty-fine";
 import type { HousingTask } from "@/lib/domain/types/task";
@@ -45,6 +45,10 @@ const depsBase = {
 };
 
 describe("expireOverdueDutyTask", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("does not expire when live row is approved", async () => {
     const live = dutyTask({ status: "approved", proof_s3_key: null });
     const taskRepository = {

@@ -23,10 +23,10 @@ export const expireDutiesJob = async (
   });
 
   try {
-    const openOverdue = await fetchAllTaskPages(
+    const overdueRows = await fetchAllTaskPages(
       taskRepository,
       {
-        status: "open",
+        status: ["open", "pending", "rejected"],
         dueBefore: now,
         proofS3KeyAbsent: true,
         orderBy: "due_at",
@@ -35,39 +35,8 @@ export const expireDutiesJob = async (
       HOUSING_CRON_TASK_PAGE_SIZE,
     );
 
-    const pendingOverdue = await fetchAllTaskPages(
-      taskRepository,
-      {
-        status: "pending",
-        dueBefore: now,
-        proofS3KeyAbsent: true,
-        orderBy: "due_at",
-        orderDirection: "asc",
-      },
-      HOUSING_CRON_TASK_PAGE_SIZE,
-    );
-
-    const rejectedOverdue = await fetchAllTaskPages(
-      taskRepository,
-      {
-        status: "rejected",
-        dueBefore: now,
-        proofS3KeyAbsent: true,
-        orderBy: "due_at",
-        orderDirection: "asc",
-      },
-      HOUSING_CRON_TASK_PAGE_SIZE,
-    );
-
-    // Pending overwrites open; rejected overwrites both for the same id (resubmit flow).
-    const byId = new Map<string, (typeof openOverdue)[0]>();
-    for (const task of openOverdue) {
-      byId.set(task.id, task);
-    }
-    for (const task of pendingOverdue) {
-      byId.set(task.id, task);
-    }
-    for (const task of rejectedOverdue) {
+    const byId = new Map<string, (typeof overdueRows)[0]>();
+    for (const task of overdueRows) {
       byId.set(task.id, task);
     }
     const overdueTasks = [...byId.values()].sort((a, b) => {
