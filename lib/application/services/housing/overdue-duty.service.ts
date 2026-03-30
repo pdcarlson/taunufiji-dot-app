@@ -29,9 +29,33 @@ const NON_EXPIRABLE_TYPES: HousingTask["type"][] = [
   "ad_hoc",
 ];
 
+const EXPIRABLE_STATUSES: HousingTask["status"][] = [
+  "open",
+  "pending",
+  "rejected",
+];
+
+function isEligibleForDutyExpiry(row: HousingTask, now: Date): boolean {
+  if (NON_EXPIRABLE_TYPES.includes(row.type)) {
+    return false;
+  }
+  if (!row.due_at || new Date(row.due_at) > now) {
+    return false;
+  }
+  if (!EXPIRABLE_STATUSES.includes(row.status)) {
+    return false;
+  }
+  if (row.proof_s3_key) {
+    return false;
+  }
+  return true;
+}
+
 /**
  * Expires a single overdue duty-like task and applies all required side effects.
  * This centralizes behavior so cron and maintenance stay consistent.
+ * Re-reads the live row before mutating so a stale cron/maintenance snapshot
+ * cannot expire a task that was approved or received proof in the meantime.
  */
 export async function expireOverdueDutyTask(
   task: HousingTask,
@@ -40,8 +64,10 @@ export async function expireOverdueDutyTask(
   const { taskRepository, pointsService, scheduleService, ledgerRepository } =
     dependencies;
   const errors: string[] = [];
+  const now = new Date();
 
-  if (NON_EXPIRABLE_TYPES.includes(task.type)) {
+  const fresh = await taskRepository.findById(task.id);
+  if (!fresh) {
     return {
       expired: false,
       fined: false,
@@ -50,7 +76,7 @@ export async function expireOverdueDutyTask(
     };
   }
 
-  if (!task.due_at || new Date(task.due_at) > new Date()) {
+  if (!isEligibleForDutyExpiry(fresh, now)) {
     return {
       expired: false,
       fined: false,
@@ -59,58 +85,54 @@ export async function expireOverdueDutyTask(
     };
   }
 
-  if (task.proof_s3_key) {
-    return {
-      expired: false,
-      fined: false,
-      triggeredNextInstance: false,
-      errors,
-    };
-  }
-
-  await taskRepository.update(task.id, {
+  await taskRepository.update(fresh.id, {
     status: "expired",
-    ...(task.assigned_to ? { is_fine: false } : {}),
+    ...(fresh.assigned_to ? { is_fine: false } : {}),
   });
 
+  const taskAfterExpire: HousingTask = { ...fresh, status: "expired" };
+
   let fined = false;
-  if (task.assigned_to) {
+  if (fresh.assigned_to) {
     try {
       const alreadyFined = await hasPersistedMissedDutyFine(
         ledgerRepository,
-        task.assigned_to,
-        task.id,
+        fresh.assigned_to,
+        fresh.id,
       );
       if (alreadyFined) {
-        await taskRepository.update(task.id, { is_fine: true });
+        await taskRepository.update(fresh.id, { is_fine: true });
         fined = true;
       } else {
-        await pointsService.awardPoints(task.assigned_to, {
+        await pointsService.awardPoints(fresh.assigned_to, {
           amount: -Math.abs(HOUSING_CONSTANTS.FINE_MISSING_DUTY),
-          reason: missedDutyFineReason(task.title, task.id),
+          reason: missedDutyFineReason(fresh.title, fresh.id),
           category: "fine",
-          fineTaskId: task.id,
+          fineTaskId: fresh.id,
         });
-        await taskRepository.update(task.id, { is_fine: true });
+        await taskRepository.update(fresh.id, { is_fine: true });
         fined = true;
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      errors.push(`Fine failed for ${task.id}: ${message}`);
+      errors.push(`Fine failed for ${fresh.id}: ${message}`);
       await taskRepository
-        .update(task.id, { is_fine: false })
+        .update(fresh.id, { is_fine: false })
         .catch(() => undefined);
     }
   }
 
   let triggeredNextInstance = false;
-  if (task.schedule_id) {
+  if (fresh.schedule_id) {
     try {
-      await scheduleService.triggerNextInstance(task.schedule_id, task);
+      await scheduleService.triggerNextInstance(
+        fresh.schedule_id,
+        taskAfterExpire,
+      );
       triggeredNextInstance = true;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      errors.push(`Scheduler failed for ${task.id}: ${message}`);
+      errors.push(`Scheduler failed for ${fresh.id}: ${message}`);
     }
   }
 

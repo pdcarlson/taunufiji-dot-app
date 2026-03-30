@@ -47,13 +47,27 @@ export const expireDutiesJob = async (
       HOUSING_CRON_TASK_PAGE_SIZE,
     );
 
-    // Pending rows intentionally overwrite open when the same id appears in both
-    // lists so we use the later assignment state for deduplication.
+    const rejectedOverdue = await fetchAllTaskPages(
+      taskRepository,
+      {
+        status: "rejected",
+        dueBefore: now,
+        proofS3KeyAbsent: true,
+        orderBy: "due_at",
+        orderDirection: "asc",
+      },
+      HOUSING_CRON_TASK_PAGE_SIZE,
+    );
+
+    // Pending overwrites open; rejected overwrites both for the same id (resubmit flow).
     const byId = new Map<string, (typeof openOverdue)[0]>();
     for (const task of openOverdue) {
       byId.set(task.id, task);
     }
     for (const task of pendingOverdue) {
+      byId.set(task.id, task);
+    }
+    for (const task of rejectedOverdue) {
       byId.set(task.id, task);
     }
     const overdueTasks = [...byId.values()].sort((a, b) => {
