@@ -254,6 +254,9 @@ describe("NotifyExpiredJob", () => {
         expect.stringMatching(/task task-vanish missing after admin channel step/),
       ]),
     );
+    expect(taskRepository.update).toHaveBeenCalledWith("task-vanish", {
+      notification_level: "expired_admin",
+    });
     expect(dmSpy).not.toHaveBeenCalled();
   });
 
