@@ -46,7 +46,7 @@ const depsBase = {
 
 describe("expireOverdueDutyTask", () => {
   it("does not expire when live row is approved", async () => {
-    const live = dutyTask({ status: "approved", proof_s3_key: "k" });
+    const live = dutyTask({ status: "approved", proof_s3_key: null });
     const taskRepository = {
       findById: vi.fn().mockResolvedValue(live),
       update: vi.fn(),
@@ -347,6 +347,7 @@ describe("expireOverdueDutyTask", () => {
   });
 
   it("uses live row for expiry even when snapshot was stale open without proof", async () => {
+    const futureDue = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const live = dutyTask({
       id: "t-live",
       status: "open",
@@ -369,7 +370,7 @@ describe("expireOverdueDutyTask", () => {
         id: "t-live",
         status: "open",
         proof_s3_key: null,
-        due_at: "2020-01-01T00:00:00.000Z",
+        due_at: futureDue,
       }),
       {
         taskRepository,

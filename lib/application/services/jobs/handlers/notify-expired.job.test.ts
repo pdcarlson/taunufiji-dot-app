@@ -27,7 +27,7 @@ const expiredTaskBase: HousingTask = {
 };
 
 function expiredTaskFixture(overrides: Partial<HousingTask>): HousingTask {
-  return { ...expiredTaskBase, ...overrides } as unknown as HousingTask;
+  return { ...expiredTaskBase, ...overrides };
 }
 
 describe("NotifyExpiredJob", () => {
