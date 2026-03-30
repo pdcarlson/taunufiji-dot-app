@@ -59,6 +59,24 @@ export async function expireOverdueDutyTask(
     };
   }
 
+  if (task.status === "approved") {
+    return {
+      expired: false,
+      fined: false,
+      triggeredNextInstance: false,
+      errors,
+    };
+  }
+
+  if (task.status === "pending" && task.proof_s3_key) {
+    return {
+      expired: false,
+      fined: false,
+      triggeredNextInstance: false,
+      errors,
+    };
+  }
+
   if (task.proof_s3_key) {
     return {
       expired: false,

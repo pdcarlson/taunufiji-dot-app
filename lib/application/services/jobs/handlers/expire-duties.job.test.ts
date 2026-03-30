@@ -81,6 +81,17 @@ describe("expireDutiesJob", () => {
             }),
           ];
         }
+        if (opts.status === "rejected") {
+          if (offset > 0) return [];
+          return [
+            baseTask({
+              id: "task-rejected",
+              title: "Stairs",
+              status: "rejected",
+              due_at: past,
+            }),
+          ];
+        }
         return [];
       },
     );
@@ -100,7 +111,7 @@ describe("expireDutiesJob", () => {
     );
 
     expect(result.errors).toEqual([]);
-    expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledTimes(2);
+    expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledTimes(3);
     expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledWith(
       expect.objectContaining({ id: "task-open" }),
       expect.objectContaining({
@@ -112,6 +123,15 @@ describe("expireDutiesJob", () => {
     );
     expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledWith(
       expect.objectContaining({ id: "task-pending" }),
+      expect.objectContaining({
+        taskRepository,
+        ledgerRepository,
+        pointsService,
+        scheduleService,
+      }),
+    );
+    expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "task-rejected" }),
       expect.objectContaining({
         taskRepository,
         ledgerRepository,

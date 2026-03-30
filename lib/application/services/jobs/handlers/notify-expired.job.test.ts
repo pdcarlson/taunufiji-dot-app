@@ -38,17 +38,17 @@ describe("NotifyExpiredJob", () => {
   });
 
   it("marks expired notification only when channel and DM both succeed", async () => {
+    const row = expiredTaskFixture({
+      id: "task-1",
+      title: "Kitchen",
+      assigned_to: "user-1",
+    });
     taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
       const offset = opts.offset ?? 0;
       if (offset > 0) return [];
-      return [
-        expiredTaskFixture({
-          id: "task-1",
-          title: "Kitchen",
-          assigned_to: "user-1",
-        }),
-      ];
+      return [row];
     });
+    taskRepository.findById = vi.fn().mockResolvedValue(row);
     taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
     vi.spyOn(NotificationService, "notifyAdmins").mockResolvedValue({
       success: true,
@@ -67,17 +67,17 @@ describe("NotifyExpiredJob", () => {
   });
 
   it("persists expired_admin when channel succeeds but DM fails, then completes on retry", async () => {
+    const rowFirst = expiredTaskFixture({
+      id: "task-retry",
+      title: "Stairs",
+      assigned_to: "user-3",
+    });
     taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
       const offset = opts.offset ?? 0;
       if (offset > 0) return [];
-      return [
-        expiredTaskFixture({
-          id: "task-retry",
-          title: "Stairs",
-          assigned_to: "user-3",
-        }),
-      ];
+      return [rowFirst];
     });
+    taskRepository.findById = vi.fn().mockResolvedValue(rowFirst);
     taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
     const notifyAdminsSpy = vi
       .spyOn(NotificationService, "notifyAdmins")
@@ -95,18 +95,18 @@ describe("NotifyExpiredJob", () => {
     });
 
     notifyAdminsSpy.mockClear();
+    const rowSecond = expiredTaskFixture({
+      id: "task-retry",
+      title: "Stairs",
+      notification_level: "expired_admin",
+      assigned_to: "user-3",
+    });
     taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
       const offset = opts.offset ?? 0;
       if (offset > 0) return [];
-      return [
-        expiredTaskFixture({
-          id: "task-retry",
-          title: "Stairs",
-          notification_level: "expired_admin",
-          assigned_to: "user-3",
-        }),
-      ];
+      return [rowSecond];
     });
+    taskRepository.findById = vi.fn().mockResolvedValue(rowSecond);
     dmSpy.mockResolvedValueOnce({ success: true });
 
     const second = await NotifyExpiredJob.run(taskRepository);
@@ -119,17 +119,17 @@ describe("NotifyExpiredJob", () => {
   });
 
   it("does not send DM or mark complete when channel fails", async () => {
+    const row = expiredTaskFixture({
+      id: "task-2",
+      title: "Bathroom",
+      assigned_to: "user-2",
+    });
     taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
       const offset = opts.offset ?? 0;
       if (offset > 0) return [];
-      return [
-        expiredTaskFixture({
-          id: "task-2",
-          title: "Bathroom",
-          assigned_to: "user-2",
-        }),
-      ];
+      return [row];
     });
+    taskRepository.findById = vi.fn().mockResolvedValue(row);
     taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
     vi.spyOn(NotificationService, "notifyAdmins").mockResolvedValue({
       success: false,
@@ -144,6 +144,76 @@ describe("NotifyExpiredJob", () => {
     expect(result.expired_notified).toBe(0);
     expect(result.errors).toHaveLength(1);
     expect(dmSpy).not.toHaveBeenCalled();
+    expect(taskRepository.update).not.toHaveBeenCalled();
+  });
+
+  it("silences missed-task ping when re-fetch shows task was approved", async () => {
+    const staleRow = expiredTaskFixture({
+      id: "task-fixed",
+      title: "Kitchen",
+      assigned_to: "user-x",
+    });
+    taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
+      const offset = opts.offset ?? 0;
+      if (offset > 0) return [];
+      return [staleRow];
+    });
+    taskRepository.findById = vi.fn().mockResolvedValue(
+      expiredTaskFixture({
+        id: "task-fixed",
+        title: "Kitchen",
+        status: "approved",
+        assigned_to: "user-x",
+        proof_s3_key: "proof/key",
+      }),
+    );
+    taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
+    const notifyAdminsSpy = vi
+      .spyOn(NotificationService, "notifyAdmins")
+      .mockResolvedValue({ success: true });
+    const dmSpy = vi
+      .spyOn(NotificationService, "sendNotification")
+      .mockResolvedValue({ success: true });
+
+    const result = await NotifyExpiredJob.run(taskRepository);
+
+    expect(result.expired_notified).toBe(0);
+    expect(notifyAdminsSpy).not.toHaveBeenCalled();
+    expect(dmSpy).not.toHaveBeenCalled();
+    expect(taskRepository.update).not.toHaveBeenCalled();
+  });
+
+  it("silences missed-task ping when re-fetch shows pending with proof", async () => {
+    const staleRow = expiredTaskFixture({
+      id: "task-under-review",
+      title: "Hall",
+      assigned_to: "user-y",
+    });
+    taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
+      const offset = opts.offset ?? 0;
+      if (offset > 0) return [];
+      return [staleRow];
+    });
+    taskRepository.findById = vi.fn().mockResolvedValue(
+      expiredTaskFixture({
+        id: "task-under-review",
+        title: "Hall",
+        status: "pending",
+        assigned_to: "user-y",
+        proof_s3_key: "proof/after",
+      }),
+    );
+    taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
+    vi.spyOn(NotificationService, "notifyAdmins").mockResolvedValue({
+      success: true,
+    });
+    vi.spyOn(NotificationService, "sendNotification").mockResolvedValue({
+      success: true,
+    });
+
+    const result = await NotifyExpiredJob.run(taskRepository);
+
+    expect(result.expired_notified).toBe(0);
     expect(taskRepository.update).not.toHaveBeenCalled();
   });
 });
