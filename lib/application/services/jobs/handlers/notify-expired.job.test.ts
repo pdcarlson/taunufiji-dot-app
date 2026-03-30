@@ -118,6 +118,38 @@ describe("NotifyExpiredJob", () => {
     });
   });
 
+  it("skips missed-task channel/DM when expired row has proof (stale status) but marks notification complete", async () => {
+    const notifyAdminsSpy = vi
+      .spyOn(NotificationService, "notifyAdmins")
+      .mockResolvedValue({ success: true });
+    const dmSpy = vi
+      .spyOn(NotificationService, "sendNotification")
+      .mockResolvedValue({ success: true });
+    taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
+      const offset = opts.offset ?? 0;
+      if (offset > 0) return [];
+      return [
+        expiredTaskFixture({
+          id: "task-proof",
+          title: "Kitchen",
+          assigned_to: "user-9",
+          proof_s3_key: "s3/proof",
+        }),
+      ];
+    });
+    taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
+
+    const result = await NotifyExpiredJob.run(taskRepository);
+
+    expect(result.expired_notified).toBe(0);
+    expect(result.errors).toEqual([]);
+    expect(notifyAdminsSpy).not.toHaveBeenCalled();
+    expect(dmSpy).not.toHaveBeenCalled();
+    expect(taskRepository.update).toHaveBeenCalledWith("task-proof", {
+      notification_level: "expired",
+    });
+  });
+
   it("does not send DM or mark complete when channel fails", async () => {
     taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
       const offset = opts.offset ?? 0;

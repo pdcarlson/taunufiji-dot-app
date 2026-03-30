@@ -60,7 +60,10 @@ export class AdminService {
       throw new Error("Task not found.");
     }
 
-    if (task.status !== "pending") {
+    const isPendingReview = task.status === "pending";
+    const isStaleExpiredWithProof =
+      task.status === "expired" && Boolean(task.proof_s3_key);
+    if (!isPendingReview && !isStaleExpiredWithProof) {
       throw new Error("Task is not pending approval.");
     }
     const assignedUserId = task.assigned_to;
@@ -68,6 +71,7 @@ export class AdminService {
       throw new Error("Cannot approve task without an assignee.");
     }
     const originalPointsValue = task.points_value;
+    const originalStatus = task.status;
 
     // Update Task Status & potentially Points
     const updates: Partial<CreateAssignmentDTO> = {
@@ -99,7 +103,7 @@ export class AdminService {
         error instanceof Error ? error : new Error(String(error));
       Promise.resolve(
         this.taskRepository.update(taskId, {
-          status: "pending",
+          status: originalStatus,
           completed_at: null,
           points_value: originalPointsValue,
         }),

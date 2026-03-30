@@ -28,6 +28,7 @@ export const pendingFinesJob = async (
         status: "expired",
         assignedToPresent: true,
         fineNotApplied: true,
+        proofS3KeyAbsent: true,
         orderBy: "due_at",
         orderDirection: "asc",
       },

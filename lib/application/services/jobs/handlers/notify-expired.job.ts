@@ -1,5 +1,6 @@
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
+import { shouldSendMissedTaskNotification } from "@/lib/utils/housing-expired-notification-eligibility";
 import {
   fetchAllTaskPages,
   HOUSING_CRON_TASK_PAGE_SIZE,
@@ -35,6 +36,13 @@ export const NotifyExpiredJob = {
       for (const task of tasksToNotify) {
         try {
           if (task.type === "bounty") {
+            await taskRepository.update(task.id, {
+              notification_level: "expired",
+            });
+            continue;
+          }
+
+          if (!shouldSendMissedTaskNotification(task)) {
             await taskRepository.update(task.id, {
               notification_level: "expired",
             });

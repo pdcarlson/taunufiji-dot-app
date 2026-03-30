@@ -83,6 +83,36 @@ describe("AdminService", () => {
       );
     });
 
+    it("should approve stale expired task when proof exists (data healing)", async () => {
+      const taskId = "task-stale-expired";
+      (mockTaskRepo.findById as any).mockResolvedValue({
+        id: taskId,
+        title: "Kitchen",
+        status: "expired",
+        type: "duty",
+        points_value: 5,
+        assigned_to: "user-1",
+        proof_s3_key: "proof/key",
+        description: "desc",
+        createdAt: "now",
+        updatedAt: "now",
+      } as any);
+
+      await service.verifyTask(taskId, "admin-1");
+
+      expect(mockTaskRepo.update).toHaveBeenCalledWith(
+        taskId,
+        expect.objectContaining({
+          status: "approved",
+          completed_at: expect.any(String),
+        }),
+      );
+      expect(DomainEventBus.publish).toHaveBeenCalledWith(
+        TaskEvents.TASK_APPROVED,
+        expect.objectContaining({ taskId, userId: "user-1", points: 5 }),
+      );
+    });
+
     it("should rollback status and throw if EventBus fails", async () => {
       const taskId = "task-fail";
       (mockTaskRepo.findById as any).mockResolvedValue({
@@ -107,6 +137,34 @@ describe("AdminService", () => {
         taskId,
         expect.objectContaining({
           status: "pending",
+          completed_at: null,
+        }),
+      );
+    });
+
+    it("should rollback to expired when healing approval fails on EventBus", async () => {
+      const taskId = "task-stale-rollback";
+      (mockTaskRepo.findById as any).mockResolvedValue({
+        id: taskId,
+        title: "Stairs",
+        status: "expired",
+        type: "duty",
+        points_value: 3,
+        assigned_to: "user-2",
+        proof_s3_key: "proof/x",
+      } as any);
+      (DomainEventBus.publish as any).mockRejectedValue(
+        new Error("Event Error"),
+      );
+
+      await expect(service.verifyTask(taskId, "admin-1")).rejects.toThrow(
+        "Failed to complete approval process: Event Error",
+      );
+
+      expect(mockTaskRepo.update).toHaveBeenLastCalledWith(
+        taskId,
+        expect.objectContaining({
+          status: "expired",
           completed_at: null,
         }),
       );
