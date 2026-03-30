@@ -53,13 +53,23 @@ describe("expireDutiesJob", () => {
     taskRepository = MockFactory.createTaskRepository();
   });
 
-  it("processes overdue open and pending tasks through shared overdue processor", async () => {
+  it("processes overdue open, pending, and rejected tasks through shared overdue processor", async () => {
     const past = new Date(Date.now() - 60_000).toISOString();
 
     taskRepository.findMany = vi.fn().mockImplementation(
       async (opts: TaskQueryOptions) => {
         const offset = opts.offset ?? 0;
-        if (opts.status === "open") {
+        const statuses = Array.isArray(opts.status)
+          ? opts.status
+          : opts.status
+            ? [opts.status]
+            : [];
+        const isCombinedOverdueScan =
+          statuses.length === 3 &&
+          statuses.includes("open") &&
+          statuses.includes("pending") &&
+          statuses.includes("rejected");
+        if (isCombinedOverdueScan) {
           if (offset > 0) return [];
           return [
             baseTask({
@@ -68,15 +78,16 @@ describe("expireDutiesJob", () => {
               status: "open",
               due_at: past,
             }),
-          ];
-        }
-        if (opts.status === "pending") {
-          if (offset > 0) return [];
-          return [
             baseTask({
               id: "task-pending",
               title: "Hall",
               status: "pending",
+              due_at: past,
+            }),
+            baseTask({
+              id: "task-rejected",
+              title: "Stairs",
+              status: "rejected",
               due_at: past,
             }),
           ];
@@ -100,7 +111,12 @@ describe("expireDutiesJob", () => {
     );
 
     expect(result.errors).toEqual([]);
-    expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledTimes(2);
+    expect(taskRepository.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: ["open", "pending", "rejected"],
+      }),
+    );
+    expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledTimes(3);
     expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledWith(
       expect.objectContaining({ id: "task-open" }),
       expect.objectContaining({
@@ -112,6 +128,15 @@ describe("expireDutiesJob", () => {
     );
     expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledWith(
       expect.objectContaining({ id: "task-pending" }),
+      expect.objectContaining({
+        taskRepository,
+        ledgerRepository,
+        pointsService,
+        scheduleService,
+      }),
+    );
+    expect(hoisted.expireOverdueDutyTask).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "task-rejected" }),
       expect.objectContaining({
         taskRepository,
         ledgerRepository,

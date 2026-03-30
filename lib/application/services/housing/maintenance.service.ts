@@ -63,9 +63,11 @@ export class MaintenanceService {
             }
           }
 
-          // Check C: Open/Pending but Expired (Duty)
+          // Check C: Open / pending / rejected (no proof) past due — expire duty (same as cron)
           if (
-            task.status !== "rejected" &&
+            (task.status === "open" ||
+              task.status === "pending" ||
+              task.status === "rejected") &&
             task.type !== "bounty" &&
             task.due_at &&
             now > new Date(task.due_at) &&

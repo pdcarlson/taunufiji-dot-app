@@ -12,6 +12,16 @@ const base: HousingTask = {
   type: "duty",
   points_value: 0,
   proof_s3_key: null,
+  schedule_id: null,
+  initial_image_s3_key: null,
+  assigned_to: null,
+  due_at: null,
+  expires_at: null,
+  unlock_at: null,
+  is_fine: null,
+  notification_level: undefined,
+  execution_limit: null,
+  completed_at: null,
 };
 
 describe("shouldSendMissedTaskNotification", () => {
@@ -41,5 +51,15 @@ describe("shouldSendMissedTaskNotification", () => {
         proof_s3_key: null,
       }),
     ).toBe(true);
+  });
+
+  it("is false for bounty even when expired with no proof", () => {
+    expect(
+      shouldSendMissedTaskNotification({
+        ...base,
+        type: "bounty",
+        proof_s3_key: null,
+      }),
+    ).toBe(false);
   });
 });

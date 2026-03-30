@@ -6,6 +6,9 @@ import { HousingTask } from "@/lib/domain/entities";
  * (stale `status` or race with cron should not ping).
  */
 export function shouldSendMissedTaskNotification(task: HousingTask): boolean {
+  if (task.type === "bounty") {
+    return false;
+  }
   if (task.status !== "expired") {
     return false;
   }
