@@ -105,8 +105,14 @@ export const NotifyExpiredJob = {
           }
 
           const afterChannel = await taskRepository.findById(fresh.id);
-          const levelForDm = afterChannel?.notification_level ?? fresh.notification_level;
-          if (levelForDm === "expired") {
+          if (!afterChannel) {
+            const errMsg = `Expired notify: task ${fresh.id} missing after admin channel step`;
+            console.error(`[NotifyExpiredJob] ${errMsg}`);
+            errors.push(errMsg);
+            continue;
+          }
+
+          if (afterChannel.notification_level === "expired") {
             console.log("[NotifyExpiredJob]", {
               phase: "skip_already_fully_notified",
               taskId: fresh.id,

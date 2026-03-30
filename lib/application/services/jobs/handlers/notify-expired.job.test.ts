@@ -219,6 +219,44 @@ describe("NotifyExpiredJob", () => {
     expect(taskRepository.update).not.toHaveBeenCalled();
   });
 
+  it("does not send DM when task disappears after admin channel step", async () => {
+    const row = expiredTaskFixture({
+      id: "task-vanish",
+      title: "Attic",
+      assigned_to: "user-v",
+    });
+    taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
+      const offset = opts.offset ?? 0;
+      if (offset > 0) return [];
+      return [row];
+    });
+    let findByIdCalls = 0;
+    taskRepository.findById = vi.fn().mockImplementation(async () => {
+      findByIdCalls++;
+      if (findByIdCalls === 1) {
+        return row;
+      }
+      return null;
+    });
+    taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
+    vi.spyOn(NotificationService, "notifyAdmins").mockResolvedValue({
+      success: true,
+    });
+    const dmSpy = vi
+      .spyOn(NotificationService, "sendNotification")
+      .mockResolvedValue({ success: true });
+
+    const result = await NotifyExpiredJob.run(taskRepository);
+
+    expect(result.expired_notified).toBe(0);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/task task-vanish missing after admin channel step/),
+      ]),
+    );
+    expect(dmSpy).not.toHaveBeenCalled();
+  });
+
   it("does not send duplicate DM when re-fetch shows notification_level already expired", async () => {
     const staleRow = expiredTaskFixture({
       id: "task-done",
