@@ -37,19 +37,19 @@ export const NotifyExpiredJob = {
 
       for (const task of tasksToNotify) {
         try {
-          metrics.refetch_first_attempt++;
+          metrics.refetchFirstAttempt++;
           const fresh = await taskRepository.findById(task.id);
           if (!fresh) {
-            metrics.refetch_first_miss++;
+            metrics.refetchFirstMiss++;
             const errMsg = `Expired notify: task ${task.id} not found on re-fetch`;
             console.error(`[NotifyExpiredJob] ${errMsg}`);
             errors.push(errMsg);
             continue;
           }
-          metrics.refetch_first_hit++;
+          metrics.refetchFirstHit++;
 
           if (!shouldSendMissedTaskNotification(fresh)) {
-            metrics.skip_ineligible++;
+            metrics.skipIneligible++;
             console.log("[NotifyExpiredJob]", {
               phase: "skip_stale_or_ineligible",
               taskId: fresh.id,
@@ -86,7 +86,7 @@ export const NotifyExpiredJob = {
             );
 
             if (!channelResult.success) {
-              metrics.channel_failed++;
+              metrics.channelFailed++;
               const errMsg = `Channel notification failed for task ${fresh.id}: ${channelResult.error}`;
               console.error(`[NotifyExpiredJob] ${errMsg}`);
               errors.push(errMsg);
@@ -100,7 +100,7 @@ export const NotifyExpiredJob = {
 
           const afterChannel = await taskRepository.findById(fresh.id);
           if (!afterChannel) {
-            metrics.missing_after_admin_step++;
+            metrics.missingAfterAdminStep++;
             const errMsg = `Expired notify: task ${fresh.id} missing after admin channel step`;
             console.error(`[NotifyExpiredJob] ${errMsg}`);
             errors.push(errMsg);
@@ -108,7 +108,7 @@ export const NotifyExpiredJob = {
           }
 
           if (afterChannel.notification_level === "expired") {
-            metrics.skip_already_fully_notified++;
+            metrics.skipAlreadyFullyNotified++;
             console.log("[NotifyExpiredJob]", {
               phase: "skip_already_fully_notified",
               taskId: fresh.id,
@@ -137,7 +137,7 @@ export const NotifyExpiredJob = {
           );
 
           if (!dmResult.success) {
-            metrics.dm_failed++;
+            metrics.dmFailed++;
             const errMsg = `DM to user ${afterChannel.assigned_to} failed for task ${afterChannel.id}: ${dmResult.error}`;
             console.error(`[NotifyExpiredJob] ${errMsg}`);
             errors.push(errMsg);
@@ -148,7 +148,7 @@ export const NotifyExpiredJob = {
             notification_level: "expired",
           });
 
-          metrics.notified_success++;
+          metrics.notifiedSuccess++;
           console.log("[NotifyExpiredJob]", {
             phase: "expired_notified",
             taskId: afterChannel.id,
