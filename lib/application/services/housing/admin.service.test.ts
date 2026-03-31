@@ -1,21 +1,44 @@
 import { AdminService } from "./admin.service";
 import { MockFactory } from "@/lib/test/mock-factory";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
-
 import { TaskEvents } from "@/lib/domain/events";
+import { ScheduleService } from "./schedule.service";
+import type { HousingTask } from "@/lib/domain/types/task";
 
-// Mock dependencies
 const mockTaskRepo = MockFactory.createTaskRepository();
-// Partial mock for ScheduleService as it's complex
+
+function housingTaskFixture(overrides: Partial<HousingTask> & { id: string }): HousingTask {
+  return {
+    id: overrides.id,
+    createdAt: overrides.createdAt ?? "2026-01-01T00:00:00.000Z",
+    updatedAt: overrides.updatedAt ?? "2026-01-01T00:00:00.000Z",
+    title: overrides.title ?? "T",
+    description: overrides.description ?? "",
+    status: overrides.status ?? "pending",
+    type: overrides.type ?? "duty",
+    points_value: overrides.points_value ?? 0,
+    schedule_id: overrides.schedule_id ?? null,
+    initial_image_s3_key: overrides.initial_image_s3_key ?? null,
+    proof_s3_key: overrides.proof_s3_key ?? null,
+    assigned_to: overrides.assigned_to ?? null,
+    due_at: overrides.due_at ?? null,
+    expires_at: overrides.expires_at ?? null,
+    unlock_at: overrides.unlock_at ?? null,
+    is_fine: overrides.is_fine ?? null,
+    notification_level: overrides.notification_level,
+    execution_limit: overrides.execution_limit ?? null,
+    completed_at: overrides.completed_at ?? null,
+  };
+}
+
 const mockScheduleService = {
   triggerNextInstance: vi.fn(),
   updateTaskThisAndFuture: vi.fn(),
   updateTaskEntireSeries: vi.fn(),
   deleteTaskThisAndFuture: vi.fn(),
   deleteTaskEntireSeries: vi.fn(),
-} as any;
+} as unknown as ScheduleService;
 
-// Mock Event Bus
 vi.mock("@/lib/infrastructure/events/dispatcher", () => ({
   DomainEventBus: {
     publish: vi.fn(),
@@ -27,7 +50,7 @@ describe("AdminService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (DomainEventBus.publish as any).mockResolvedValue(undefined);
+    vi.mocked(DomainEventBus.publish).mockResolvedValue(undefined);
     service = new AdminService(mockTaskRepo, mockScheduleService);
   });
 
@@ -35,29 +58,25 @@ describe("AdminService", () => {
     it("should approve a pending task and set completed_at", async () => {
       const taskId = "task-123";
 
-      // Mock findById to return a pending task
-      (mockTaskRepo.findById as any).mockResolvedValue({
-        id: taskId,
-        title: "Test Task",
-        status: "pending",
-        type: "duty",
-        points_value: 10,
-        assigned_to: "user-1",
-        // ... other mandatory fields
-        description: "desc",
-        createdAt: "now",
-        updatedAt: "now",
-      } as any);
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(
+        housingTaskFixture({
+          id: taskId,
+          title: "Test Task",
+          status: "pending",
+          type: "duty",
+          points_value: 10,
+          assigned_to: "user-1",
+          description: "desc",
+        }),
+      );
 
-      // Execute
       await service.verifyTask(taskId, "admin-1");
 
-      // Verify Update was called with completed_at
       expect(mockTaskRepo.update).toHaveBeenCalledWith(
         taskId,
         expect.objectContaining({
           status: "approved",
-          completed_at: expect.any(String), // Verify string date is passed
+          completed_at: expect.any(String),
         }),
       );
 
@@ -73,10 +92,13 @@ describe("AdminService", () => {
     });
 
     it("should throw error if task is not pending", async () => {
-      (mockTaskRepo.findById as any).mockResolvedValue({
-        id: "task-open",
-        status: "open",
-      } as any);
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(
+        housingTaskFixture({
+          id: "task-open",
+          title: "Open",
+          status: "open",
+        }),
+      );
 
       await expect(service.verifyTask("task-open", "admin-1")).rejects.toThrow(
         "Task is not pending approval.",
@@ -85,18 +107,18 @@ describe("AdminService", () => {
 
     it("should approve stale expired task when proof exists (data healing)", async () => {
       const taskId = "task-stale-expired";
-      (mockTaskRepo.findById as any).mockResolvedValue({
-        id: taskId,
-        title: "Kitchen",
-        status: "expired",
-        type: "duty",
-        points_value: 5,
-        assigned_to: "user-1",
-        proof_s3_key: "proof/key",
-        description: "desc",
-        createdAt: "now",
-        updatedAt: "now",
-      } as any);
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(
+        housingTaskFixture({
+          id: taskId,
+          title: "Kitchen",
+          status: "expired",
+          type: "duty",
+          points_value: 5,
+          assigned_to: "user-1",
+          proof_s3_key: "proof/key",
+          description: "desc",
+        }),
+      );
 
       await service.verifyTask(taskId, "admin-1");
 
@@ -115,16 +137,17 @@ describe("AdminService", () => {
 
     it("should rollback status and throw if EventBus fails", async () => {
       const taskId = "task-fail";
-      (mockTaskRepo.findById as any).mockResolvedValue({
-        id: taskId,
-        title: "Fail Task",
-        status: "pending",
-        points_value: 10,
-        assigned_to: "user-1",
-      } as any);
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(
+        housingTaskFixture({
+          id: taskId,
+          title: "Fail Task",
+          status: "pending",
+          points_value: 10,
+          assigned_to: "user-1",
+        }),
+      );
 
-      // Mock EventBus failure
-      (DomainEventBus.publish as any).mockRejectedValue(
+      vi.mocked(DomainEventBus.publish).mockRejectedValue(
         new Error("Event Error"),
       );
 
@@ -144,16 +167,18 @@ describe("AdminService", () => {
 
     it("should rollback to expired when healing approval fails on EventBus", async () => {
       const taskId = "task-stale-rollback";
-      (mockTaskRepo.findById as any).mockResolvedValue({
-        id: taskId,
-        title: "Stairs",
-        status: "expired",
-        type: "duty",
-        points_value: 3,
-        assigned_to: "user-2",
-        proof_s3_key: "proof/x",
-      } as any);
-      (DomainEventBus.publish as any).mockRejectedValue(
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(
+        housingTaskFixture({
+          id: taskId,
+          title: "Stairs",
+          status: "expired",
+          type: "duty",
+          points_value: 3,
+          assigned_to: "user-2",
+          proof_s3_key: "proof/x",
+        }),
+      );
+      vi.mocked(DomainEventBus.publish).mockRejectedValue(
         new Error("Event Error"),
       );
 
@@ -169,19 +194,21 @@ describe("AdminService", () => {
         }),
       );
     });
+
     it("should use overridePoints if provided", async () => {
       const taskId = "task-override";
-      (mockTaskRepo.findById as any).mockResolvedValue({
-        id: taskId,
-        title: "Override Task",
-        status: "pending",
-        points_value: 10,
-        assigned_to: "user-1",
-      } as any);
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(
+        housingTaskFixture({
+          id: taskId,
+          title: "Override Task",
+          status: "pending",
+          points_value: 10,
+          assigned_to: "user-1",
+        }),
+      );
 
       await service.verifyTask(taskId, "admin-1", 20);
 
-      // Verify update called with new points
       expect(mockTaskRepo.update).toHaveBeenCalledWith(
         taskId,
         expect.objectContaining({
@@ -190,7 +217,6 @@ describe("AdminService", () => {
         }),
       );
 
-      // Verify Event published with new points
       expect(DomainEventBus.publish).toHaveBeenCalledWith(
         TaskEvents.TASK_APPROVED,
         expect.objectContaining({
@@ -199,20 +225,23 @@ describe("AdminService", () => {
       );
     });
   });
+
   describe("rejectTask", () => {
     it("should delete ad-hoc tasks upon rejection", async () => {
       const taskId = "adhoc-1";
-      (mockTaskRepo.findById as any).mockResolvedValue({
-        id: taskId,
-        type: "ad_hoc",
-        assigned_to: "user-1",
-        title: "Extra Work",
-      } as any);
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(
+        housingTaskFixture({
+          id: taskId,
+          type: "ad_hoc",
+          assigned_to: "user-1",
+          title: "Extra Work",
+        }),
+      );
 
       await service.rejectTask(taskId, "Not needed");
 
       expect(mockTaskRepo.delete).toHaveBeenCalledWith(taskId);
-      expect(mockTaskRepo.update).not.toHaveBeenCalled(); // Should NOT update status
+      expect(mockTaskRepo.update).not.toHaveBeenCalled();
       expect(DomainEventBus.publish).toHaveBeenCalledWith(
         TaskEvents.TASK_REJECTED,
         expect.objectContaining({ taskId }),
@@ -221,12 +250,14 @@ describe("AdminService", () => {
 
     it("should update status for normal tasks upon rejection", async () => {
       const taskId = "duty-1";
-      (mockTaskRepo.findById as any).mockResolvedValue({
-        id: taskId,
-        type: "duty",
-        assigned_to: "user-1",
-        title: "Clean",
-      } as any);
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(
+        housingTaskFixture({
+          id: taskId,
+          type: "duty",
+          assigned_to: "user-1",
+          title: "Clean",
+        }),
+      );
 
       await service.rejectTask(taskId, "Bad proof");
 
@@ -240,11 +271,16 @@ describe("AdminService", () => {
 
   describe("recurring scope mutations", () => {
     it("updates only one task when scope is this_instance", async () => {
-      (mockTaskRepo.findById as any).mockResolvedValue({
-        id: "task-1",
-        schedule_id: "schedule-1",
-      });
-      (mockTaskRepo.update as any).mockResolvedValue({ id: "task-1" });
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(
+        housingTaskFixture({
+          id: "task-1",
+          schedule_id: "schedule-1",
+          title: "S",
+        }),
+      );
+      vi.mocked(mockTaskRepo.update).mockResolvedValue(
+        housingTaskFixture({ id: "task-1", title: "S" }),
+      );
 
       await service.updateTask(
         "task-1",
@@ -261,13 +297,14 @@ describe("AdminService", () => {
     });
 
     it("routes update to schedule service for this_and_future scope", async () => {
-      const task = {
+      const task = housingTaskFixture({
         id: "task-2",
         schedule_id: "schedule-2",
         due_at: "2026-03-10T03:59:00.000Z",
-      };
-      (mockTaskRepo.findById as any).mockResolvedValue(task);
-      (mockScheduleService.updateTaskThisAndFuture as any).mockResolvedValue(
+        title: "S",
+      });
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(task);
+      vi.mocked(mockScheduleService.updateTaskThisAndFuture).mockResolvedValue(
         task,
       );
 
@@ -288,13 +325,14 @@ describe("AdminService", () => {
     });
 
     it("routes update to entire_series without requiring due_at", async () => {
-      const task = {
+      const task = housingTaskFixture({
         id: "task-X",
         schedule_id: "schedule-X",
-      };
+        title: "S",
+      });
       const payload = { title: "Series title" };
-      (mockTaskRepo.findById as any).mockResolvedValue(task);
-      (mockScheduleService.updateTaskEntireSeries as any).mockResolvedValue(
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(task);
+      vi.mocked(mockScheduleService.updateTaskEntireSeries).mockResolvedValue(
         task,
       );
 
@@ -309,11 +347,12 @@ describe("AdminService", () => {
     });
 
     it("routes delete to schedule service for entire_series scope", async () => {
-      const task = {
+      const task = housingTaskFixture({
         id: "task-Y",
         schedule_id: "schedule-Y",
-      };
-      (mockTaskRepo.findById as any).mockResolvedValue(task);
+        title: "S",
+      });
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(task);
 
       await service.deleteTask("task-Y", { scope: "entire_series" });
 
@@ -325,12 +364,13 @@ describe("AdminService", () => {
     });
 
     it("routes delete to schedule service for this_and_future scope", async () => {
-      const task = {
+      const task = housingTaskFixture({
         id: "task-Z",
         schedule_id: "schedule-Z",
         due_at: "2026-03-10T03:59:00.000Z",
-      };
-      (mockTaskRepo.findById as any).mockResolvedValue(task);
+        title: "S",
+      });
+      vi.mocked(mockTaskRepo.findById).mockResolvedValue(task);
 
       await service.deleteTask("task-Z", { scope: "this_and_future" });
 
