@@ -233,6 +233,10 @@ describe("expireOverdueDutyTask", () => {
     expect(result.expired).toBe(true);
     expect(result.fined).toBe(true);
     expect(pointsService.awardPoints).not.toHaveBeenCalled();
+    expect(taskRepository.update).toHaveBeenCalledWith(
+      taskId,
+      expect.objectContaining({ status: "expired" }),
+    );
     expect(taskRepository.update).toHaveBeenCalledWith(taskId, {
       is_fine: true,
     });
