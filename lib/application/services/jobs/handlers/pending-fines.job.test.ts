@@ -77,6 +77,23 @@ describe("pendingFinesJob", () => {
     });
   });
 
+  it("queries only expired rows without proof (no fine retry when proof present)", async () => {
+    const findMany = vi.fn().mockImplementation(
+      async (opts: TaskQueryOptions) => {
+        expect(opts.proofS3KeyAbsent).toBe(true);
+        const offset = opts.offset ?? 0;
+        if (offset > 0) return [];
+        return [];
+      },
+    );
+    taskRepository.findMany = findMany;
+
+    await pendingFinesJob(taskRepository, pointsService, ledgerRepository);
+
+    expect(findMany).toHaveBeenCalled();
+    expect(pointsService.awardPoints).not.toHaveBeenCalled();
+  });
+
   it("skips awardPoints when ledger already has fine for task id in reason", async () => {
     taskRepository.findMany = vi.fn().mockImplementation(
       async (opts: TaskQueryOptions) => {

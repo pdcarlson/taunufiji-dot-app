@@ -30,7 +30,8 @@ export interface TaskQueryOptions {
   proofS3KeyAbsent?: boolean;
   /**
    * When true, only tasks where `is_fine` is unset or false (missed-duty fine not yet persisted).
-   * Pair with `status: "expired"` and `assignedToPresent: true` for fine retry scans.
+   * Pair with `status: "expired"`, `assignedToPresent: true`, and usually `proofS3KeyAbsent: true`
+   * for fine retry scans (submitted work should not receive missed-duty fines).
    */
   fineNotApplied?: boolean;
   /**

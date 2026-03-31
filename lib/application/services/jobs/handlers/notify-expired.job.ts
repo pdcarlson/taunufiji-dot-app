@@ -1,23 +1,10 @@
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
-import { HousingTask } from "@/lib/domain/types/task";
 import { NotificationService } from "@/lib/application/services/shared/notification.service";
+import { shouldSendMissedTaskNotification } from "@/lib/utils/housing-expired-notification-eligibility";
 import {
   fetchAllTaskPages,
   HOUSING_CRON_TASK_PAGE_SIZE,
 } from "../task-query-pagination";
-
-function shouldDeliverMissedDutyPing(task: HousingTask): boolean {
-  if (task.type === "bounty") {
-    return false;
-  }
-  if (task.status !== "expired") {
-    return false;
-  }
-  if (task.proof_s3_key) {
-    return false;
-  }
-  return true;
-}
 
 export const NotifyExpiredJob = {
   async run(taskRepository: ITaskRepository): Promise<{
@@ -56,7 +43,7 @@ export const NotifyExpiredJob = {
             continue;
           }
 
-          if (!shouldDeliverMissedDutyPing(fresh)) {
+          if (!shouldSendMissedTaskNotification(fresh)) {
             console.log("[NotifyExpiredJob]", {
               phase: "skip_stale_or_ineligible",
               taskId: fresh.id,
