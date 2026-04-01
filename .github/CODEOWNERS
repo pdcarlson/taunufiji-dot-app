@@ -1,0 +1,3 @@
+# Require review from code owners when enabled on the branch ruleset (see docs/deployment/branch-protection.md).
+# Multiple space-separated owners: any listed owner can satisfy a required code-owner review.
+* @pdcarlson @cursoragent

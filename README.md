@@ -176,6 +176,13 @@ Code quality is enforced via GitHub Actions (`.github/workflows/ci.yml`).
 - **Type Safety**: TypeScript Strict Mode check (`tsc --noEmit`).
 - **Build Verification**: Full production build (`next build`) runs on every Pull Request to prevent regressions.
 
+### Contributing and local development
+
+- **[`CONTRIBUTING.md`](CONTRIBUTING.md)** — Pull requests (base `main`), branch naming, running the same checks as CI, and reporting bugs via Issues.
+- **[`AGENTS.md`](AGENTS.md)** — Quality gate commands, architecture boundaries for `lib/`, and commit message format (also used by automation).
+- **Environment** — Copy [`.env.example`](.env.example) to `.env.local` and fill in Appwrite, AWS, Discord, and cron values. See [`lib/infrastructure/config/server-env-schema.ts`](lib/infrastructure/config/server-env-schema.ts) for the validated shape. For lint/tests/build without real services, use `SKIP_ENV_VALIDATION=true` as documented in `AGENTS.md`.
+- **Canonical docs** — [`spec/`](spec/README.md) (architecture, platform, product); [`docs/`](docs/README.md) (deployment, testing, style).
+
 ---
 
 _Engineered by [Paul Carlson](https://github.com/pdcarlson) for Phi Gamma Delta._

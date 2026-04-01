@@ -18,10 +18,11 @@ Feature Branch → PR (CI Quality Gates) → Merge to main → Vercel Preview (p
 
 ## Sub-Pages
 
-| Document | Description |
-|----------|-------------|
-| [CI Quality Gates](ci.md) | GitHub Actions workflow, job details, required status checks |
-| [Environments](environments.md) | Staging, production, secret management, env matrix, runtime checklist |
-| [Cron Jobs](cron.md) | Vercel Cron configuration, HOUSING_BATCH pipeline, manual testing |
-| [Troubleshooting](troubleshooting.md) | Staging diagnostics, runbook for common failure symptoms |
-| [Branch Protection](branch-protection.md) | Git branch model, rulesets, GitHub repo settings automation |
+| Document                                  | Description                                                                    |
+| ----------------------------------------- | ------------------------------------------------------------------------------ |
+| [Contributing](../../CONTRIBUTING.md)     | Human contributor workflow, PRs to `main`, local quality gate, bugs via Issues |
+| [CI Quality Gates](ci.md)                 | GitHub Actions workflow, job details, required status checks                   |
+| [Environments](environments.md)           | Staging, production, secret management, env matrix, runtime checklist          |
+| [Cron Jobs](cron.md)                      | Vercel Cron configuration, HOUSING_BATCH pipeline, manual testing              |
+| [Troubleshooting](troubleshooting.md)     | Staging diagnostics, runbook for common failure symptoms                       |
+| [Branch Protection](branch-protection.md) | Git branch model, rulesets, GitHub repo settings automation                    |

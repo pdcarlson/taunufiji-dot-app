@@ -219,6 +219,7 @@ UI scope labels map to `RecurringMutationScope` on server actions. Cron reads **
   - Channel fails: do not send the assignee DM yet; leave `notification_level` below `expired_admin`; retry both channel and DM on a later run.
   - Channel succeeds, DM fails: set `notification_level` to `expired_admin` so the next cron pass skips repeating the channel alert and only retries the DM; after DM succeeds, set `notification_level` to `expired`.
   - Unassigned expired tasks: mark `expired` without DMs (no assignee); admins still see the task in data if needed.
+- **Stale `status: expired` with proof**: If a document still shows `expired` but `proof_s3_key` is set (race or inconsistent write), the missed-task housing channel + assignee DM path must **not** run; advance `notification_level` to `expired` to stop retries. Admins may still **approve** that row (same as `pending` with proof) to heal status to `approved`.
 - Unlock and recurring notification stages should persist completion only after successful delivery.
 - Urgent reminder threshold is `12` hours before `due_at`.
 
