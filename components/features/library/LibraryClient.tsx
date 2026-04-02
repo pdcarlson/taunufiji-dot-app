@@ -107,20 +107,25 @@ export default function LibraryClient({
     (key) => filters[key] !== INITIAL_FILTERS[key],
   );
 
+  // When no filters are active, keep the list in sync with RSC prefetched data.
+  // When filters are active, never clobber client search results (including empty
+  // result sets) with the unfiltered initial payload.
   useEffect(() => {
+    if (hasActiveFilters) {
+      return;
+    }
+
     const resourcesChanged = !areResourcesEquivalent(results, initialResources);
     const totalChanged = searchTotal !== initialTotal;
 
-    if (!hasActiveFilters || resourcesChanged) {
-      if (resourcesChanged) {
-        setResults(initialResources);
-      }
-      if (totalChanged) {
-        setSearchTotal(initialTotal);
-      }
-      if (initialResources.length > 0) {
-        setLoading(false);
-      }
+    if (resourcesChanged) {
+      setResults(initialResources);
+    }
+    if (totalChanged) {
+      setSearchTotal(initialTotal);
+    }
+    if (initialResources.length > 0) {
+      setLoading(false);
     }
   }, [hasActiveFilters, initialResources, initialTotal, results, searchTotal]);
 
