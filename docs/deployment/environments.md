@@ -35,7 +35,7 @@
 | Appwrite        | `NEXT_PUBLIC_APPWRITE_ENDPOINT`, `NEXT_PUBLIC_APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY`                        |
 | Discord Core    | `DISCORD_APP_ID`, `DISCORD_PUBLIC_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_HOUSING_CHANNEL_ID` |
 | Discord Roles   | `DISCORD_ROLE_ID_BROTHER`, `DISCORD_ROLE_ID_CABINET`, `DISCORD_ROLE_ID_HOUSING_CHAIR`                         |
-| AWS/S3          | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME`                                 |
+| AWS/S3          | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME` (bucket must allow browser `PUT` from your app origins via CORS for Library uploads) |
 | Cron (optional) | `CRON_SECRET` — set when Vercel cron or authenticated `/api/cron` use is enabled                              |
 
 In `serverEnvSchema` (`lib/infrastructure/config/server-env-schema.ts`), **`CRON_SECRET` is optional** (Zod `.optional()`). Omit it only when cron is disabled and nothing calls `/api/cron`; otherwise configure a non-empty secret in Vercel (and locally) so the endpoint can authorize requests.
