@@ -33,7 +33,9 @@ export class LibraryService {
     if (activeKeys.length > 0) {
       logger.info("[library.search] query", {
         activeKeys,
-        hasProfessorFilter: normalized.professor !== undefined,
+        hasProfessorFilter:
+          normalized.professor !== undefined &&
+          normalized.professor !== "All",
       });
     }
     const result = await this.libraryRepository.search(normalized);
