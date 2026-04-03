@@ -36,9 +36,7 @@ async function putWithRetry(
   file: File,
   maxRetries = 2,
 ): Promise<Response> {
-  const contentType = validatedLibraryUploadContentType(
-    file.type || "application/pdf",
-  );
+  const contentType = validatedLibraryUploadContentType();
   let lastResponse: Response | null = null;
   let lastError: unknown;
 
@@ -262,9 +260,7 @@ export default function UnifiedUploadPage() {
         await presignLibraryUploadAction(
           {
             filename: stdName,
-            contentType: validatedLibraryUploadContentType(
-              fileToUpload.type || "application/pdf",
-            ),
+            contentType: validatedLibraryUploadContentType(),
           },
           jwt,
         );

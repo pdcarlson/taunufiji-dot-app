@@ -32,9 +32,7 @@ export async function presignLibraryUploadAction(
       }
       const safeName = sanitizeLibraryUploadFilename(input.filename);
       const key = `library/${safeName}`;
-      const validatedContentType = validatedLibraryUploadContentType(
-        input.contentType,
-      );
+      const validatedContentType = validatedLibraryUploadContentType();
 
       const uploadUrl = await container.storageService.getUploadUrl(
         key,
@@ -121,7 +119,7 @@ export async function createLibraryResourceAction(
 
       return record;
     },
-    { jwt },
+    { jwt, actionName: "createLibraryResource" },
   );
 
   if (result.success && result.data) return result.data;
