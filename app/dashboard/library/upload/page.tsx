@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
-  uploadFileAction,
+  presignLibraryUploadAction,
   createLibraryResourceAction,
 } from "@/lib/presentation/actions/library/manage.actions";
 import {
@@ -210,17 +210,30 @@ export default function UnifiedUploadPage() {
         });
       }
 
-      // 2. UPLOAD TO STORAGE
+      // 2. UPLOAD TO STORAGE (browser → S3 via presigned URL; avoids Vercel body limits)
       toast.loading("Uploading File...", { id: toastId });
 
-      // Use jwt generated earlier
-      const formData = new FormData();
-      formData.append("file", fileToUpload);
-      // formData.append("jwt", jwt); // Pass JWT
+      const { key: s3Key, uploadUrl } = await presignLibraryUploadAction(
+        {
+          filename: stdName,
+          contentType: fileToUpload.type || "application/pdf",
+        },
+        jwt,
+      );
 
-      // We need a server action that accepts FormData for upload
-      const uploadRes = await uploadFileAction(formData, jwt);
-      if (!uploadRes || !uploadRes.$id) throw new Error("Upload failed");
+      const putResponse = await fetch(uploadUrl, {
+        method: "PUT",
+        body: fileToUpload,
+        headers: {
+          "Content-Type": fileToUpload.type || "application/pdf",
+        },
+      });
+
+      if (!putResponse.ok) {
+        throw new Error(
+          `Storage upload failed (${putResponse.status}). If this persists, confirm the S3 bucket CORS allows PUT from your site origin.`,
+        );
+      }
 
       // 3. SUBMIT METADATA TO API
       toast.loading("Finalizing Record...", { id: toastId });
@@ -234,7 +247,7 @@ export default function UnifiedUploadPage() {
         : stickyMetadata.courseName || "";
 
       const resourceData = {
-        fileId: uploadRes.$id,
+        fileId: s3Key,
         metadata: {
           ...stickyMetadata,
           courseName,

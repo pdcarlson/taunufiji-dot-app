@@ -3,35 +3,45 @@
 import { logger } from "@/lib/utils/logger";
 import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 
+export type PresignLibraryUploadInput = {
+  filename: string;
+  contentType: string;
+};
+
+export type PresignLibraryUploadResult = {
+  key: string;
+  uploadUrl: string;
+};
+
 /**
- * Uploads a file to S3 and returns the Key/ID
+ * Issues a presigned PUT URL so the browser uploads directly to S3.
+ * Avoids sending the file through Vercel (serverless body limits ~4.5MB on Hobby).
  */
-export async function uploadFileAction(formData: FormData, jwt: string) {
-  try {
-    const result = await actionWrapper(
-      async ({ container }) => {
-        // 2. Process File
-        const file = formData.get("file") as File;
-        if (!file) throw new Error("No file uploaded");
+export async function presignLibraryUploadAction(
+  input: PresignLibraryUploadInput,
+  jwt: string,
+): Promise<PresignLibraryUploadResult> {
+  const result = await actionWrapper(
+    async ({ container }) => {
+      if (!input.filename?.trim()) {
+        throw new Error("No filename provided");
+      }
+      const safeName = input.filename.replace(/\s+/g, "_");
+      const key = `library/${safeName}`;
 
-        const buffer = Buffer.from(await file.arrayBuffer());
-        // Use 'library/' folder and keep original filename (sanitized)
-        const key = `library/${file.name.replace(/\s+/g, "_")}`;
+      const uploadUrl = await container.storageService.getUploadUrl(
+        key,
+        input.contentType || "application/pdf",
+      );
 
-        await container.storageService.uploadFile(buffer, key, file.type);
+      return { key, uploadUrl };
+    },
+    { jwt, actionName: "presignLibraryUpload" },
+  );
 
-        // Return an ID-like object to satisfy UI
-        return { $id: key, key: key };
-      },
-      { jwt },
-    );
-
-    if (result.success && result.data) return result.data;
-    throw new Error(result.error || "Upload failed");
-  } catch (e) {
-    logger.error("Upload Failed", e);
-    throw new Error("Failed to upload file");
-  }
+  if (result.success && result.data) return result.data;
+  logger.error("Library upload presign failed", result.error);
+  throw new Error(result.error || "Upload presign failed");
 }
 
 /**
