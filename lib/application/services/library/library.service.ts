@@ -10,11 +10,14 @@ import { logger } from "@/lib/utils/logger";
 export type { LibrarySearchFilters, CreateResourceParams };
 
 import { IStorageService } from "@/lib/domain/ports/storage.service.port";
+import { IDomainEventPublisher } from "@/lib/domain/ports/domain-event.publisher.port";
+import { sanitizeLibraryUploadFilename } from "@/lib/utils/sanitize-library-upload-filename";
 
 export class LibraryService {
   constructor(
     private readonly libraryRepository: ILibraryRepository,
     private readonly storageService: IStorageService,
+    private readonly domainEventPublisher: IDomainEventPublisher,
   ) {}
 
   /**
@@ -120,5 +123,81 @@ export class LibraryService {
     version: string;
   }) {
     return await this.libraryRepository.exists(criteria);
+  }
+
+  /**
+   * Promotes a uniquely keyed staging upload to the canonical `library/` key,
+   * persists metadata, notifies subscribers, and removes the staging object.
+   */
+  async finalizeUploadedResource(input: {
+    tempS3Key: string;
+    standardizedFilename: string;
+    uploadedByDiscordId: string;
+    department: string;
+    course_number: string;
+    course_name: string;
+    professor: string;
+    semester: string;
+    year: number;
+    type: string;
+    version: string;
+  }): Promise<LibraryResource> {
+    const safeBasename = sanitizeLibraryUploadFilename(input.standardizedFilename);
+    const finalKey = `library/${safeBasename}`;
+
+    await this.libraryRepository.ensureMetadata({
+      department: input.department,
+      course_number: input.course_number,
+      course_name: input.course_name,
+      professor: input.professor,
+    });
+
+    try {
+      await this.storageService.copyObject(input.tempS3Key, finalKey);
+    } catch (e) {
+      logger.error("[library.finalize] copyObject failed", e);
+      await this.storageService.deleteObject(input.tempS3Key).catch(() => undefined);
+      throw e;
+    }
+
+    let record: LibraryResource;
+    try {
+      record = await this.libraryRepository.create({
+        department: input.department,
+        course_number: input.course_number,
+        course_name: input.course_name,
+        professor: input.professor,
+        semester: input.semester,
+        year: input.year,
+        type: input.type,
+        version: input.version,
+        original_filename: safeBasename,
+        file_s3_key: finalKey,
+        uploaded_by: input.uploadedByDiscordId,
+      });
+    } catch (e) {
+      logger.error("[library.finalize] create failed; removing promoted object", e);
+      await this.storageService.deleteObject(finalKey).catch(() => undefined);
+      await this.storageService.deleteObject(input.tempS3Key).catch(() => undefined);
+      throw e;
+    }
+
+    try {
+      await this.storageService.deleteObject(input.tempS3Key);
+    } catch (e) {
+      logger.error("[library.finalize] temp object delete failed (non-fatal)", e);
+    }
+
+    try {
+      await this.domainEventPublisher.publishLibraryUploaded({
+        userId: input.uploadedByDiscordId,
+        resourceId: record.id,
+        fileName: safeBasename,
+      });
+    } catch (e) {
+      logger.error("Failed to dispatch LIBRARY_UPLOADED event", e);
+    }
+
+    return record;
   }
 }

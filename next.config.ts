@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://cloud.appwrite.io https://appwrite.taunufiji.app https://cdn.discordapp.com; font-src 'self'; connect-src 'self' https://appwrite.taunufiji.app https://cloud.appwrite.io;",
+              "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://cloud.appwrite.io https://appwrite.taunufiji.app https://cdn.discordapp.com; font-src 'self'; connect-src 'self' https://*.amazonaws.com https://appwrite.taunufiji.app https://cloud.appwrite.io;",
           },
         ],
       },

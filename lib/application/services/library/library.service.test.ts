@@ -14,13 +14,21 @@ describe("LibraryService", () => {
     getReadUrl: vi.fn().mockResolvedValue("https://S3-URL"),
     getUploadUrl: vi.fn().mockResolvedValue("https://S3-UPLOAD-URL"),
     uploadFile: vi.fn(),
-    deleteFile: vi.fn(),
+    copyObject: vi.fn().mockResolvedValue(undefined),
+    deleteObject: vi.fn().mockResolvedValue(undefined),
+  };
+  const mockDomainEventPublisher = {
+    publishLibraryUploaded: vi.fn().mockResolvedValue(undefined),
   };
   let service: LibraryService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new LibraryService(mockRepo, mockStorageService);
+    service = new LibraryService(
+      mockRepo,
+      mockStorageService,
+      mockDomainEventPublisher,
+    );
   });
 
   describe("getStats", () => {
@@ -110,6 +118,80 @@ describe("LibraryService", () => {
         .mockResolvedValue({ courses: {}, professors: [] });
       await service.getSearchMetadata();
       expect(mockRepo.getMetadata).toHaveBeenCalled();
+    });
+  });
+
+  describe("finalizeUploadedResource", () => {
+    it("copies temp key to final key, creates record, deletes temp, publishes event", async () => {
+      mockRepo.ensureMetadata = vi.fn().mockResolvedValue(undefined);
+      mockRepo.create = vi.fn().mockResolvedValue({ id: "doc-1" });
+
+      const record = await service.finalizeUploadedResource({
+        tempS3Key: "library/uploads/u/temp.pdf",
+        standardizedFilename: "Final_Name.pdf",
+        uploadedByDiscordId: "discord-1",
+        department: "CSCI",
+        course_number: "1200",
+        course_name: "Intro",
+        professor: "P",
+        semester: "Spring",
+        year: 2025,
+        type: "Exam1",
+        version: "Student",
+      });
+
+      expect(record).toEqual({ id: "doc-1" });
+      expect(mockRepo.ensureMetadata).toHaveBeenCalled();
+      expect(mockStorageService.copyObject).toHaveBeenCalledWith(
+        "library/uploads/u/temp.pdf",
+        "library/Final_Name.pdf",
+      );
+      expect(mockRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file_s3_key: "library/Final_Name.pdf",
+          original_filename: "Final_Name.pdf",
+          uploaded_by: "discord-1",
+        }),
+      );
+      expect(mockStorageService.deleteObject).toHaveBeenCalledWith(
+        "library/uploads/u/temp.pdf",
+      );
+      expect(mockDomainEventPublisher.publishLibraryUploaded).toHaveBeenCalledWith(
+        {
+          userId: "discord-1",
+          resourceId: "doc-1",
+          fileName: "Final_Name.pdf",
+        },
+      );
+    });
+
+    it("on create failure, deletes promoted and temp keys", async () => {
+      mockRepo.ensureMetadata = vi.fn().mockResolvedValue(undefined);
+      mockRepo.create = vi.fn().mockRejectedValue(new Error("db down"));
+
+      await expect(
+        service.finalizeUploadedResource({
+          tempS3Key: "library/uploads/u/temp.pdf",
+          standardizedFilename: "x.pdf",
+          uploadedByDiscordId: "d1",
+          department: "CSCI",
+          course_number: "1200",
+          course_name: "Intro",
+          professor: "P",
+          semester: "Spring",
+          year: 2025,
+          type: "Exam1",
+          version: "Student",
+        }),
+      ).rejects.toThrow("db down");
+
+      expect(mockStorageService.deleteObject).toHaveBeenCalledWith(
+        "library/x.pdf",
+      );
+      expect(mockStorageService.deleteObject).toHaveBeenCalledWith(
+        "library/uploads/u/temp.pdf",
+      );
+      expect(mockDomainEventPublisher.publishLibraryUploaded).not.toHaveBeenCalled();
     });
   });
 });

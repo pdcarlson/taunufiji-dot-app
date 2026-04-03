@@ -8,6 +8,8 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  CopyObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@/lib/infrastructure/config/env";
@@ -64,6 +66,27 @@ export class S3StorageService implements IStorageService {
       Key: key,
       Body: buffer,
       ContentType: contentType,
+    });
+    await s3.send(command);
+  }
+
+  async copyObject(sourceKey: string, destinationKey: string): Promise<void> {
+    const encodedSourceKey = sourceKey
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+    const command = new CopyObjectCommand({
+      Bucket: env.AWS_BUCKET_NAME,
+      CopySource: `${env.AWS_BUCKET_NAME}/${encodedSourceKey}`,
+      Key: destinationKey,
+    });
+    await s3.send(command);
+  }
+
+  async deleteObject(key: string): Promise<void> {
+    const command = new DeleteObjectCommand({
+      Bucket: env.AWS_BUCKET_NAME,
+      Key: key,
     });
     await s3.send(command);
   }
