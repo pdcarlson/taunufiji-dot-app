@@ -257,13 +257,7 @@ export default function UnifiedUploadPage() {
       toast.loading("Uploading File...", { id: toastId });
 
       const { key: s3Key, uploadUrl, sanitizedFilename } =
-        await presignLibraryUploadAction(
-          {
-            filename: stdName,
-            contentType: validatedLibraryUploadContentType(),
-          },
-          jwt,
-        );
+        await presignLibraryUploadAction({ filename: stdName }, jwt);
 
       const putResponse = await putWithRetry(uploadUrl, fileToUpload);
 

@@ -7,7 +7,6 @@ import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 
 export type PresignLibraryUploadInput = {
   filename: string;
-  contentType: string;
 };
 
 export type PresignLibraryUploadResult = {
@@ -20,6 +19,7 @@ export type PresignLibraryUploadResult = {
 /**
  * Issues a presigned PUT URL so the browser uploads directly to S3.
  * Avoids sending the file through Vercel (serverless body limits ~4.5MB on Hobby).
+ * S3 Content-Type is always `application/pdf` via `validatedLibraryUploadContentType()`.
  */
 export async function presignLibraryUploadAction(
   input: PresignLibraryUploadInput,
@@ -73,11 +73,11 @@ export async function createLibraryResourceAction(
 ) {
   const result = await actionWrapper(
     async ({ container, userId }) => {
-      // 3. Ensure User Profile (Discord ID)
+      // 1. Ensure User Profile (Discord ID)
       const profile = await container.userService.getByAuthId(userId);
       if (!profile) throw new Error("Profile not found");
 
-      // 4. Ensure Dependents (Course/Professor) exist
+      // 2. Ensure Dependents (Course/Professor) exist
       await container.libraryService.ensureMetadata({
         department: data.metadata.department,
         course_number: data.metadata.courseNumber,
@@ -85,7 +85,7 @@ export async function createLibraryResourceAction(
         professor: data.metadata.professor,
       });
 
-      // 2. Create Record
+      // 3. Create Record
       const record = await container.libraryService.createResource({
         department: data.metadata.department,
         course_number: data.metadata.courseNumber,
@@ -103,7 +103,7 @@ export async function createLibraryResourceAction(
         uploaded_by: profile.discord_id,
       });
 
-      // 3. Dispatch Event (Event Architecture)
+      // 4. Dispatch Event (Event Architecture)
       try {
         const { DomainEventBus } =
           await import("@/lib/infrastructure/events/dispatcher");

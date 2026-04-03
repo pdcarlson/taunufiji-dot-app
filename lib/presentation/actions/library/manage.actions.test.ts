@@ -26,7 +26,7 @@ describe("presignLibraryUploadAction", () => {
     });
 
     const result = await presignLibraryUploadAction(
-      { filename: "CSCI1200 Exam1.pdf", contentType: "application/pdf" },
+      { filename: "CSCI1200 Exam1.pdf" },
       "jwt",
     );
 
@@ -45,10 +45,7 @@ describe("presignLibraryUploadAction", () => {
     });
 
     await expect(
-      presignLibraryUploadAction(
-        { filename: "a.pdf", contentType: "application/pdf" },
-        "jwt",
-      ),
+      presignLibraryUploadAction({ filename: "a.pdf" }, "jwt"),
     ).rejects.toThrow("Unauthorized");
   });
 });
