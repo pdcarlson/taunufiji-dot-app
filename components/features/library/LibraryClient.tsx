@@ -63,7 +63,7 @@ function areResourcesEquivalent(
   return left.every((resource, index) => resource.id === right[index]?.id);
 }
 
-export default function LibraryClient({
+export function LibraryClient({
   initialTotal,
   initialUserFiles,
   initialResources = [],

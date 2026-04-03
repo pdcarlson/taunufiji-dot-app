@@ -21,8 +21,13 @@ describe("normalizeLibrarySearchFilters", () => {
         semester: "All",
         type: "All",
         version: "All",
+        professor: "All",
       }),
     ).toEqual({});
+  });
+
+  it("omits professor when it is the All sentinel (no Appwrite search for placeholder)", () => {
+    expect(normalizeLibrarySearchFilters({ professor: "All" })).toEqual({});
   });
 
   it("normalizes professor and other string filters", () => {

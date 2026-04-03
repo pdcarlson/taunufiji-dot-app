@@ -19,7 +19,7 @@ export function normalizeLibrarySearchFilters(
   if (filters.course_number && filters.course_number !== "All") {
     out.course_number = normalizeWhitespace(filters.course_number).toUpperCase();
   }
-  if (filters.professor) {
+  if (filters.professor && filters.professor !== "All") {
     out.professor = normalizeWhitespace(filters.professor);
   }
   if (filters.year !== undefined) {

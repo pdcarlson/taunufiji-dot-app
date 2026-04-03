@@ -33,7 +33,10 @@ export class LibraryService {
       activeKeys,
     });
     if (activeKeys.length > 0) {
-      logger.info("[library.search] query", { normalized, activeKeys });
+      logger.info("[library.search] query", {
+        activeKeys,
+        hasProfessorFilter: normalized.professor !== undefined,
+      });
     }
     const result = await this.libraryRepository.search(normalized);
     if (activeKeys.length > 0) {
