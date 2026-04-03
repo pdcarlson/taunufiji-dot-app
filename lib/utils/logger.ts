@@ -1,11 +1,11 @@
 import { env } from "@/lib/infrastructure/config/env";
 
 /**
- * Development-only logger to avoid cluttering production logs and leaking info.
- * Use this instead of console.log for debugging.
+ * Mostly development-gated logging to avoid cluttering production and leaking
+ * user-provided data. Errors always log; `info` follows the same dev gate as
+ * `log` / `warn` / `debug`.
  */
 
-// Force true for now to debug production issues if needed, or stick to env
 const isDev = env.NODE_ENV === "development";
 
 export const logger = {
@@ -18,6 +18,11 @@ export const logger = {
     // Always log errors, even in prod, but maybe format differently? 
     // For now, simple console.error is fine for Vercel logs.
     console.error(`\x1b[31m[ERROR]\x1b[0m ${message}`, ...args);
+  },
+  info: (message: string, ...args: unknown[]) => {
+    if (isDev) {
+      console.info(`\x1b[32m[INFO]\x1b[0m ${message}`, ...args);
+    }
   },
   warn: (message: string, ...args: unknown[]) => {
     if (isDev) {

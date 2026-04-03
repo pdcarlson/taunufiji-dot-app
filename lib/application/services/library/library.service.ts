@@ -4,6 +4,8 @@ import {
   CreateResourceParams,
 } from "@/lib/domain/ports/library.repository";
 import { LibraryResource } from "@/lib/domain/types/library";
+import { normalizeLibrarySearchFilters } from "@/lib/utils/librarySearchFilters";
+import { logger } from "@/lib/utils/logger";
 
 export type { LibrarySearchFilters, CreateResourceParams };
 
@@ -21,7 +23,33 @@ export class LibraryService {
   async search(
     filters: LibrarySearchFilters,
   ): Promise<{ documents: LibraryResource[]; total: number }> {
-    return await this.libraryRepository.search(filters);
+    const normalized = normalizeLibrarySearchFilters(filters);
+    const activeKeys = Object.keys(normalized);
+    const effectiveKeys = activeKeys.filter(
+      (k) => !(k === "professor" && normalized.professor === "All"),
+    );
+    logger.debug("[library.search] filters", {
+      raw: filters,
+      normalized,
+      activeKeys,
+      effectiveKeys,
+    });
+    if (effectiveKeys.length > 0) {
+      logger.info("[library.search] query", {
+        effectiveKeys,
+        hasProfessorFilter:
+          normalized.professor !== undefined &&
+          normalized.professor !== "All",
+      });
+    }
+    const result = await this.libraryRepository.search(normalized);
+    if (effectiveKeys.length > 0) {
+      logger.info("[library.search] outcome", {
+        total: result.total,
+        returned: result.documents.length,
+      });
+    }
+    return result;
   }
 
   /**
