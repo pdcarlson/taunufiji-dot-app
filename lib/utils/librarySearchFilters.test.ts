@@ -46,9 +46,42 @@ describe("normalizeLibrarySearchFilters", () => {
     });
   });
 
-  it("preserves year", () => {
+  it("preserves positive integer year", () => {
     expect(normalizeLibrarySearchFilters({ year: 2025 })).toEqual({
       year: 2025,
     });
+  });
+
+  it("omits year when not a positive integer", () => {
+    expect(
+      normalizeLibrarySearchFilters({
+        year: 0,
+      }),
+    ).toEqual({});
+    expect(normalizeLibrarySearchFilters({ year: -1 })).toEqual({});
+    expect(normalizeLibrarySearchFilters({ year: 1.5 })).toEqual({});
+  });
+
+  it("omits string filter keys when value is empty", () => {
+    expect(
+      normalizeLibrarySearchFilters({
+        department: "",
+        course_number: "",
+        professor: "",
+        semester: "",
+        type: "",
+        version: "",
+      }),
+    ).toEqual({});
+  });
+
+  it("omits string filter keys when value is whitespace-only after trim", () => {
+    expect(
+      normalizeLibrarySearchFilters({
+        department: "   ",
+        course_number: "\t  ",
+        professor: " \n ",
+      }),
+    ).toEqual({});
   });
 });

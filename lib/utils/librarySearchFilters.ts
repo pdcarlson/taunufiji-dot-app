@@ -14,25 +14,48 @@ export function normalizeLibrarySearchFilters(
   const out: LibrarySearchFilters = {};
 
   if (filters.department && filters.department !== "All") {
-    out.department = normalizeWhitespace(filters.department).toUpperCase();
+    const v = normalizeWhitespace(filters.department).toUpperCase();
+    if (v) {
+      out.department = v;
+    }
   }
   if (filters.course_number && filters.course_number !== "All") {
-    out.course_number = normalizeWhitespace(filters.course_number).toUpperCase();
+    const v = normalizeWhitespace(filters.course_number).toUpperCase();
+    if (v) {
+      out.course_number = v;
+    }
   }
   if (filters.professor && filters.professor !== "All") {
-    out.professor = normalizeWhitespace(filters.professor);
+    const v = normalizeWhitespace(filters.professor);
+    if (v) {
+      out.professor = v;
+    }
   }
-  if (filters.year !== undefined) {
+  if (
+    filters.year !== undefined &&
+    Number.isInteger(filters.year) &&
+    isFinite(filters.year) &&
+    filters.year > 0
+  ) {
     out.year = filters.year;
   }
   if (filters.semester && filters.semester !== "All") {
-    out.semester = normalizeWhitespace(filters.semester);
+    const v = normalizeWhitespace(filters.semester);
+    if (v) {
+      out.semester = v;
+    }
   }
   if (filters.type && filters.type !== "All") {
-    out.type = normalizeWhitespace(filters.type);
+    const v = normalizeWhitespace(filters.type);
+    if (v) {
+      out.type = v;
+    }
   }
   if (filters.version && filters.version !== "All") {
-    out.version = normalizeWhitespace(filters.version);
+    const v = normalizeWhitespace(filters.version);
+    if (v) {
+      out.version = v;
+    }
   }
 
   return out;

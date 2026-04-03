@@ -24,9 +24,7 @@ export class LibraryService {
     filters: LibrarySearchFilters,
   ): Promise<{ documents: LibraryResource[]; total: number }> {
     const normalized = normalizeLibrarySearchFilters(filters);
-    const activeKeys = Object.keys(normalized).filter(
-      (k) => normalized[k as keyof LibrarySearchFilters] !== undefined,
-    );
+    const activeKeys = Object.keys(normalized);
     logger.debug("[library.search] filters", {
       raw: filters,
       normalized,
