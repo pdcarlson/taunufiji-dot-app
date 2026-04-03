@@ -13,7 +13,7 @@ Presentation → Application → Domain ← Infrastructure
 The heart of the software. Has **no imports from infrastructure, application, or presentation layers**.
 
 - **Entities**: Pure TypeScript classes defining core business objects (`HousingTask`, `LedgerEntry`).
-- **Ports**: Interface definitions for external systems (`ITaskRepository`, `INotificationProvider`).
+- **Ports**: Interface definitions for external systems (`ITaskRepository`, `INotificationProvider`, `IDomainEventPublisher` for application-triggered outbound events such as library upload notifications).
 - **Types / DTOs**: Zod schemas (`lib/domain/types/`) define the canonical shape of domain objects (e.g., `BaseEntitySchema`, `TaskSchema`). Zod is the sole external dependency in this layer — it is used for schema _definition and type inference_ (`z.infer<…>`). Runtime validation of input payloads destined for Server Actions happens in the presentation layer; the domain schemas serve as the single source of truth for the data contracts shared across layers.
 
 ### 2. Application Layer (`lib/application`)

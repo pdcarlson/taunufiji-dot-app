@@ -1,5 +1,7 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+
 import { logger } from "@/lib/utils/logger";
 import { validatedLibraryUploadContentType } from "@/lib/utils/library-upload-content-type";
 import { sanitizeLibraryUploadFilename } from "@/lib/utils/sanitize-library-upload-filename";
@@ -10,9 +12,10 @@ export type PresignLibraryUploadInput = {
 };
 
 export type PresignLibraryUploadResult = {
+  /** Staging object key under `library/uploads/<uuid>/…`; pass to finalize as `fileId`. */
   key: string;
   uploadUrl: string;
-  /** Basename under `library/` after server-side sanitization (use for DB + display). */
+  /** Basename after sanitization; use for UI label (finalize copies to `library/<this>`). */
   sanitizedFilename: string;
 };
 
@@ -31,15 +34,19 @@ export async function presignLibraryUploadAction(
         throw new Error("No filename provided");
       }
       const safeName = sanitizeLibraryUploadFilename(input.filename);
-      const key = `library/${safeName}`;
+      const stagingKey = `library/uploads/${randomUUID()}/${safeName}`;
       const validatedContentType = validatedLibraryUploadContentType();
 
       const uploadUrl = await container.storageService.getUploadUrl(
-        key,
+        stagingKey,
         validatedContentType,
       );
 
-      return { key, uploadUrl, sanitizedFilename: safeName };
+      return {
+        key: stagingKey,
+        uploadUrl,
+        sanitizedFilename: safeName,
+      };
     },
     { jwt, actionName: "presignLibraryUpload" },
   );
@@ -73,51 +80,27 @@ export async function createLibraryResourceAction(
 ) {
   const result = await actionWrapper(
     async ({ container, userId }) => {
-      // 1. Ensure User Profile (Discord ID)
       const profile = await container.userService.getByAuthId(userId);
       if (!profile) throw new Error("Profile not found");
 
-      // 2. Ensure Dependents (Course/Professor) exist
-      await container.libraryService.ensureMetadata({
-        department: data.metadata.department,
-        course_number: data.metadata.courseNumber,
-        course_name: data.metadata.courseName,
-        professor: data.metadata.professor,
-      });
+      const year =
+        typeof data.metadata.year === "string"
+          ? parseInt(data.metadata.year)
+          : data.metadata.year;
 
-      // 3. Create Record
-      const record = await container.libraryService.createResource({
+      return await container.libraryService.finalizeUploadedResource({
+        tempS3Key: data.fileId,
+        standardizedFilename: data.metadata.standardizedFilename,
+        uploadedByDiscordId: profile.discord_id,
         department: data.metadata.department,
         course_number: data.metadata.courseNumber,
         course_name: data.metadata.courseName,
         professor: data.metadata.professor,
         semester: data.metadata.semester,
-        year:
-          typeof data.metadata.year === "string"
-            ? parseInt(data.metadata.year)
-            : data.metadata.year,
+        year,
         type: data.metadata.assessmentType,
         version: data.metadata.version,
-        original_filename: data.metadata.standardizedFilename,
-        file_s3_key: data.fileId,
-        uploaded_by: profile.discord_id,
       });
-
-      // 4. Dispatch Event (Event Architecture)
-      try {
-        const { DomainEventBus } =
-          await import("@/lib/infrastructure/events/dispatcher");
-        const { LibraryEvents } = await import("@/lib/domain/events");
-        await DomainEventBus.publish(LibraryEvents.LIBRARY_UPLOADED, {
-          userId: profile.discord_id,
-          resourceId: record.id,
-          fileName: data.metadata.standardizedFilename,
-        });
-      } catch (e) {
-        logger.error("Failed to dispatch LIBRARY_UPLOADED event", e);
-      }
-
-      return record;
     },
     { jwt, actionName: "createLibraryResource" },
   );

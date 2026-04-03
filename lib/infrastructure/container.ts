@@ -18,6 +18,7 @@ import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { IUserRepository } from "@/lib/domain/ports/user.repository";
 import { ILedgerRepository } from "@/lib/domain/ports/ledger.repository";
 import { ILibraryRepository } from "@/lib/domain/ports/library.repository";
+import { IDomainEventPublisher } from "@/lib/domain/ports/domain-event.publisher.port";
 import { INotificationProvider } from "@/lib/domain/ports/notification.provider";
 import { IIdentityProvider } from "@/lib/domain/ports/identity.provider";
 import { IStorageService } from "@/lib/domain/ports/storage.service.port";
@@ -30,6 +31,7 @@ import { AppwriteLibraryRepository } from "./persistence/library.repository";
 import { DiscordProvider } from "./messaging/discord.provider";
 import { AppwriteIdentityProvider } from "./auth/appwrite.identity";
 import { S3StorageService } from "./storage/storage";
+import { AppwriteDomainEventPublisher } from "./events/domain-event.publisher";
 
 import {
   DutyService,
@@ -54,6 +56,7 @@ export interface Container {
   notificationProvider: INotificationProvider;
   identityProvider: IIdentityProvider;
   storageService: IStorageService;
+  domainEventPublisher: IDomainEventPublisher;
   // Services
   userService: UserService;
   dutyService: IDutyService;
@@ -86,6 +89,7 @@ export function getContainer(): Container {
     const notificationProvider = new DiscordProvider();
     const identityProvider = new AppwriteIdentityProvider();
     const storageService = new S3StorageService();
+    const domainEventPublisher = new AppwriteDomainEventPublisher();
 
     // 3. Services (Order matters!)
     const userService = new UserService(userRepository);
@@ -105,6 +109,7 @@ export function getContainer(): Container {
     const libraryService = new LibraryService(
       libraryRepository,
       storageService,
+      domainEventPublisher,
     );
     const cronService = new CronService(
       HousingTimeDrivenPipeline,
@@ -122,6 +127,7 @@ export function getContainer(): Container {
       notificationProvider,
       identityProvider,
       storageService,
+      domainEventPublisher,
       // Services
       userService,
       dutyService,
