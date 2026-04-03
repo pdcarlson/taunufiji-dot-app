@@ -20,7 +20,8 @@ export type PresignLibraryUploadResult = {
 };
 
 /**
- * Issues a presigned PUT URL so the browser uploads directly to S3.
+ * Issues a presigned PUT URL to a **staging** key (`library/uploads/<uuid>/…`).
+ * Finalize via `createLibraryResourceAction`, which promotes to `library/<sanitized>`.
  * Avoids sending the file through Vercel (serverless body limits ~4.5MB on Hobby).
  * S3 Content-Type is always `application/pdf` via `validatedLibraryUploadContentType()`.
  */
