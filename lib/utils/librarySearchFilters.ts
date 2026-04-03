@@ -13,23 +13,22 @@ export function normalizeLibrarySearchFilters(
 ): LibrarySearchFilters {
   const out: LibrarySearchFilters = {};
 
-  if (filters.department && filters.department !== "All") {
-    const v = normalizeWhitespace(filters.department).toUpperCase();
-    if (v) {
-      out.department = v;
+  if (filters.department) {
+    const ws = normalizeWhitespace(filters.department);
+    if (ws && ws.toUpperCase() !== "ALL") {
+      out.department = ws.toUpperCase();
     }
   }
-  if (filters.course_number && filters.course_number !== "All") {
-    const v = normalizeWhitespace(filters.course_number).toUpperCase();
-    if (v) {
-      out.course_number = v;
+  if (filters.course_number) {
+    const ws = normalizeWhitespace(filters.course_number);
+    if (ws && ws.toUpperCase() !== "ALL") {
+      out.course_number = ws.toUpperCase();
     }
   }
   if (filters.professor) {
     const v = normalizeWhitespace(filters.professor);
-    if (v === "All") {
-      // Literal sentinel for professor is kept so callers can distinguish
-      // “no professor filter” (omit) from an explicit All search token if needed.
+    if (v.toUpperCase() === "ALL") {
+      // Canonical sentinel; repository skips Query.search for this value.
       out.professor = "All";
     } else if (v) {
       out.professor = v;
@@ -43,22 +42,22 @@ export function normalizeLibrarySearchFilters(
   ) {
     out.year = filters.year;
   }
-  if (filters.semester && filters.semester !== "All") {
-    const v = normalizeWhitespace(filters.semester);
-    if (v) {
-      out.semester = v;
+  if (filters.semester) {
+    const ws = normalizeWhitespace(filters.semester);
+    if (ws && ws.toUpperCase() !== "ALL") {
+      out.semester = ws;
     }
   }
-  if (filters.type && filters.type !== "All") {
-    const v = normalizeWhitespace(filters.type);
-    if (v) {
-      out.type = v;
+  if (filters.type) {
+    const ws = normalizeWhitespace(filters.type);
+    if (ws && ws.toUpperCase() !== "ALL") {
+      out.type = ws;
     }
   }
-  if (filters.version && filters.version !== "All") {
-    const v = normalizeWhitespace(filters.version);
-    if (v) {
-      out.version = v;
+  if (filters.version) {
+    const ws = normalizeWhitespace(filters.version);
+    if (ws && ws.toUpperCase() !== "ALL") {
+      out.version = ws;
     }
   }
 

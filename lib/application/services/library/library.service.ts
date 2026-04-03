@@ -25,21 +25,25 @@ export class LibraryService {
   ): Promise<{ documents: LibraryResource[]; total: number }> {
     const normalized = normalizeLibrarySearchFilters(filters);
     const activeKeys = Object.keys(normalized);
+    const effectiveKeys = activeKeys.filter(
+      (k) => !(k === "professor" && normalized.professor === "All"),
+    );
     logger.debug("[library.search] filters", {
       raw: filters,
       normalized,
       activeKeys,
+      effectiveKeys,
     });
-    if (activeKeys.length > 0) {
+    if (effectiveKeys.length > 0) {
       logger.info("[library.search] query", {
-        activeKeys,
+        effectiveKeys,
         hasProfessorFilter:
           normalized.professor !== undefined &&
           normalized.professor !== "All",
       });
     }
     const result = await this.libraryRepository.search(normalized);
-    if (activeKeys.length > 0) {
+    if (effectiveKeys.length > 0) {
       logger.info("[library.search] outcome", {
         total: result.total,
         returned: result.documents.length,

@@ -25,6 +25,18 @@ describe("normalizeLibrarySearchFilters", () => {
     ).toEqual({});
   });
 
+  it("drops All sentinel after trim and case-insensitive match for equality-style fields", () => {
+    expect(
+      normalizeLibrarySearchFilters({
+        department: "  all ",
+        course_number: "\tAll\n",
+        semester: " ALL ",
+        type: "all",
+        version: "  ALL  ",
+      }),
+    ).toEqual({});
+  });
+
   it("normalizes professor and other string filters", () => {
     expect(
       normalizeLibrarySearchFilters({
@@ -43,6 +55,9 @@ describe("normalizeLibrarySearchFilters", () => {
 
   it("passes professor All through unchanged (search field, not equality sentinel)", () => {
     expect(normalizeLibrarySearchFilters({ professor: "All" })).toEqual({
+      professor: "All",
+    });
+    expect(normalizeLibrarySearchFilters({ professor: "  all " })).toEqual({
       professor: "All",
     });
   });
