@@ -30,6 +30,48 @@ import {
   getMetadataAction,
 } from "@/lib/presentation/actions/library/read.actions";
 
+async function putWithRetry(
+  url: string,
+  file: File,
+  maxRetries = 2,
+): Promise<Response> {
+  const contentType = file.type || "application/pdf";
+  let lastResponse: Response | null = null;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": contentType },
+      });
+      if (response.ok) {
+        return response;
+      }
+      lastResponse = response;
+      const retryable = response.status >= 500 && response.status <= 599;
+      if (!retryable || attempt === maxRetries) {
+        return response;
+      }
+    } catch (e) {
+      lastError = e;
+      if (attempt === maxRetries) {
+        throw e;
+      }
+    }
+    const delayMs = 300 * 2 ** attempt;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+
+  if (lastResponse) {
+    return lastResponse;
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Storage upload failed after retries");
+}
+
 // Dynamic import to prevent SSR evaluation of PDF library (uses DOMMatrix)
 const PdfRedactor = dynamic_(
   () => import("@/components/features/library/upload/PdfRedactor"),
@@ -213,21 +255,22 @@ export default function UnifiedUploadPage() {
       // 2. UPLOAD TO STORAGE (browser → S3 via presigned URL; avoids Vercel body limits)
       toast.loading("Uploading File...", { id: toastId });
 
-      const { key: s3Key, uploadUrl } = await presignLibraryUploadAction(
-        {
-          filename: stdName,
-          contentType: fileToUpload.type || "application/pdf",
-        },
-        jwt,
-      );
+      const { key: s3Key, uploadUrl, sanitizedFilename } =
+        await presignLibraryUploadAction(
+          {
+            filename: stdName,
+            contentType: fileToUpload.type || "application/pdf",
+          },
+          jwt,
+        );
 
-      const putResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        body: fileToUpload,
-        headers: {
-          "Content-Type": fileToUpload.type || "application/pdf",
-        },
-      });
+      if (sanitizedFilename !== fileToUpload.name) {
+        fileToUpload = new File([fileToUpload], sanitizedFilename, {
+          type: fileToUpload.type || "application/pdf",
+        });
+      }
+
+      const putResponse = await putWithRetry(uploadUrl, fileToUpload);
 
       if (!putResponse.ok) {
         throw new Error(
@@ -252,7 +295,7 @@ export default function UnifiedUploadPage() {
           ...stickyMetadata,
           courseName,
           semester: stickyMetadata.semester,
-          standardizedFilename: stdName,
+          standardizedFilename: sanitizedFilename,
         },
       };
 

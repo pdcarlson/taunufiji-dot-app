@@ -1,0 +1,26 @@
+import { sanitizeLibraryUploadFilename } from "./sanitize-library-upload-filename";
+
+describe("sanitizeLibraryUploadFilename", () => {
+  it("preserves safe standardized exam-style names", () => {
+    expect(sanitizeLibraryUploadFilename("CSCI1200_Exam1_Cutler_Spring_2025_Student.pdf")).toBe(
+      "CSCI1200_Exam1_Cutler_Spring_2025_Student.pdf",
+    );
+  });
+
+  it("maps spaces and odd characters to single underscores", () => {
+    expect(sanitizeLibraryUploadFilename("CSCI1200 Exam1.pdf")).toBe("CSCI1200_Exam1.pdf");
+  });
+
+  it("uses basename only and strips traversal", () => {
+    expect(sanitizeLibraryUploadFilename("../../../etc/passwd.pdf")).toBe("passwd.pdf");
+  });
+
+  it("decodes percent-encoded slashes before taking basename", () => {
+    expect(sanitizeLibraryUploadFilename("x%2F..%2F..%2Fsecret.pdf")).toBe("secret.pdf");
+  });
+
+  it("returns a non-empty fallback when nothing safe remains", () => {
+    const out = sanitizeLibraryUploadFilename("..../");
+    expect(out).toMatch(/^upload-[0-9a-f-]{36}\.pdf$/i);
+  });
+});

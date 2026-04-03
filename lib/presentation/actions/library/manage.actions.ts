@@ -1,6 +1,7 @@
 "use server";
 
 import { logger } from "@/lib/utils/logger";
+import { sanitizeLibraryUploadFilename } from "@/lib/utils/sanitize-library-upload-filename";
 import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 
 export type PresignLibraryUploadInput = {
@@ -11,6 +12,8 @@ export type PresignLibraryUploadInput = {
 export type PresignLibraryUploadResult = {
   key: string;
   uploadUrl: string;
+  /** Basename under `library/` after server-side sanitization (use for DB + display). */
+  sanitizedFilename: string;
 };
 
 /**
@@ -26,7 +29,7 @@ export async function presignLibraryUploadAction(
       if (!input.filename?.trim()) {
         throw new Error("No filename provided");
       }
-      const safeName = input.filename.replace(/\s+/g, "_");
+      const safeName = sanitizeLibraryUploadFilename(input.filename);
       const key = `library/${safeName}`;
 
       const uploadUrl = await container.storageService.getUploadUrl(
@@ -34,7 +37,7 @@ export async function presignLibraryUploadAction(
         input.contentType || "application/pdf",
       );
 
-      return { key, uploadUrl };
+      return { key, uploadUrl, sanitizedFilename: safeName };
     },
     { jwt, actionName: "presignLibraryUpload" },
   );

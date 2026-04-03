@@ -35,8 +35,26 @@
 | Appwrite        | `NEXT_PUBLIC_APPWRITE_ENDPOINT`, `NEXT_PUBLIC_APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY`                        |
 | Discord Core    | `DISCORD_APP_ID`, `DISCORD_PUBLIC_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_HOUSING_CHANNEL_ID` |
 | Discord Roles   | `DISCORD_ROLE_ID_BROTHER`, `DISCORD_ROLE_ID_CABINET`, `DISCORD_ROLE_ID_HOUSING_CHAIR`                         |
-| AWS/S3          | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME` (bucket must allow browser `PUT` from your app origins via CORS for Library uploads) |
+| AWS/S3          | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME` (bucket must allow browser `PUT` from your app origins via CORS for Library uploads; see below) |
 | Cron (optional) | `CRON_SECRET` — set when Vercel cron or authenticated `/api/cron` use is enabled                              |
+
+**S3 CORS (Library browser uploads):** Presigned `PUT` requests originate from the browser. In the S3 bucket **Permissions → Cross-origin resource sharing (CORS)**, use rules that include your Vercel preview and production origins. Required elements for this app: **`AllowedMethods`** including `PUT`, **`AllowedHeaders`** including `Content-Type`, and **`ExposeHeaders`** including `ETag` (matches the signed request). Minimal example (replace origins with yours); full reference: [AWS S3 CORS configuration](https://docs.aws.amazon.com/AmazonS3/latest/userguide/cors.html).
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "https://YOUR_VERCEL_PRODUCTION_HOSTNAME",
+      "https://YOUR_VERCEL_PREVIEW_HOSTNAME",
+      "http://127.0.0.1:REPLACE_WITH_DEV_PORT"
+    ],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3000
+  }
+]
+```
 
 In `serverEnvSchema` (`lib/infrastructure/config/server-env-schema.ts`), **`CRON_SECRET` is optional** (Zod `.optional()`). Omit it only when cron is disabled and nothing calls `/api/cron`; otherwise configure a non-empty secret in Vercel (and locally) so the endpoint can authorize requests.
 

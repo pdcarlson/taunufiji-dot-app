@@ -21,6 +21,7 @@ describe("presignLibraryUploadAction", () => {
       data: {
         key: "library/CSCI1200_Exam1.pdf",
         uploadUrl: "https://s3.example/presigned",
+        sanitizedFilename: "CSCI1200_Exam1.pdf",
       },
     });
 
@@ -32,6 +33,7 @@ describe("presignLibraryUploadAction", () => {
     expect(result).toEqual({
       key: "library/CSCI1200_Exam1.pdf",
       uploadUrl: "https://s3.example/presigned",
+      sanitizedFilename: "CSCI1200_Exam1.pdf",
     });
   });
 
@@ -83,5 +85,33 @@ describe("createLibraryResourceAction", () => {
     );
 
     expect(result).toEqual({ id: "rec1" });
+  });
+
+  it("throws when actionWrapper fails", async () => {
+    actionWrapperMock.mockResolvedValue({
+      success: false,
+      error: "some error",
+      errorCode: "UNKNOWN_ERROR",
+    });
+
+    await expect(
+      createLibraryResourceAction(
+        {
+          fileId: "library/x.pdf",
+          metadata: {
+            department: "CSCI",
+            courseNumber: "1200",
+            courseName: "Intro",
+            professor: "P",
+            semester: "Spring",
+            year: 2025,
+            assessmentType: "Exam1",
+            version: "Student",
+            standardizedFilename: "x.pdf",
+          },
+        },
+        "jwt",
+      ),
+    ).rejects.toThrow("some error");
   });
 });
