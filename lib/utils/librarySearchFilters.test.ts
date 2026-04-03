@@ -13,7 +13,7 @@ describe("normalizeLibrarySearchFilters", () => {
     });
   });
 
-  it("drops All sentinel values", () => {
+  it("drops All sentinel values for equality-style fields", () => {
     expect(
       normalizeLibrarySearchFilters({
         department: "All",
@@ -21,13 +21,8 @@ describe("normalizeLibrarySearchFilters", () => {
         semester: "All",
         type: "All",
         version: "All",
-        professor: "All",
       }),
     ).toEqual({});
-  });
-
-  it("omits professor when it is the All sentinel (no Appwrite search for placeholder)", () => {
-    expect(normalizeLibrarySearchFilters({ professor: "All" })).toEqual({});
   });
 
   it("normalizes professor and other string filters", () => {
@@ -46,6 +41,12 @@ describe("normalizeLibrarySearchFilters", () => {
     });
   });
 
+  it("passes professor All through unchanged (search field, not equality sentinel)", () => {
+    expect(normalizeLibrarySearchFilters({ professor: "All" })).toEqual({
+      professor: "All",
+    });
+  });
+
   it("preserves positive integer year", () => {
     expect(normalizeLibrarySearchFilters({ year: 2025 })).toEqual({
       year: 2025,
@@ -60,6 +61,8 @@ describe("normalizeLibrarySearchFilters", () => {
     ).toEqual({});
     expect(normalizeLibrarySearchFilters({ year: -1 })).toEqual({});
     expect(normalizeLibrarySearchFilters({ year: 1.5 })).toEqual({});
+    expect(normalizeLibrarySearchFilters({ year: NaN })).toEqual({});
+    expect(normalizeLibrarySearchFilters({ year: Infinity })).toEqual({});
   });
 
   it("omits string filter keys when value is empty", () => {

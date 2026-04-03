@@ -25,9 +25,13 @@ export function normalizeLibrarySearchFilters(
       out.course_number = v;
     }
   }
-  if (filters.professor && filters.professor !== "All") {
+  if (filters.professor) {
     const v = normalizeWhitespace(filters.professor);
-    if (v) {
+    if (v === "All") {
+      // Literal sentinel for professor is kept so callers can distinguish
+      // “no professor filter” (omit) from an explicit All search token if needed.
+      out.professor = "All";
+    } else if (v) {
       out.professor = v;
     }
   }
