@@ -37,6 +37,7 @@ export function sanitizeLibraryUploadFilename(original: string): string {
 
   cleaned = cleaned.replace(/\.\.+/g, "_");
   cleaned = cleaned.replace(/_+/g, "_");
+  cleaned = cleaned.replace(/-+/g, "-");
   cleaned = cleaned.replace(/^[._-]+|[._-]+$/g, "");
 
   if (cleaned.length > MAX_OBJECT_BASENAME_LENGTH) {

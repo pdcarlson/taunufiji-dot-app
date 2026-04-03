@@ -40,6 +40,8 @@
 
 **S3 CORS (Library browser uploads):** Presigned `PUT` requests originate from the browser. In the S3 bucket **Permissions → Cross-origin resource sharing (CORS)**, use rules that include your Vercel preview and production origins. Required elements for this app: **`AllowedMethods`** including `PUT`, **`AllowedHeaders`** including `Content-Type`, and **`ExposeHeaders`** including `ETag` (matches the signed request). Minimal example (replace origins with yours); full reference: [AWS S3 CORS configuration](https://docs.aws.amazon.com/AmazonS3/latest/userguide/cors.html).
 
+**Vercel previews:** Each preview deployment gets its own hostname, so you either list every preview URL you care about, or use a wildcard such as `https://*.vercel.app` (broader; use only if acceptable for your bucket). Replace `https://YOUR_VERCEL_PREVIEW_HOSTNAME` below with specific preview hostnames **or** that wildcard pattern.
+
 ```json
 [
   {

@@ -23,4 +23,29 @@ describe("sanitizeLibraryUploadFilename", () => {
     const out = sanitizeLibraryUploadFilename("..../");
     expect(out).toMatch(/^upload-[0-9a-f-]{36}\.pdf$/i);
   });
+
+  it("removes null bytes", () => {
+    expect(sanitizeLibraryUploadFilename("foo\0bar.pdf")).toBe("foobar.pdf");
+  });
+
+  it("strips ASCII control characters", () => {
+    expect(sanitizeLibraryUploadFilename("foo\x01\x1Fbar.pdf")).toBe(
+      "foobar.pdf",
+    );
+    expect(sanitizeLibraryUploadFilename("foo\x7Fbar.pdf")).toBe("foobar.pdf");
+  });
+
+  it("truncates basenames longer than 200 characters", () => {
+    const long = `${"a".repeat(250)}.pdf`;
+    const out = sanitizeLibraryUploadFilename(long);
+    expect(out.length).toBeLessThanOrEqual(200);
+  });
+
+  it("collapses consecutive dots to a single underscore", () => {
+    expect(sanitizeLibraryUploadFilename("foo..bar.pdf")).toBe("foo_bar.pdf");
+  });
+
+  it("collapses consecutive hyphens", () => {
+    expect(sanitizeLibraryUploadFilename("foo---bar.pdf")).toBe("foo-bar.pdf");
+  });
 });

@@ -29,13 +29,16 @@ import {
   checkDuplicateResourceAction,
   getMetadataAction,
 } from "@/lib/presentation/actions/library/read.actions";
+import { validatedLibraryUploadContentType } from "@/lib/utils/library-upload-content-type";
 
 async function putWithRetry(
   url: string,
   file: File,
   maxRetries = 2,
 ): Promise<Response> {
-  const contentType = file.type || "application/pdf";
+  const contentType = validatedLibraryUploadContentType(
+    file.type || "application/pdf",
+  );
   let lastResponse: Response | null = null;
   let lastError: unknown;
 
@@ -259,16 +262,12 @@ export default function UnifiedUploadPage() {
         await presignLibraryUploadAction(
           {
             filename: stdName,
-            contentType: fileToUpload.type || "application/pdf",
+            contentType: validatedLibraryUploadContentType(
+              fileToUpload.type || "application/pdf",
+            ),
           },
           jwt,
         );
-
-      if (sanitizedFilename !== fileToUpload.name) {
-        fileToUpload = new File([fileToUpload], sanitizedFilename, {
-          type: fileToUpload.type || "application/pdf",
-        });
-      }
 
       const putResponse = await putWithRetry(uploadUrl, fileToUpload);
 

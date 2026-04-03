@@ -1,6 +1,7 @@
 "use server";
 
 import { logger } from "@/lib/utils/logger";
+import { validatedLibraryUploadContentType } from "@/lib/utils/library-upload-content-type";
 import { sanitizeLibraryUploadFilename } from "@/lib/utils/sanitize-library-upload-filename";
 import { actionWrapper } from "@/lib/presentation/utils/action-handler";
 
@@ -31,10 +32,13 @@ export async function presignLibraryUploadAction(
       }
       const safeName = sanitizeLibraryUploadFilename(input.filename);
       const key = `library/${safeName}`;
+      const validatedContentType = validatedLibraryUploadContentType(
+        input.contentType,
+      );
 
       const uploadUrl = await container.storageService.getUploadUrl(
         key,
-        input.contentType || "application/pdf",
+        validatedContentType,
       );
 
       return { key, uploadUrl, sanitizedFilename: safeName };
