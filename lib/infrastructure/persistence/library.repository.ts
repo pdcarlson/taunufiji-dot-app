@@ -143,7 +143,7 @@ export class AppwriteLibraryRepository implements ILibraryRepository {
     if (filters.course_number && filters.course_number !== "All") {
       queries.push(Query.equal("course_number", filters.course_number));
     }
-    if (filters.professor) {
+    if (filters.professor && filters.professor !== "All") {
       queries.push(Query.search("professor", filters.professor));
     }
     if (filters.year) {

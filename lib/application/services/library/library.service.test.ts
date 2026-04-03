@@ -38,13 +38,17 @@ describe("LibraryService", () => {
   });
 
   describe("search", () => {
-    it("should delegate to repository", async () => {
+    it("should delegate to repository with normalized filters", async () => {
       mockRepo.search = vi.fn().mockResolvedValue({ documents: [], total: 0 });
-      const filters = { department: "CS", year: 2024 };
+      const filters = { department: "  cs ", course_number: "1200", year: 2024 };
 
       await service.search(filters);
 
-      expect(mockRepo.search).toHaveBeenCalledWith(filters);
+      expect(mockRepo.search).toHaveBeenCalledWith({
+        department: "CS",
+        course_number: "1200",
+        year: 2024,
+      });
     });
   });
 

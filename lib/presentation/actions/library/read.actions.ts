@@ -134,7 +134,7 @@ export async function searchLibraryAction(
 
       return await container.libraryService.search(searchFilters);
     },
-    { jwt, public: true },
+    { jwt, public: true, actionName: "library-search" },
   );
 
   if (result.success && result.data) return result.data;
