@@ -44,6 +44,22 @@ This is often **cold start** or heavy SSR on the first hit after idle.
    - confirm the configured role IDs exist in the guild.
 4. Re-run diagnostics and then re-test task creation in staging UI.
 
+### Symptom: After "Log in with Discord", the browser shows "Your connection is not private" for `appwrite.<your-domain>` (`NET::ERR_CERT_DATE_INVALID`)
+
+This is **not** a Vercel or Next.js bug. Discord OAuth sends the browser to your **Appwrite** API hostname (for this project, the custom domain `https://appwrite.taunufiji.app`). Appwrite Cloud terminates TLS for that hostname. If the certificate **expires** or has the wrong **notBefore** / **notAfter** window, Chrome reports `NET::ERR_CERT_DATE_INVALID` and login cannot complete.
+
+**Common trigger:** Appwrite **paused** the project briefly; automated certificate renewal can miss a cycle or leave the custom domain on an expired cert until it is refreshed.
+
+**What to do:**
+
+1. In **Appwrite Console** → your project → **Settings** (or **Domains** / **Custom domains**, depending on console version) → open the **`appwrite.*` custom domain** used as `NEXT_PUBLIC_APPWRITE_ENDPOINT`.
+2. Confirm DNS still matches Appwrite’s required records (usually a **CNAME** to Appwrite’s target). Do not point that hostname at Vercel; the app on Vercel only **calls** this URL over HTTPS.
+3. **Refresh the certificate:** remove and re-add the custom domain, or use any **Verify / Renew certificate** control Appwrite exposes. Wait until the console shows the domain verified and HTTPS healthy, then retry login.
+
+**Sanity check (terminal):** `echo | openssl s_client -connect appwrite.<your-domain>:443 -servername appwrite.<your-domain> 2>/dev/null | openssl x509 -noout -dates` — ensure `notAfter` is in the future.
+
+**Vercel:** Production domains for the Next.js app (`taunufiji.app` → `www.taunufiji.app`, etc.) can still be correct while the Appwrite subdomain fails; fix the Appwrite side for auth.
+
 ### Symptom: User can view dashboard but mutation fails with authorization
 
 1. Verify the user has the Brother role for baseline access.
