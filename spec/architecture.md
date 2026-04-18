@@ -65,6 +65,7 @@ Concrete implementations of domain ports.
 
 - **Hosting**: **Vercel** builds and serves the Next.js app from the GitHub repo (**Preview** from **`main`** and other branches as configured; **Production** from **`production`** when set as the production branch).
 - **Backend**: **Appwrite** (Auth, Databases) is configured via env vars injected at deploy time; it does not host the web app.
+- **Appwrite endpoint hostname**: `NEXT_PUBLIC_APPWRITE_ENDPOINT` must use an **HTTPS URL on a hostname under the same site as the Next.js app** (subdomain of the chapter domain), not a regional `*.cloud.appwrite.io` host, so session cookies remain first-party and OAuth redirects stay consistent. DNS for that subdomain may be edited in **Vercel DNS**; certificate renewal for the Appwrite API still flows through **Appwrite** for that hostname when DNS CNAMEs to `*.cloud.appwrite.io`.
 - **CI**: GitHub Actions runs quality gates (lint, type check, test, build) on pushes and PRs.
 - **Cron**: Vercel Cron triggers `/api/cron?job=HOUSING_BATCH` on the **production** deployment per `vercel.json` (once daily on the current schedule); Vercel sends `Authorization: Bearer <CRON_SECRET>` when that env var is set on the project.
 
