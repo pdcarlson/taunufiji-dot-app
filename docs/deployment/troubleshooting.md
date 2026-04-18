@@ -25,6 +25,23 @@ If this command fails, do not merge **`main` → `production`** (do not ship the
 
 ## Staging Troubleshooting Runbook
 
+### Appwrite API hostname, TLS, and custom domains
+
+**Invariant (production):** `NEXT_PUBLIC_APPWRITE_ENDPOINT` must stay on an **HTTPS hostname under the same chapter domain as the web app** (for example `https://appwrite.example.edu/v1` with `https://www.example.edu`). Do **not** change production to a regional Appwrite Cloud URL such as `https://REGION.cloud.appwrite.io/v1`; that makes the API a **third-party origin** and breaks first-party Appwrite session cookies. See [Environments: Appwrite API hostname](environments.md#appwrite-api-hostname-same-site-as-the-app).
+
+**Vercel DNS vs Vercel TLS:** You can host **DNS** for `taunufiji.app` in Vercel and set `appwrite` → **CNAME** → `nyc.cloud.appwrite.io` (or whatever Appwrite shows). Browsers still fetch TLS from the **IP chain that CNAME resolves to** — Appwrite’s edge — so an **expired certificate** on `https://appwrite.taunufiji.app` is renewed in **Appwrite** for that custom domain, not by attaching the name to a Vercel project. Vercel’s domain checker may call that CNAME “misconfigured” because it expects Vercel hosting; that warning is **misleading** for an Appwrite-only API host.
+
+**`NET::ERR_CERT_DATE_INVALID`:** The certificate presented on port 443 for that hostname is expired or not yet valid. Confirm with:
+
+```bash
+echo | openssl s_client -servername appwrite.example.com -connect appwrite.example.com:443 2>/dev/null \
+  | openssl x509 -noout -dates -subject -issuer
+```
+
+**Appwrite Console: “Domain is already used”:** Appwrite already has that hostname attached somewhere (same project’s **Custom domains** list, another project, or another org). It is not the registrar blocking `taunufiji.app`. Find the existing attachment, renew SSL there, or ask Appwrite support to release a stuck domain record.
+
+**Why not “just proxy Appwrite through Vercel”?** Terminating `https://appwrite.*` on Vercel and reverse-proxying to Appwrite would require a solution that supports **WebSocket upgrades** (Appwrite Realtime) and careful forwarding of cookies and hop-by-hop headers. Vercel’s simple external **rewrites** are not a drop-in replacement for the full Appwrite API surface. The supported pattern for this product remains **custom domain on Appwrite + CNAME in DNS**.
+
 ### Symptom: Deploy succeeds but first request is slow or times out
 
 This is often **cold start** or heavy SSR on the first hit after idle.

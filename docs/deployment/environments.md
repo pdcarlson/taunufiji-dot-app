@@ -32,7 +32,7 @@
 | Concern         | Variables                                                                                                     |
 | --------------- | ------------------------------------------------------------------------------------------------------------- |
 | App URL         | `NEXT_PUBLIC_APP_URL`                                                                                         |
-| Appwrite        | `NEXT_PUBLIC_APPWRITE_ENDPOINT`, `NEXT_PUBLIC_APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY`                        |
+| Appwrite        | `NEXT_PUBLIC_APPWRITE_ENDPOINT`, `NEXT_PUBLIC_APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY` — see [Appwrite API hostname](#appwrite-api-hostname-same-site-as-the-app) below |
 | Discord Core    | `DISCORD_APP_ID`, `DISCORD_PUBLIC_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_HOUSING_CHANNEL_ID` |
 | Discord Roles   | `DISCORD_ROLE_ID_BROTHER`, `DISCORD_ROLE_ID_CABINET`, `DISCORD_ROLE_ID_HOUSING_CHAIR`                         |
 | AWS/S3          | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME` (bucket must allow browser `PUT` from your app origins via CORS for Library uploads; see below) |
@@ -61,6 +61,14 @@
 In `serverEnvSchema` (`lib/infrastructure/config/server-env-schema.ts`), **`CRON_SECRET` is optional** (Zod `.optional()`). Omit it only when cron is disabled and nothing calls `/api/cron`; otherwise configure a non-empty secret in Vercel (and locally) so the endpoint can authorize requests.
 
 `SKIP_ENV_VALIDATION=true` is intended for local fallback scenarios only when intentionally bypassing strict checks. CI should validate against a complete placeholder matrix, and runtime staging/production should validate with real environment values.
+
+## Appwrite API hostname (same site as the app)
+
+**Production and staging deployments:** `NEXT_PUBLIC_APPWRITE_ENDPOINT` must be **`https://<appwrite-subdomain>.<your-chapter-domain>/v1`** (or equivalent path) where the hostname is a **subdomain of the same registrable domain** as `NEXT_PUBLIC_APP_URL` (for example `appwrite.example.edu` with `https://www.example.edu`). This is a **product invariant**: switching production to a regional Appwrite Cloud URL such as `https://REGION.cloud.appwrite.io/v1` makes the API a **third-party** origin relative to the web app and breaks first-party cookie semantics for Appwrite sessions (and is unacceptable for this deployment model).
+
+**DNS vs TLS:** You may manage DNS in **Vercel** (CNAME to the regional target Appwrite shows in the console, e.g. `nyc.cloud.appwrite.io`). That does **not** move TLS issuance to Vercel: the certificate the browser sees is still minted for traffic terminating on **Appwrite’s edge** until DNS is changed to route HTTPS to Vercel instead (which would stop being an Appwrite API endpoint).
+
+**Appwrite Console “Domain is already used”:** That message means Appwrite already has that hostname registered somewhere in their cloud (often the **same project** under **Settings → Custom domains**, or another project or organization you own). It is **not** proof that Vercel “owns” the name at the DNS registrar. Fix: find which Appwrite project lists the domain and renew SSL there, remove the domain from the wrong project after migrating ownership, or contact **Appwrite support** to detach a stuck record. Adding the hostname under **Vercel → Project → Domains** alone does not replace Appwrite’s certificate while the CNAME still targets `*.cloud.appwrite.io`.
 
 ## Runtime Environment Checklist (Vercel)
 
