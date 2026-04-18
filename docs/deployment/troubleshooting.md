@@ -26,26 +26,31 @@ If this command fails, do not merge **`main` → `production`** (do not ship the
 
 ## Staging Troubleshooting Runbook
 
-### Symptom: "Your connection is not private" / `NET::ERR_CERT_DATE_INVALID` on the Appwrite host (e.g. `appwrite.example.com`)
+### Symptom: "Your connection is not private" / `NET::ERR_CERT_DATE_INVALID` on the Appwrite API host (e.g. `appwrite.example.com`)
 
-The Next.js app on **Vercel** is separate from **Appwrite Cloud**. OAuth and the Appwrite web SDK talk to whatever host is in `NEXT_PUBLIC_APPWRITE_ENDPOINT`. If that host’s **TLS certificate is expired or not yet valid**, the browser blocks the connection before any application code runs — login with Discord fails with a certificate warning.
+The Next.js app on **Vercel** is separate from **Appwrite Cloud**. OAuth and the Appwrite web SDK use whatever host is in `NEXT_PUBLIC_APPWRITE_ENDPOINT`. If that host’s **TLS certificate is expired or not yet valid**, the browser blocks HTTPS before any application code runs.
 
-**What `NET::ERR_CERT_DATE_INVALID` means:** the browser does not trust the server’s certificate dates (usually **expired**, occasionally clock skew on the client).
+**What `NET::ERR_CERT_DATE_INVALID` means:** the browser rejects the certificate’s validity window (usually **expired**).
 
-**How to confirm from a shell (replace the host with your endpoint hostname, no `/v1` path):**
+**Who must issue the certificate (important):** TLS is terminated by whoever answers **HTTPS on the IPs your DNS resolves to**. If DNS is a **CNAME to** `*.cloud.appwrite.io`, the certificate you see in the browser is **Appwrite’s** (on their edge), not Vercel’s — even when **DNS records** are edited in **Vercel DNS** because the zone uses Vercel nameservers. Managing DNS in Vercel does **not** move TLS termination to Vercel unless you **change** that CNAME to point at Vercel (which would break the Appwrite API on that hostname).
+
+**How to confirm from a shell (use your endpoint hostname, no `/v1` path):**
 
 ```bash
 echo | openssl s_client -servername appwrite.example.com -connect appwrite.example.com:443 2>/dev/null \
-  | openssl x509 -noout -dates -subject
+  | openssl x509 -noout -dates -subject -issuer
 ```
 
-**Typical causes after an Appwrite project pause:** automatic certificate renewal (ACME) may not run while the project is suspended; the cert can expire shortly after.
+**Typical causes after an Appwrite project pause:** automatic certificate renewal may not complete while the project is suspended; the cert can expire shortly after.
 
 **What to do:**
 
-1. In **Appwrite Console** → your project → **Settings** (or **Domains** / custom hostname): open the **custom domain** used in `NEXT_PUBLIC_APPWRITE_ENDPOINT`, ensure it is **verified**, and use any **renew / refresh certificate** option if shown. Re-saving or toggling verification can trigger a new cert.
-2. Ensure **DNS** for that hostname still matches Appwrite’s documented target (usually a **CNAME** to your region’s `*.cloud.appwrite.io`). This hostname is **not** a Vercel project domain — the Vercel “domain configuration” checker may label a CNAME to Appwrite as “misconfigured” because it expects Vercel’s own records; that warning does **not** apply to traffic that should terminate on Appwrite.
-3. Run `npm run diagnose:staging` — it fails fast if the Appwrite endpoint certificate is expired or expiring within 14 days.
+1. **Appwrite Console** (not the registrar): Project → **Settings** → **Custom domains** for the hostname in `NEXT_PUBLIC_APPWRITE_ENDPOINT`. Use **Generate SSL certificate** / renew / re-verify if the UI offers it. You do **not** delegate the apex domain to Appwrite; you only register the hostname **inside** the Appwrite project and point **DNS** at their target (same pattern as [Appwrite custom domains](https://appwrite.io/docs/advanced/platform/custom-domains)).
+2. Keep **DNS** aligned with that doc (usually a **CNAME** to your region’s `*.cloud.appwrite.io`). The Vercel “domain configuration” API may show **`misconfigured: true`** for such a CNAME because it assumes the hostname is for a Vercel deployment; ignore that for Appwrite-only hostnames.
+3. **Server API keys** in this repo cannot renew certificates (they lack `projects.read` / domain scopes on the Appwrite API). Renewal is console-side or Appwrite support.
+4. Run `npm run diagnose:staging` — it fails fast if the Appwrite endpoint certificate is expired or expiring within 14 days.
+
+**Emergency workaround (cookie / third-party caveats):** point `NEXT_PUBLIC_APPWRITE_ENDPOINT` at your regional `https://<region>.cloud.appwrite.io/v1` in Vercel env and redeploy. Prefer fixing the custom domain when possible; see [Appwrite third-party cookies](https://appwrite.io/docs/advanced/platform/custom-domains#third-party-cookies) for why same-site API hostnames exist.
 
 ### Symptom: Deploy succeeds but first request is slow or times out
 
