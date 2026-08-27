@@ -22,13 +22,56 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
-  uploadFileAction,
+  presignLibraryUploadAction,
   createLibraryResourceAction,
 } from "@/lib/presentation/actions/library/manage.actions";
 import {
   checkDuplicateResourceAction,
   getMetadataAction,
 } from "@/lib/presentation/actions/library/read.actions";
+import { validatedLibraryUploadContentType } from "@/lib/utils/library-upload-content-type";
+
+async function putWithRetry(
+  url: string,
+  file: File,
+  maxRetries = 2,
+): Promise<Response> {
+  const contentType = validatedLibraryUploadContentType();
+  let lastResponse: Response | null = null;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": contentType },
+      });
+      if (response.ok) {
+        return response;
+      }
+      lastResponse = response;
+      const retryable = response.status >= 500 && response.status <= 599;
+      if (!retryable || attempt === maxRetries) {
+        return response;
+      }
+    } catch (e) {
+      lastError = e;
+      if (attempt === maxRetries) {
+        throw e;
+      }
+    }
+    const delayMs = 300 * 2 ** attempt;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+
+  if (lastResponse) {
+    return lastResponse;
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Storage upload failed after retries");
+}
 
 // Dynamic import to prevent SSR evaluation of PDF library (uses DOMMatrix)
 const PdfRedactor = dynamic_(
@@ -210,17 +253,19 @@ export default function UnifiedUploadPage() {
         });
       }
 
-      // 2. UPLOAD TO STORAGE
+      // 2. UPLOAD TO STORAGE (browser → S3 via presigned URL; avoids Vercel body limits)
       toast.loading("Uploading File...", { id: toastId });
 
-      // Use jwt generated earlier
-      const formData = new FormData();
-      formData.append("file", fileToUpload);
-      // formData.append("jwt", jwt); // Pass JWT
+      const { key: s3Key, uploadUrl, sanitizedFilename } =
+        await presignLibraryUploadAction({ filename: stdName }, jwt);
 
-      // We need a server action that accepts FormData for upload
-      const uploadRes = await uploadFileAction(formData, jwt);
-      if (!uploadRes || !uploadRes.$id) throw new Error("Upload failed");
+      const putResponse = await putWithRetry(uploadUrl, fileToUpload);
+
+      if (!putResponse.ok) {
+        throw new Error(
+          `Storage upload failed (${putResponse.status}). If this persists, confirm the S3 bucket CORS allows PUT from your site origin.`,
+        );
+      }
 
       // 3. SUBMIT METADATA TO API
       toast.loading("Finalizing Record...", { id: toastId });
@@ -234,12 +279,12 @@ export default function UnifiedUploadPage() {
         : stickyMetadata.courseName || "";
 
       const resourceData = {
-        fileId: uploadRes.$id,
+        fileId: s3Key,
         metadata: {
           ...stickyMetadata,
           courseName,
           semester: stickyMetadata.semester,
-          standardizedFilename: stdName,
+          standardizedFilename: sanitizedFilename,
         },
       };
 

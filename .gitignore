@@ -43,3 +43,6 @@ next-env.d.ts
 
 # antigravity agent
 .agent
+
+# semester reset backups (chapter data)
+/backups

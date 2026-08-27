@@ -1,3 +1,4 @@
+import tls from "node:tls";
 import { config as loadDotEnv } from "dotenv";
 import { Databases, Query } from "node-appwrite";
 import { DB_ID, COLLECTIONS } from "@/lib/infrastructure/config/schema";
@@ -17,6 +18,120 @@ type DiagnosticResult = {
 const DISCORD_API = "https://discord.com/api/v10";
 const REQUEST_TIMEOUT_MS = 8_000;
 const RESPONSE_BODY_SNIPPET_MAX_LENGTH = 300;
+const TLS_CERT_WARNING_DAYS = 14;
+
+function parseCertDate(value: string | undefined): Date | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+async function runAppwriteEndpointTlsCheck(host: string): Promise<DiagnosticResult> {
+  const checkName = "Appwrite endpoint TLS certificate";
+  return await new Promise((resolve) => {
+    const socket = tls.connect({
+      host,
+      port: 443,
+      servername: host,
+      rejectUnauthorized: false,
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+
+    const finish = (result: DiagnosticResult): void => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(result);
+    };
+
+    socket.once("timeout", () => {
+      finish({
+        check: checkName,
+        passed: false,
+        detail: `TLS handshake timed out after ${REQUEST_TIMEOUT_MS}ms`,
+      });
+    });
+
+    socket.once("error", (error: Error) => {
+      finish({
+        check: checkName,
+        passed: false,
+        detail: error.message,
+      });
+    });
+
+    socket.once("secureConnect", () => {
+      const raw = socket.getPeerCertificate();
+      socket.end();
+
+      if (!raw || Object.keys(raw).length === 0) {
+        finish({
+          check: checkName,
+          passed: false,
+          detail: "Peer did not present a certificate",
+        });
+        return;
+      }
+
+      const notBefore = parseCertDate(raw.valid_from);
+      const notAfter = parseCertDate(raw.valid_to);
+      if (!notBefore || !notAfter) {
+        finish({
+          check: checkName,
+          passed: false,
+          detail: "Certificate missing valid_from / valid_to",
+        });
+        return;
+      }
+
+      const now = new Date();
+      const subject =
+        typeof raw.subject?.CN === "string"
+          ? raw.subject.CN
+          : typeof raw.subject === "string"
+            ? raw.subject
+            : host;
+
+      if (now < notBefore) {
+        finish({
+          check: checkName,
+          passed: false,
+          detail: `Certificate for ${subject} is not yet valid (starts ${notBefore.toISOString()})`,
+        });
+        return;
+      }
+
+      if (now > notAfter) {
+        finish({
+          check: checkName,
+          passed: false,
+          detail: `Certificate for ${subject} expired ${notAfter.toISOString()} — browsers show NET::ERR_CERT_DATE_INVALID; renew TLS in Appwrite (custom domain) after outages`,
+        });
+        return;
+      }
+
+      const daysRemaining =
+        (notAfter.getTime() - now.getTime()) / (86_400_000);
+      const expiresSummary = `expires ${notAfter.toISOString()} (${Math.floor(daysRemaining)}d remaining)`;
+
+      if (daysRemaining <= TLS_CERT_WARNING_DAYS) {
+        finish({
+          check: checkName,
+          passed: false,
+          detail: `Certificate for ${subject} ${expiresSummary} — renew soon to avoid login failures`,
+        });
+        return;
+      }
+
+      finish({
+        check: checkName,
+        passed: true,
+        detail: `Certificate for ${subject} ${expiresSummary}`,
+      });
+    });
+  });
+}
 
 function safeErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -306,6 +421,7 @@ async function main(): Promise<void> {
   const databases = new Databases(createAppwriteAdminClientFromEnv());
 
   const results: DiagnosticResult[] = [
+    await runAppwriteEndpointTlsCheck(endpointHost),
     ...(await runAppwriteChecks(databases)),
     ...(await runDiscordChecks(env)),
   ];

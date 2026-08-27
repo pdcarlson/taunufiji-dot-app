@@ -18,4 +18,14 @@ export interface IStorageService {
     key: string,
     contentType: string,
   ): Promise<void>;
+
+  /**
+   * Copies an object within the same bucket (server-side promote).
+   */
+  copyObject(sourceKey: string, destinationKey: string): Promise<void>;
+
+  /**
+   * Deletes an object by key.
+   */
+  deleteObject(key: string): Promise<void>;
 }

@@ -6,7 +6,7 @@ interface AppwriteAccountClient {
   get: () => Promise<Models.User<Models.Preferences>>;
 }
 
-type ActionContext = {
+export type ActionContext = {
   container: Container;
   userId: string; // Auth ID when authenticated; empty string for public actions without JWT.
   account: AppwriteAccountClient | null; // Appwrite account client, not the user model
