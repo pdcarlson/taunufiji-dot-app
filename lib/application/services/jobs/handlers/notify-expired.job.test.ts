@@ -66,6 +66,33 @@ describe("NotifyExpiredJob", () => {
     });
   });
 
+  it("posts the missed-task message without a link, so Discord embeds no GIF", async () => {
+    const row = expiredTaskFixture({
+      id: "task-no-gif",
+      title: "Sweep (Third Floor)",
+      assigned_to: "user-9",
+    });
+    taskRepository.findMany = vi.fn().mockImplementation(async (opts) => {
+      const offset = opts.offset ?? 0;
+      if (offset > 0) return [];
+      return [row];
+    });
+    taskRepository.findById = vi.fn().mockResolvedValue(row);
+    taskRepository.update = vi.fn().mockResolvedValue(expiredTaskBase);
+    const notifyAdminsSpy = vi
+      .spyOn(NotificationService, "notifyAdmins")
+      .mockResolvedValue({ success: true });
+    vi.spyOn(NotificationService, "sendNotification").mockResolvedValue({
+      success: true,
+    });
+
+    await NotifyExpiredJob.run(taskRepository);
+
+    expect(notifyAdminsSpy).toHaveBeenCalledWith(
+      "🚨 **MISSED TASK**: <@user-9> failed to complete **Sweep (Third Floor)**. Task expired.",
+    );
+  });
+
   it("persists expired_admin when channel succeeds but DM fails, then completes on retry", async () => {
     const rowFirst = expiredTaskFixture({
       id: "task-retry",
