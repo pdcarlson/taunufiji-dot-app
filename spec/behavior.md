@@ -160,12 +160,15 @@ UI scope labels map to `RecurringMutationScope` on server actions. Cron reads **
   - transitions to `pending` as "claimed/in progress" state.
 - Unclaim:
   - requires caller owns current assignment,
-  - restores task to `open` and clears assignment-specific due date where appropriate.
+  - restores task to `open` and clears assignee and due date (written as `null`; `undefined` is dropped from the Appwrite request and leaves the old values).
 
 ### Submit Proof
 
 - Requires caller owns assigned task.
 - Must reject submissions after expiry.
+- The photo goes browser → S3 through a presigned `PUT` (`presignProofUploadAction`), never through a server action body, because Vercel caps function request bodies (~4.5MB) below a typical phone photo. Eligibility is checked before the URL is issued and again on submit.
+- After a claim, unclaim, or submit, the card hands the saved task to the page that owns the list (`TaskSyncContext`), which shows it at once and then reloads in the background. `router.refresh()` alone never updated these client-held lists.
+- Every upload gets a unique key (`proofs/tasks/<taskId>/<uuid>/<name>`, ad-hoc: `proofs/adhoc/<discordId>/<uuid>/<name>`); submit refuses keys outside the caller's prefix.
 - On success stores proof key and remains `pending` (review-ready is inferred from `proof_s3_key`).
 
 ### Review (Approve / Reject)
@@ -184,6 +187,7 @@ UI scope labels map to `RecurringMutationScope` on server actions. Cron reads **
 
 - Missing/invalid JWT -> explicit authentication failure.
 - Authenticated but no Brother role -> unauthorized baseline access failure.
+- Signing in without baseline access -> no profile row is created; the profile is only synced after the access check passes.
 - Brother but not housing admin invoking mutation -> role-specific denial.
 - Discord API temporary failure while checking roles -> safe failure mode; no mutation.
 

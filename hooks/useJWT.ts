@@ -1,7 +1,7 @@
 /**
  * useJWT Hook
  *
- * Encapsulates Appwrite JWT token creation in a single location.
+ * Encapsulates Appwrite JWT access in a single location (backed by a shared cache).
  * Components should use this hook instead of importing the Appwrite account directly.
  *
  * @example
@@ -16,21 +16,17 @@
  */
 
 import { useCallback } from "react";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+import { jwtCache } from "@/lib/infrastructure/persistence/appwrite.web";
 
 interface UseJWTReturn {
   /**
-   * Creates a new JWT token on-demand.
-   * Returns the JWT string directly.
+   * Returns a JWT for server actions, reusing a recent one when possible.
    */
   getJWT: () => Promise<string>;
 }
 
 export function useJWT(): UseJWTReturn {
-  const getJWT = useCallback(async (): Promise<string> => {
-    const { jwt } = await account.createJWT();
-    return jwt;
-  }, []);
+  const getJWT = useCallback((): Promise<string> => jwtCache.get(), []);
 
   return { getJWT };
 }

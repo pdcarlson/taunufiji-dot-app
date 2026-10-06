@@ -116,6 +116,72 @@ describe("DutyService", () => {
     });
   });
 
+  describe("unclaimTask", () => {
+    it("clears assignee and deadline with null so Appwrite actually unsets them", async () => {
+      mockTaskRepo.findById = vi.fn().mockResolvedValue(
+        createMockTask({
+          id: "task_1",
+          status: "pending",
+          assigned_to: "user_1",
+          due_at: "2026-01-01T00:00:00.000Z",
+        }),
+      );
+
+      await service.unclaimTask("task_1", "user_1");
+
+      const [, updates] = vi.mocked(mockTaskRepo.update).mock.calls[0];
+      expect(updates).toEqual({
+        status: "open",
+        assigned_to: null,
+        due_at: null,
+      });
+      // undefined values vanish from the request body; that was the bug.
+      expect(JSON.parse(JSON.stringify(updates))).toHaveProperty(
+        "assigned_to",
+        null,
+      );
+    });
+  });
+
+  describe("assertCanSubmitProof", () => {
+    it("returns the task for its assignee before the deadline", async () => {
+      const task = createMockTask({
+        id: "task_1",
+        assigned_to: "user_1",
+        due_at: new Date(Date.now() + 60_000).toISOString(),
+      });
+      mockTaskRepo.findById = vi.fn().mockResolvedValue(task);
+
+      await expect(
+        service.assertCanSubmitProof("task_1", "user_1"),
+      ).resolves.toBe(task);
+    });
+
+    it("rejects after the deadline", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockTaskRepo.findById = vi.fn().mockResolvedValue(
+        createMockTask({
+          id: "task_1",
+          assigned_to: "user_1",
+          due_at: new Date(Date.now() - 60_000).toISOString(),
+        }),
+      );
+
+      await expect(
+        service.assertCanSubmitProof("task_1", "user_1"),
+      ).rejects.toThrow("expired");
+      errorSpy.mockRestore();
+    });
+
+    it("rejects a missing task", async () => {
+      mockTaskRepo.findById = vi.fn().mockResolvedValue(null);
+
+      await expect(
+        service.assertCanSubmitProof("task_1", "user_1"),
+      ).rejects.toThrow("not found");
+    });
+  });
+
   describe("getMyTasks", () => {
     // This tests the PURITY of getMyTasks (no side effects)
     it("should return filtered tasks without modifications", async () => {

@@ -166,6 +166,8 @@ export class AdminService {
       status: shouldUnassign ? "open" : "rejected",
       proof_s3_key: null,
       assigned_to: shouldUnassign ? null : task.assigned_to,
+      // A bounty back in the pool must not carry the previous claimer's deadline.
+      ...(shouldUnassign ? { due_at: null } : {}),
     });
     try {
       if (task.assigned_to) {

@@ -2,6 +2,7 @@ import { HousingTask } from "@/lib/domain/entities";
 
 export interface IDutyService {
   claimTask(taskId: string, profileId: string): Promise<HousingTask>;
+  assertCanSubmitProof(taskId: string, profileId: string): Promise<HousingTask>;
   submitProof(
     taskId: string,
     profileId: string,

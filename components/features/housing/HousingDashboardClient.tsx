@@ -21,6 +21,7 @@ import {
 import { MyDutiesWidget } from "./MyDutiesWidget";
 // Note: We use useAuth for getToken and isHousingAdmin
 import { useAuth } from "@/components/providers/AuthProvider";
+import { TaskSyncProvider, applyTaskChange } from "./TaskSyncContext";
 
 /**
  * Server-prefetched housing dashboard payload for the client shell.
@@ -70,7 +71,10 @@ export function HousingDashboardClient({
   const [showBountyModal, setShowBountyModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
-  const loadDashboardData = async (options?: { notifySuccess?: boolean }) => {
+  const loadDashboardData = async (options?: {
+    notifySuccess?: boolean;
+    quiet?: boolean;
+  }) => {
     try {
       const jwt = await getToken();
 
@@ -96,11 +100,18 @@ export function HousingDashboardClient({
       }
     } catch (error) {
       console.error("Refresh failed", error);
-      toast.error("Failed to refresh data");
+      if (!options?.quiet) toast.error("Failed to refresh data");
     }
   };
 
   const handleRefresh = () => loadDashboardData({ notifySuccess: true });
+
+  // Show the saved row at once, then reconcile with the server in the background
+  // (claims move bounties into "My Duties", submits flip cards to "Reviewing").
+  const handleTaskChanged = (taskId: string, updated: HousingTask | null) => {
+    setTasks((prev) => applyTaskChange(prev, taskId, updated));
+    void loadDashboardData({ quiet: true });
+  };
 
   const closeEditTaskModal = () => setEditingTask(null);
 
@@ -114,79 +125,113 @@ export function HousingDashboardClient({
   );
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row gap-4 md:gap-6 justify-between items-center md:items-end text-center md:text-left">
-        <div>
-          <h1 className="font-bebas text-3xl md:text-4xl text-fiji-dark leading-none">
-            Housing Operations
-          </h1>
-          <p className="text-stone-500 text-xs md:text-sm">
-            Tau Nu Chapter Housing Dashboard.
-          </p>
-        </div>
-      </div>
-
-      {/* ADMIN ACTION BAR */}
-      {isAdmin && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-          <button
-            onClick={() => setShowBountyModal(true)}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-fiji-gold to-amber-500 hover:from-amber-500 hover:to-fiji-gold text-white text-sm font-bold px-4 py-3 rounded-lg transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
-          >
-            <Zap className="w-4 h-4" /> Post Bounty
-          </button>
-          <button
-            onClick={() => setShowOneOffModal(true)}
-            className="flex items-center justify-center gap-2 bg-fiji-purple hover:bg-fiji-dark text-white text-sm font-bold px-4 py-3 rounded-lg transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
-          >
-            <UserPlus className="w-4 h-4" /> Assign Duty
-          </button>
-          <button
-            onClick={() => setShowScheduleModal(true)}
-            className="flex items-center justify-center gap-2 bg-white hover:bg-stone-50 text-stone-700 text-sm font-bold px-4 py-3 rounded-lg transition-all border-2 border-stone-200 hover:border-stone-300"
-          >
-            <CalendarClock className="w-4 h-4" /> Create Schedule
-          </button>
-        </div>
-      )}
-
-      {/* MAIN CONTENT: 2-COLUMN LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT COLUMN: My Duties (sticky on desktop) */}
-        <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-4">
-            <MyDutiesWidget
-              initialTasks={myDuties}
-              userId={currentUser?.$id || ""}
-              profileId={profileId}
-              variant="minimal"
-            />
+    <TaskSyncProvider onTaskChanged={handleTaskChanged}>
+      <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6 justify-between items-center md:items-end text-center md:text-left">
+          <div>
+            <h1 className="font-bebas text-3xl md:text-4xl text-fiji-dark leading-none">
+              Housing Operations
+            </h1>
+            <p className="text-stone-500 text-xs md:text-sm">
+              Tau Nu Chapter Housing Dashboard.
+            </p>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Reviews + Bounties */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* PENDING REVIEWS (Admin Only - Always Visible) */}
-          {isAdmin && (
+        {/* ADMIN ACTION BAR */}
+        {isAdmin && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+            <button
+              onClick={() => setShowBountyModal(true)}
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-fiji-gold to-amber-500 hover:from-amber-500 hover:to-fiji-gold text-white text-sm font-bold px-4 py-3 rounded-lg transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+            >
+              <Zap className="w-4 h-4" /> Post Bounty
+            </button>
+            <button
+              onClick={() => setShowOneOffModal(true)}
+              className="flex items-center justify-center gap-2 bg-fiji-purple hover:bg-fiji-dark text-white text-sm font-bold px-4 py-3 rounded-lg transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+            >
+              <UserPlus className="w-4 h-4" /> Assign Duty
+            </button>
+            <button
+              onClick={() => setShowScheduleModal(true)}
+              className="flex items-center justify-center gap-2 bg-white hover:bg-stone-50 text-stone-700 text-sm font-bold px-4 py-3 rounded-lg transition-all border-2 border-stone-200 hover:border-stone-300"
+            >
+              <CalendarClock className="w-4 h-4" /> Create Schedule
+            </button>
+          </div>
+        )}
+
+        {/* MAIN CONTENT: 2-COLUMN LAYOUT */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* LEFT COLUMN: My Duties (sticky on desktop) */}
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-4">
+              <MyDutiesWidget
+                initialTasks={myDuties}
+                userId={currentUser?.$id || ""}
+                profileId={profileId}
+                variant="minimal"
+              />
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Reviews + Bounties */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* PENDING REVIEWS (Admin Only - Always Visible) */}
+            {isAdmin && (
+              <section>
+                <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-2">
+                  <h2 className="font-bebas text-2xl text-stone-700">
+                    Pending Approvals
+                  </h2>
+                  {pendingReviews.length > 0 && (
+                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      {pendingReviews.length}
+                    </span>
+                  )}
+                </div>
+                {pendingReviews.length === 0 ? (
+                  <div className="text-center py-8 bg-green-50 rounded border border-dashed border-green-200 text-green-600 font-bold">
+                    ✓ All caught up! No pending reviews.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pendingReviews.map((t) => (
+                      <TaskCard
+                        key={t.id}
+                        task={t}
+                        userId={currentUser?.$id || ""}
+                        profileId={profileId}
+                        userName={currentUser?.name || "Guest"}
+                        isAdmin={isAdmin}
+                        getJWT={getToken}
+                        viewMode="review"
+                        onReview={setReviewTask}
+                        onEdit={(t) => setEditingTask(t)}
+                        variant="horizontal"
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* AVAILABLE BOUNTIES (Horizontal Cards) */}
             <section>
               <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-2">
                 <h2 className="font-bebas text-2xl text-stone-700">
-                  Pending Approvals
+                  Available Bounties
                 </h2>
-                {pendingReviews.length > 0 && (
-                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                    {pendingReviews.length}
-                  </span>
-                )}
               </div>
-              {pendingReviews.length === 0 ? (
-                <div className="text-center py-8 bg-green-50 rounded border border-dashed border-green-200 text-green-600 font-bold">
-                  ✓ All caught up! No pending reviews.
+              {availableBounties.length === 0 ? (
+                <div className="text-center py-12 bg-stone-50 rounded border border-dashed border-stone-200 text-stone-400 font-bold">
+                  No active bounties
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {pendingReviews.map((t) => (
+                  {availableBounties.map((t) => (
                     <TaskCard
                       key={t.id}
                       task={t}
@@ -195,103 +240,71 @@ export function HousingDashboardClient({
                       userName={currentUser?.name || "Guest"}
                       isAdmin={isAdmin}
                       getJWT={getToken}
-                      viewMode="review"
-                      onReview={setReviewTask}
-                      onEdit={(t) => setEditingTask(t)}
+                      viewMode="action"
                       variant="horizontal"
+                      onEdit={(t) => setEditingTask(t)}
                     />
                   ))}
                 </div>
               )}
             </section>
-          )}
-
-          {/* AVAILABLE BOUNTIES (Horizontal Cards) */}
-          <section>
-            <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-2">
-              <h2 className="font-bebas text-2xl text-stone-700">
-                Available Bounties
-              </h2>
-            </div>
-            {availableBounties.length === 0 ? (
-              <div className="text-center py-12 bg-stone-50 rounded border border-dashed border-stone-200 text-stone-400 font-bold">
-                No active bounties
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {availableBounties.map((t) => (
-                  <TaskCard
-                    key={t.id}
-                    task={t}
-                    userId={currentUser?.$id || ""}
-                    profileId={profileId}
-                    userName={currentUser?.name || "Guest"}
-                    isAdmin={isAdmin}
-                    getJWT={getToken}
-                    viewMode="action"
-                    variant="horizontal"
-                    onEdit={(t) => setEditingTask(t)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+          </div>
         </div>
+
+        {/* TASK ROSTER */}
+        <section className="pt-6">
+          <DutyRoster
+            tasks={tasks}
+            members={members}
+            isAdmin={isAdmin}
+            onRefresh={handleRefresh}
+            onEdit={(t) => setEditingTask(t)}
+          />
+        </section>
+
+        {/* MODALS */}
+        <ProofReviewModal
+          task={reviewTask}
+          onClose={() => setReviewTask(null)}
+          onSuccess={handleRefresh}
+        />
+
+        {showBountyModal && (
+          <CreateBountyModal
+            onClose={() => setShowBountyModal(false)}
+            onSuccess={() => {
+              setShowBountyModal(false);
+              handleRefresh();
+            }}
+          />
+        )}
+
+        {showScheduleModal && (
+          <CreateScheduleModal
+            onClose={() => setShowScheduleModal(false)}
+            onSuccess={handleRefresh}
+            members={members}
+          />
+        )}
+
+        {showOneOffModal && (
+          <CreateOneOffModal
+            onClose={() => setShowOneOffModal(false)}
+            onSuccess={handleRefresh}
+            members={members}
+          />
+        )}
+
+        {editingTask && (
+          <EditTaskModal
+            task={editingTask}
+            members={members}
+            onClose={closeEditTaskModal}
+            onRefresh={() => loadDashboardData()}
+            onSuccessClose={closeEditTaskModal}
+          />
+        )}
       </div>
-
-      {/* TASK ROSTER */}
-      <section className="pt-6">
-        <DutyRoster
-          tasks={tasks}
-          members={members}
-          isAdmin={isAdmin}
-          onRefresh={handleRefresh}
-          onEdit={(t) => setEditingTask(t)}
-        />
-      </section>
-
-      {/* MODALS */}
-      <ProofReviewModal
-        task={reviewTask}
-        onClose={() => setReviewTask(null)}
-        onSuccess={handleRefresh}
-      />
-
-      {showBountyModal && (
-        <CreateBountyModal
-          onClose={() => setShowBountyModal(false)}
-          onSuccess={() => {
-            setShowBountyModal(false);
-            handleRefresh();
-          }}
-        />
-      )}
-
-      {showScheduleModal && (
-        <CreateScheduleModal
-          onClose={() => setShowScheduleModal(false)}
-          onSuccess={handleRefresh}
-          members={members}
-        />
-      )}
-
-      {showOneOffModal && (
-        <CreateOneOffModal
-          onClose={() => setShowOneOffModal(false)}
-          onSuccess={handleRefresh}
-          members={members}
-        />
-      )}
-
-      {editingTask && (
-        <EditTaskModal
-          task={editingTask}
-          members={members}
-          onClose={closeEditTaskModal}
-          onRefresh={() => loadDashboardData()}
-          onSuccessClose={closeEditTaskModal}
-        />
-      )}
-    </div>
+    </TaskSyncProvider>
   );
 }
