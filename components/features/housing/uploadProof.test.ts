@@ -6,7 +6,7 @@ vi.mock("@/lib/presentation/actions/housing/duty.actions", () => ({
   presignProofUploadAction: hoisted.presign,
 }));
 
-import { uploadProofPhoto } from "./uploadProof";
+import { shrinkPhoto, uploadProofPhoto } from "./uploadProof";
 
 describe("uploadProofPhoto", () => {
   const fetchMock = vi.fn();
@@ -97,5 +97,56 @@ describe("uploadProofPhoto", () => {
     await pending;
     expect(fetchMock).toHaveBeenCalledTimes(3);
     vi.useRealTimers();
+  });
+});
+
+describe("shrinkPhoto", () => {
+  const big = () =>
+    new File([new Uint8Array(4 * 1024 * 1024)], "IMG_1.HEIC", {
+      type: "image/heic",
+    });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("leaves small photos untouched", async () => {
+    const small = new File(["x"], "a.jpg", { type: "image/jpeg" });
+    expect(await shrinkPhoto(small)).toBe(small);
+  });
+
+  it("uploads the original when the browser cannot decode it", async () => {
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn().mockRejectedValue(new Error("unsupported")),
+    );
+    const file = big();
+    expect(await shrinkPhoto(file)).toBe(file);
+  });
+
+  it("downscales large photos to a JPEG under 2048px", async () => {
+    const close = vi.fn();
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn().mockResolvedValue({ width: 8000, height: 6000, close }),
+    );
+    const drawImage = vi.fn();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage,
+    } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(
+      function (this: HTMLCanvasElement, cb: BlobCallback) {
+        cb(new Blob([new Uint8Array(500 * 1024)], { type: "image/jpeg" }));
+      },
+    );
+
+    const out = await shrinkPhoto(big());
+
+    expect(out.name).toBe("IMG_1.jpg");
+    expect(out.type).toBe("image/jpeg");
+    expect(out.size).toBe(500 * 1024);
+    expect(drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 2048, 1536);
+    expect(close).toHaveBeenCalled();
   });
 });

@@ -116,6 +116,33 @@ describe("DutyService", () => {
     });
   });
 
+  describe("unclaimTask", () => {
+    it("clears assignee and deadline with null so Appwrite actually unsets them", async () => {
+      mockTaskRepo.findById = vi.fn().mockResolvedValue(
+        createMockTask({
+          id: "task_1",
+          status: "pending",
+          assigned_to: "user_1",
+          due_at: "2026-01-01T00:00:00.000Z",
+        }),
+      );
+
+      await service.unclaimTask("task_1", "user_1");
+
+      const [, updates] = vi.mocked(mockTaskRepo.update).mock.calls[0];
+      expect(updates).toEqual({
+        status: "open",
+        assigned_to: null,
+        due_at: null,
+      });
+      // undefined values vanish from the request body; that was the bug.
+      expect(JSON.parse(JSON.stringify(updates))).toHaveProperty(
+        "assigned_to",
+        null,
+      );
+    });
+  });
+
   describe("assertCanSubmitProof", () => {
     it("returns the task for its assignee before the deadline", async () => {
       const task = createMockTask({
