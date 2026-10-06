@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { requestAdHocAction } from "@/lib/presentation/actions/housing/duty.actions";
 import { useJWT } from "@/hooks/useJWT";
+import { uploadProofPhoto } from "./uploadProof";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -46,13 +47,16 @@ export default function AdHocRequestModal({ onClose, onSuccess }: Props) {
         return;
       }
 
-      const formData = new FormData();
-      formData.append("title", data.title);
-      formData.append("description", data.description);
-      formData.append("points", points.toString());
-      formData.append("file", selectedFile);
-
-      const res = await requestAdHocAction(formData, jwt);
+      const proofKey = await uploadProofPhoto(selectedFile, jwt);
+      const res = await requestAdHocAction(
+        {
+          title: data.title,
+          description: data.description,
+          points,
+          proofKey,
+        },
+        jwt,
+      );
       if (res.success) {
         toast.success("Request Submitted!");
         onSuccess();
@@ -60,8 +64,8 @@ export default function AdHocRequestModal({ onClose, onSuccess }: Props) {
         toast.error(res.error || "Failed to submit request");
       }
     } catch (e) {
-      toast.error("An error occurred");
       console.error(e);
+      toast.error(e instanceof Error ? e.message : "An error occurred");
     } finally {
       setLoading(false);
     }

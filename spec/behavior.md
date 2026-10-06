@@ -166,6 +166,8 @@ UI scope labels map to `RecurringMutationScope` on server actions. Cron reads **
 
 - Requires caller owns assigned task.
 - Must reject submissions after expiry.
+- The photo goes browser → S3 through a presigned `PUT` (`presignProofUploadAction`), never through a server action body, because Vercel caps function request bodies (~4.5MB) below a typical phone photo. Eligibility is checked before the URL is issued and again on submit.
+- Every upload gets a unique key (`proofs/tasks/<taskId>/<uuid>/<name>`, ad-hoc: `proofs/adhoc/<discordId>/<uuid>/<name>`); submit refuses keys outside the caller's prefix.
 - On success stores proof key and remains `pending` (review-ready is inferred from `proof_s3_key`).
 
 ### Review (Approve / Reject)
