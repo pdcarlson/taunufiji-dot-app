@@ -8,7 +8,10 @@ import {
   useCallback,
   ReactNode,
 } from "react";
-import { account } from "@/lib/infrastructure/persistence/appwrite.web";
+import {
+  account,
+  jwtCache,
+} from "@/lib/infrastructure/persistence/appwrite.web";
 import { Models, OAuthProvider } from "appwrite";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -56,12 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Create JWT for Server Action Verification
-        const jwtResponse = await account.createJWT();
+        const jwt = await jwtCache.get();
 
         const [userProfileData, adminStatus] = await Promise.all([
-          getProfileAction(jwtResponse.jwt),
-          checkHousingAdminAction(jwtResponse.jwt),
+          getProfileAction(jwt),
+          checkHousingAdminAction(jwt),
         ]);
 
         // getProfileAction returns { profile: Member | null, isAuthorized: boolean } | null
@@ -69,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsHousingAdmin(adminStatus);
       } catch (err: unknown) {
         console.warn("[AuthProvider] No session found", err);
+        jwtCache.clear();
         setUser(null);
         setProfile(null);
         setError(err instanceof Error ? err.message : String(err));
@@ -88,13 +91,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const getToken = useCallback(async () => {
-    const { jwt } = await account.createJWT();
-    return jwt;
-  }, []);
+  const getToken = useCallback(() => jwtCache.get(), []);
 
   const logout = async () => {
     await account.deleteSession("current");
+    jwtCache.clear();
     setUser(null);
     setProfile(null);
     setIsHousingAdmin(false);

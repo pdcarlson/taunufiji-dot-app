@@ -75,7 +75,7 @@ Access is strictly managed via Discord Role verification.
 ### Responsive Strategy
 
 - **Balanced Responsive**: Features must function seamlessly across all screen sizes.
-  - **Mobile**: Critical for Brothers performing chores and submitting proof in real-time.
+  - **Mobile**: Critical for Brothers performing chores and submitting proof in real-time. Proof submission uses a bottom sheet: pick or take a photo, confirm the preview, then submit with visible progress; a failed upload keeps the photo for a one-tap retry. Photos are downscaled in the browser before upload, and tap targets are at least 44px.
   - **Desktop**: Critical for admin roles managing complex schedules and reviewing data-heavy ledger histories.
 
 ### Engineering Principles for UI

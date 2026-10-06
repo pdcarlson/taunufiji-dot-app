@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { HousingTask } from "@/lib/domain/entities";
 import {
   Briefcase,
@@ -18,11 +17,11 @@ import { Loader } from "@/components/ui/Loader";
 import toast from "react-hot-toast";
 import {
   claimTaskAction,
-  unclaimTaskAction, // Note: Import paths might need adjusting if they changed?
-  submitProofAction,
+  unclaimTaskAction,
 } from "@/lib/presentation/actions/housing/duty.actions";
 import { isAwaitingExpiryTransition } from "@/lib/utils/housing-assignee-task-state";
-import { uploadProofPhoto } from "../../uploadProof";
+import { ProofUploadButton } from "../../ProofUploadButton";
+import { useTaskChanged } from "../../TaskSyncContext";
 
 interface DutyCardProps {
   task: HousingTask;
@@ -50,7 +49,7 @@ export function DutyCard({
   getJWT,
   variant = "square",
 }: Omit<DutyCardProps, 'onEdit'>) {
-  const router = useRouter();
+  const onTaskChanged = useTaskChanged();
   const [loading, setLoading] = useState(false);
 
   const isOneOff = task.type === "one_off";
@@ -83,7 +82,7 @@ export function DutyCard({
       const res = await claimTaskAction(task.id, userId, jwt);
       if (!res.success) throw new Error(res.error);
       toast.success("Bounty Claimed!");
-      router.refresh();
+      onTaskChanged(task.id, res.data);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Error claiming task";
@@ -99,37 +98,13 @@ export function DutyCard({
       const res = await unclaimTaskAction(task.id, jwt);
       if (!res.success) throw new Error(res.error);
       toast.success("Unclaimed");
-      router.refresh();
+      onTaskChanged(task.id, res.data);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Error unclaiming task";
       toast.error(message);
     }
     setLoading(false);
-  };
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target;
-    const file = input.files?.[0];
-    if (!file) return;
-    setLoading(true);
-    try {
-      const jwt = await getJWT();
-      const proofKey = await uploadProofPhoto(file, jwt, task.id);
-      const result = await submitProofAction({ taskId: task.id, proofKey }, jwt);
-      if (!result.success) throw new Error(result.error);
-      toast.success("Proof uploaded!");
-      router.refresh();
-    } catch (err: unknown) {
-      console.error("Upload error:", err);
-      toast.error(
-        err instanceof Error ? err.message : "Upload failed. Please try again.",
-      );
-    } finally {
-      // Let the member pick the same photo again after a failure.
-      input.value = "";
-      setLoading(false);
-    }
   };
 
   const containerClasses = `relative bg-white border rounded-xl p-5 transition-all shadow-sm hover:shadow-md h-full group ${
@@ -149,7 +124,7 @@ export function DutyCard({
         <button
           onClick={handleClaim}
           disabled={loading}
-          className={`${btnClass} font-bold py-2 rounded text-sm transition-colors bg-stone-100 text-stone-700 hover:bg-stone-200 hover:text-stone-900 border border-stone-200 flex items-center justify-center gap-2`}
+          className={`${btnClass} min-h-11 font-bold py-2 rounded-lg text-sm transition-colors bg-stone-100 text-stone-700 hover:bg-stone-200 hover:text-stone-900 border border-stone-200 flex items-center justify-center gap-2`}
         >
           {loading ? (
             <>
@@ -200,38 +175,30 @@ export function DutyCard({
           <div
             className={`flex gap-2 ${btnClass === "w-full" ? "w-full" : "w-auto items-center"}`}
           >
-            <label
-              className={`${btnClass === "w-full" ? "flex-1" : "px-4"} bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow hover:-translate-y-0.5 active:translate-y-0 ${
-                uploadControlDisabled
-                  ? "opacity-50 pointer-events-none grayscale"
-                  : ""
-              }`}
+            <ProofUploadButton
+              taskId={task.id}
+              getJWT={getJWT}
+              onSubmitted={(updated) => onTaskChanged(task.id, updated)}
+              disabled={uploadControlDisabled}
+              className={`${btnClass === "w-full" ? "flex-1" : "px-4"} min-h-11 bg-fiji-purple hover:bg-fiji-dark text-white py-2 rounded-lg text-sm font-bold text-center cursor-pointer flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow active:translate-y-0`}
             >
-              {loading ? (
-                <Loader size="sm" className="text-white" />
-              ) : pastDueBlocksNonDutyUpload ? (
+              {pastDueBlocksNonDutyUpload ? (
                 <>
                   <Clock className="w-4 h-4" /> Past due
                 </>
               ) : (
                 <>
-                  <UploadCloud className="w-4 h-4" /> Upload
+                  <UploadCloud className="w-4 h-4" /> Upload proof
                 </>
               )}
-              <input
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleUpload}
-                disabled={uploadControlDisabled}
-              />
-            </label>
+            </ProofUploadButton>
             {!isDuty && (
               <button
                 onClick={handleUnclaim}
                 disabled={loading}
-                className="px-3 text-red-400 hover:bg-red-50 rounded border border-transparent hover:border-red-100 transition-colors h-full flex items-center justify-center"
+                className="min-h-11 min-w-11 px-3 text-red-400 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-100 transition-colors flex items-center justify-center"
                 title="Unclaim"
+                aria-label="Unclaim"
               >
                 <XCircle className="w-5 h-5" />
               </button>
@@ -256,7 +223,7 @@ export function DutyCard({
               type="button"
               onClick={handleUnclaim}
               disabled={loading}
-              className="w-full rounded border border-red-200 bg-white py-2 text-xs font-bold text-red-600 hover:bg-red-50"
+              className="w-full min-h-11 rounded-lg border border-red-200 bg-white py-2 text-sm font-bold text-red-600 hover:bg-red-50"
             >
               Unclaim bounty
             </button>
@@ -314,7 +281,7 @@ export function DutyCard({
                 {task.title}
               </h3>
             </div>
-            <p className="text-stone-500 text-xs line-clamp-1">
+            <p className="text-stone-500 text-xs line-clamp-2 sm:line-clamp-1">
               {task.description || "No description provided."}
             </p>
           </div>
@@ -335,7 +302,7 @@ export function DutyCard({
           </div>
 
           {/* ACTION BUTTON */}
-          <div className="w-[140px] flex justify-end">
+          <div className="w-full sm:w-[160px] flex justify-end">
             {renderActions("w-full")}
           </div>
         </div>

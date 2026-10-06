@@ -269,6 +269,31 @@ describe("AdminService", () => {
     });
   });
 
+  it("returns a rejected bounty to the pool without the old assignee or deadline", async () => {
+    vi.mocked(mockTaskRepo.findById).mockResolvedValue(
+      housingTaskFixture({
+        id: "bounty-1",
+        type: "bounty",
+        status: "pending",
+        assigned_to: "user-1",
+        due_at: "2026-01-01T00:00:00.000Z",
+        title: "Lawn",
+      }),
+    );
+
+    await service.rejectTask("bounty-1", "Blurry");
+
+    expect(mockTaskRepo.update).toHaveBeenCalledWith(
+      "bounty-1",
+      expect.objectContaining({
+        status: "open",
+        assigned_to: null,
+        due_at: null,
+        proof_s3_key: null,
+      }),
+    );
+  });
+
   describe("recurring scope mutations", () => {
     it("updates only one task when scope is this_instance", async () => {
       vi.mocked(mockTaskRepo.findById).mockResolvedValue(

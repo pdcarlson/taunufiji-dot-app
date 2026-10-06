@@ -118,8 +118,10 @@ export class DutyService implements IDutyService {
 
     const result = await this.taskRepository.update(taskId, {
       status: "open",
-      assigned_to: undefined,
-      due_at: undefined,
+      // null, not undefined: undefined is dropped from the JSON body, so
+      // Appwrite kept the old assignee and the bounty stayed in "My Duties".
+      assigned_to: null,
+      due_at: null,
     });
 
     // Emit Event

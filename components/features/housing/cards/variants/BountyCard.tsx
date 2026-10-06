@@ -5,6 +5,7 @@ import { HousingTask } from "@/lib/domain/entities";
 import { claimTaskAction } from "@/lib/presentation/actions/housing/duty.actions";
 import { Loader } from "@/components/ui/Loader";
 import toast from "react-hot-toast";
+import { useTaskChanged } from "../../TaskSyncContext";
 
 interface BountyCardProps {
   task: HousingTask;
@@ -14,6 +15,7 @@ interface BountyCardProps {
 
 export default function BountyCard({ task, userId, getJWT }: BountyCardProps) {
   const [loading, setLoading] = useState(false);
+  const onTaskChanged = useTaskChanged();
 
   const handleClaim = async () => {
     setLoading(true);
@@ -22,23 +24,26 @@ export default function BountyCard({ task, userId, getJWT }: BountyCardProps) {
       const res = await claimTaskAction(task.id, userId, jwt);
       if (!res.success) throw new Error(res.error);
       toast.success("Bounty Claimed!");
-      window.location.reload(); // Force full refresh to update state
+      onTaskChanged(task.id, res.data);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Error claiming task";
       toast.error(message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
-    <div className="bg-white border border-stone-200 rounded-lg p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
+    <div className="bg-white border border-stone-200 rounded-lg p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow">
       {/* Title & Description */}
-      <div className="flex-1 min-w-0">
+      <div className="basis-full sm:basis-auto flex-1 min-w-0">
         <h3 className="font-bebas text-xl text-stone-800 truncate">
           {task.title}
         </h3>
-        <p className="text-stone-500 text-sm truncate">{task.description}</p>
+        <p className="text-stone-500 text-sm line-clamp-2 sm:truncate">
+          {task.description}
+        </p>
       </div>
 
       {/* Points */}
@@ -50,7 +55,7 @@ export default function BountyCard({ task, userId, getJWT }: BountyCardProps) {
       <button
         onClick={handleClaim}
         disabled={loading}
-        className="bg-fiji-purple hover:bg-fiji-dark text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap flex items-center gap-2"
+        className="flex-1 sm:flex-none min-h-11 bg-fiji-purple hover:bg-fiji-dark text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap flex items-center justify-center gap-2 disabled:opacity-60"
       >
         {loading ? (
           <>
