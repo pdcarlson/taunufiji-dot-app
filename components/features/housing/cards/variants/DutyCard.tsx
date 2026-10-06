@@ -22,6 +22,7 @@ import {
   submitProofAction,
 } from "@/lib/presentation/actions/housing/duty.actions";
 import { isAwaitingExpiryTransition } from "@/lib/utils/housing-assignee-task-state";
+import { uploadProofPhoto } from "../../uploadProof";
 
 interface DutyCardProps {
   task: HousingTask;
@@ -108,19 +109,14 @@ export function DutyCard({
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File size exceeds 10MB limit.");
-      return;
-    }
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("taskId", task.id);
       const jwt = await getJWT();
-      const result = await submitProofAction(formData, jwt);
+      const proofKey = await uploadProofPhoto(file, jwt, task.id);
+      const result = await submitProofAction({ taskId: task.id, proofKey }, jwt);
       if (!result.success) throw new Error(result.error);
       toast.success("Proof uploaded!");
       router.refresh();
@@ -130,6 +126,8 @@ export function DutyCard({
         err instanceof Error ? err.message : "Upload failed. Please try again.",
       );
     } finally {
+      // Let the member pick the same photo again after a failure.
+      input.value = "";
       setLoading(false);
     }
   };

@@ -9,6 +9,7 @@ export default mergeConfig(
         "lib/presentation/utils/action-handler.test.ts",
         "lib/presentation/actions/housing/admin.actions.test.ts",
         "lib/presentation/actions/housing/schedule.actions.test.ts",
+        "lib/presentation/actions/housing/duty.actions.test.ts",
       ],
       coverage: {
         enabled: true,
@@ -18,6 +19,7 @@ export default mergeConfig(
           "lib/presentation/utils/action-handler.ts",
           "lib/presentation/actions/housing/admin.actions.ts",
           "lib/presentation/actions/housing/schedule.actions.ts",
+          "lib/presentation/actions/housing/duty.actions.ts",
         ],
         thresholds: {
           lines: 90,

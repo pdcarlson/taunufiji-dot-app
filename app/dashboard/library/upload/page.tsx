@@ -30,48 +30,7 @@ import {
   getMetadataAction,
 } from "@/lib/presentation/actions/library/read.actions";
 import { validatedLibraryUploadContentType } from "@/lib/utils/library-upload-content-type";
-
-async function putWithRetry(
-  url: string,
-  file: File,
-  maxRetries = 2,
-): Promise<Response> {
-  const contentType = validatedLibraryUploadContentType();
-  let lastResponse: Response | null = null;
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
-    try {
-      const response = await fetch(url, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": contentType },
-      });
-      if (response.ok) {
-        return response;
-      }
-      lastResponse = response;
-      const retryable = response.status >= 500 && response.status <= 599;
-      if (!retryable || attempt === maxRetries) {
-        return response;
-      }
-    } catch (e) {
-      lastError = e;
-      if (attempt === maxRetries) {
-        throw e;
-      }
-    }
-    const delayMs = 300 * 2 ** attempt;
-    await new Promise((r) => setTimeout(r, delayMs));
-  }
-
-  if (lastResponse) {
-    return lastResponse;
-  }
-  throw lastError instanceof Error
-    ? lastError
-    : new Error("Storage upload failed after retries");
-}
+import { putWithRetry } from "@/lib/utils/put-with-retry";
 
 // Dynamic import to prevent SSR evaluation of PDF library (uses DOMMatrix)
 const PdfRedactor = dynamic_(
@@ -259,7 +218,11 @@ export default function UnifiedUploadPage() {
       const { key: s3Key, uploadUrl, sanitizedFilename } =
         await presignLibraryUploadAction({ filename: stdName }, jwt);
 
-      const putResponse = await putWithRetry(uploadUrl, fileToUpload);
+      const putResponse = await putWithRetry(
+        uploadUrl,
+        fileToUpload,
+        validatedLibraryUploadContentType(),
+      );
 
       if (!putResponse.ok) {
         throw new Error(

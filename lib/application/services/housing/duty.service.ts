@@ -55,11 +55,11 @@ export class DutyService implements IDutyService {
   }
 
   /**
-   * Submit proof for a task
-   * Emits: TASK_SUBMITTED
+   * Checks that `profileId` may attach proof to `taskId` right now.
+   * Called before issuing an upload URL so members learn about a problem
+   * before sending a photo, and again on submit.
    */
-  async submitProof(taskId: string, profileId: string, s3Key: string) {
-    // 1. Verify Ownership
+  async assertCanSubmitProof(taskId: string, profileId: string) {
     const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Task not found.");
@@ -69,13 +69,22 @@ export class DutyService implements IDutyService {
       throw new Error("You are not assigned to this task.");
     }
 
-    // 1b. Check Expiry
     if (task.due_at && new Date() > new Date(task.due_at)) {
       console.error(
         `[Submission Rejected] Task Expired. Server Time: ${new Date().toISOString()}, Due: ${task.due_at}, TaskID: ${taskId}`,
       );
       throw new Error("Task is expired. You cannot submit late.");
     }
+
+    return task;
+  }
+
+  /**
+   * Submit proof for a task
+   * Emits: TASK_SUBMITTED
+   */
+  async submitProof(taskId: string, profileId: string, s3Key: string) {
+    const task = await this.assertCanSubmitProof(taskId, profileId);
 
     const result = await this.taskRepository.update(taskId, {
       status: "pending", // Waiting for approval
