@@ -84,6 +84,8 @@ Before promoting a merge to **`production`**, verify the **Vercel Production** e
 - `DISCORD_ROLE_ID_HOUSING_CHAIR`
 - `CRON_SECRET` (when using Vercel cron or manual `/api/cron` invocations; optional in schema otherwise)
 
+`DISCORD_ROLE_ID_BROTHER` holds the Discord role that grants baseline platform access (the "weekly tasks" role); the variable name is historical. Cabinet and Housing Chair also grant access on their own.
+
 For production specifically, the three `DISCORD_ROLE_ID_*` keys must be present before deployment. Missing role IDs can break role-gated runtime flows even when unrelated routes (such as image proxying) build successfully.
 
 ## Appwrite: Extending `notification_level` (Housing)
