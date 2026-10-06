@@ -31,7 +31,7 @@ export default function UnauthorizedPage() {
           </div>
           <ul className="list-disc pl-5 text-stone-600 text-sm space-y-2 marker:text-stone-400">
             <li>Ensure you are a member of the Discord Server.</li>
-            <li>Verify you have the "Brothers" role.</li>
+            <li>Verify you have the "weekly tasks" role.</li>
             <li>
               Contact an <strong>Officer</strong> for manual approval.
             </li>

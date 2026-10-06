@@ -187,6 +187,7 @@ UI scope labels map to `RecurringMutationScope` on server actions. Cron reads **
 
 - Missing/invalid JWT -> explicit authentication failure.
 - Authenticated but no Brother role -> unauthorized baseline access failure.
+- Signing in without baseline access -> no profile row is created; the profile is only synced after the access check passes.
 - Brother but not housing admin invoking mutation -> role-specific denial.
 - Discord API temporary failure while checking roles -> safe failure mode; no mutation.
 
