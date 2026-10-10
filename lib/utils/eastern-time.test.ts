@@ -1,4 +1,6 @@
 import {
+  DUE_TIME_LABEL,
+  EASTERN_TIME_ZONE,
   buildWeeklyEasternRecurrenceRule,
   easternDateInputToIso,
   getTodayEasternDateInput,
@@ -10,6 +12,16 @@ describe("eastern-time utilities", () => {
   it("converts ET date input to ET end-of-day ISO", () => {
     const iso = easternDateInputToIso("2026-03-10");
     expect(iso).toBe("2026-03-11T03:59:00.000Z");
+  });
+
+  it("labels due dates with the wall-clock time they are stored at", () => {
+    const stored = new Date(easternDateInputToIso("2026-10-12"));
+    const shown = stored.toLocaleTimeString("en-US", {
+      timeZone: EASTERN_TIME_ZONE,
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    expect(DUE_TIME_LABEL).toBe(`${shown} ET`);
   });
 
   it("round-trips ET ISO to date input", () => {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 import { ScheduleService } from "./schedule.service";
 import { MockFactory } from "@/lib/test/mock-factory";
@@ -310,6 +310,56 @@ describe("ScheduleService deleteTaskThisAndFuture", () => {
     const deleteMock = taskRepository.delete as Mock;
     expect(updateScheduleMock.mock.invocationCallOrder[0]).toBeLessThan(
       deleteMock.mock.invocationCallOrder[0],
+    );
+  });
+});
+
+describe("ScheduleService createSchedule", () => {
+  let taskRepository: ReturnType<typeof MockFactory.createTaskRepository>;
+  let service: ScheduleService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-10T16:00:00.000Z")); // Sat 12:00 PM ET
+    taskRepository = MockFactory.createTaskRepository();
+    service = new ScheduleService(taskRepository);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("opens the first instance 72 hours before it is due when no lead time is given", async () => {
+    (taskRepository.createSchedule as Mock).mockImplementation(
+      async (data) => ({
+        id: "schedule-1",
+        createdAt: "2026-10-10T16:00:00.000Z",
+        updatedAt: "2026-10-10T16:00:00.000Z",
+        ...data,
+      }),
+    );
+    (taskRepository.create as Mock).mockImplementation(async (data) => ({
+      id: "task-1",
+      ...data,
+    }));
+
+    await service.createSchedule({
+      title: "Clean dishwasher",
+      description: "d",
+      recurrence_rule:
+        "DTSTART;TZID=America/New_York:20240101T235900\nRRULE:FREQ=WEEKLY;BYDAY=WE;BYHOUR=23;BYMINUTE=59;BYSECOND=0",
+      points_value: 0,
+      assigned_to: "user-a",
+      active: true,
+    });
+
+    expect(taskRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        due_at: "2026-10-15T03:59:00.000Z",
+        unlock_at: "2026-10-12T03:59:00.000Z",
+        status: "locked",
+      }),
     );
   });
 });

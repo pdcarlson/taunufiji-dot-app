@@ -55,6 +55,32 @@ describe("ensureFutureTasksJob", () => {
     );
   });
 
+  it("falls back to the 72h lead time when a schedule has none stored", async () => {
+    (taskRepository.findActiveSchedules as Mock).mockResolvedValue([
+      {
+        id: "schedule-3",
+        title: "Clean library",
+        description: "Sweep",
+        active: true,
+        recurrence_rule: "7",
+        lead_time_hours: null,
+        points_value: 0,
+      },
+    ]);
+    (taskRepository.findMany as Mock)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    await ensureFutureTasksJob(taskRepository);
+
+    const created = (taskRepository.create as Mock).mock.calls[0][0];
+    const leadHours =
+      (new Date(created.due_at).getTime() -
+        new Date(created.unlock_at).getTime()) /
+      (60 * 60 * 1000);
+    expect(leadHours).toBe(72);
+  });
+
   it("does not create when repository.findMany returns existing future instances", async () => {
     (taskRepository.findActiveSchedules as Mock).mockResolvedValue([
       {

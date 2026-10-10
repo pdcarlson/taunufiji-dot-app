@@ -49,7 +49,7 @@ This document is the durable behavioral reference for the Housing module. It def
 
 ## 3.1 Recurring Duty Flow (schedule-backed)
 
-1. Schedule exists and is active.
+1. Schedule exists and is active. Its `lead_time_hours` defaults to **72** (`DEFAULT_LEAD_TIME_HOURS` in `lib/domain/types/schedule.ts`) in the dashboard, the `/schedule` command, and every fallback for a schedule with no stored value.
 2. New duty instance generated:
    - `locked` if `unlock_at` is in the future,
    - `open` if immediately visible.
@@ -210,6 +210,7 @@ UI scope labels map to `RecurringMutationScope` on server actions. Cron reads **
 - `unlock_at > due_at` should never be generated.
 - Recurrence generation should avoid creating overdue instances on recovery paths.
 - Expiry check must use consistent timezone assumptions.
+- Date-only due dates are stored at 11:59 PM Eastern (`easternDateInputToIso`). Any UI label for that time uses `DUE_TIME_LABEL` from `lib/utils/eastern-time.ts` so the label cannot drift from what is saved.
 - Cron runs should be idempotent enough to avoid repeated destructive side effects.
 - `open` tasks whose due time has passed should not remain user-actionable in dashboard views; they must be transitioned to `expired` by canonical expiry logic or hidden until transition completes.
 

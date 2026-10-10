@@ -9,6 +9,7 @@ import { getHousingActionErrorMessage } from "./actionError";
 import { buildWeeklyEasternRecurrenceRule } from "@/lib/utils/eastern-time";
 
 import { Member } from "@/lib/domain/entities";
+import { DEFAULT_LEAD_TIME_HOURS } from "@/lib/domain/types/schedule";
 
 interface Props {
   onClose: () => void;
@@ -41,7 +42,7 @@ export default function CreateScheduleModal({
       description: "",
       assigned_to: "",
       freq_day: "FR",
-      lead_time: 24,
+      lead_time: DEFAULT_LEAD_TIME_HOURS,
     },
   });
   const { getJWT } = useJWT();
@@ -173,7 +174,7 @@ export default function CreateScheduleModal({
                 type="number"
                 {...register("lead_time", { required: true, min: 1 })}
                 className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                placeholder="24"
+                placeholder={String(DEFAULT_LEAD_TIME_HOURS)}
               />
             </div>
           </div>

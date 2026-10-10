@@ -1,4 +1,5 @@
 import { RRule, RRuleSet, rrulestr } from "rrule";
+import { DEFAULT_LEAD_TIME_HOURS } from "@/lib/domain/types/schedule";
 
 export interface ScheduleCalculation {
   dueAt: Date;
@@ -16,7 +17,7 @@ export interface ScheduleCalculation {
 export function calculateNextInstance(
   recurrenceRule: string,
   lastCompletedAt: Date,
-  leadTimeHours: number = 24,
+  leadTimeHours: number = DEFAULT_LEAD_TIME_HOURS,
   referenceDate?: Date,
 ): ScheduleCalculation | null {
   try {
