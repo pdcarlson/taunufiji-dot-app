@@ -22,4 +22,16 @@ describe("calculateNextInstance", () => {
     expect(result?.dueAt.toISOString()).toBe("2026-03-10T03:59:00.000Z");
     expect(result?.unlockAt.toISOString()).toBe("2026-03-09T03:59:00.000Z");
   });
+
+  it("unlocks 72 hours before the due date when no lead time is passed", () => {
+    const rule =
+      "DTSTART;TZID=America/New_York:20240101T235900\nRRULE:FREQ=WEEKLY;BYDAY=WE;BYHOUR=23;BYMINUTE=59;BYSECOND=0";
+    const result = calculateNextInstance(
+      rule,
+      new Date("2026-10-11T12:00:00.000Z"),
+    );
+
+    expect(result?.dueAt.toISOString()).toBe("2026-10-15T03:59:00.000Z");
+    expect(result?.unlockAt.toISOString()).toBe("2026-10-12T03:59:00.000Z");
+  });
 });

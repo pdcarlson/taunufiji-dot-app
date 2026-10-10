@@ -17,6 +17,12 @@ export const HousingScheduleSchema = BaseEntitySchema.extend({
 
 export type HousingSchedule = z.infer<typeof HousingScheduleSchema>;
 
+/**
+ * Chapter policy: recurring duties open 3 days before they are due. Used wherever a
+ * schedule has no stored lead time, so new schedules and fallbacks never drift back to 24h.
+ */
+export const DEFAULT_LEAD_TIME_HOURS = 72;
+
 export const CreateScheduleDTOSchema = HousingScheduleSchema.omit({
   id: true,
   createdAt: true,

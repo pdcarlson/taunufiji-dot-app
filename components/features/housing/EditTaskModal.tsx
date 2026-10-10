@@ -10,11 +10,13 @@ import { Loader } from "@/components/ui/Loader";
 import { X, Calendar, Edit2, Users, Clock, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
+  DUE_TIME_LABEL,
   easternDateInputToIso,
   getTodayEasternDateInput,
   isoToEasternDateInput,
 } from "@/lib/utils/eastern-time";
 import { RecurringMutationScope } from "@/lib/domain/types/recurring";
+import { DEFAULT_LEAD_TIME_HOURS } from "@/lib/domain/types/schedule";
 
 export interface EditTaskModalProps {
   task: HousingTask;
@@ -56,7 +58,7 @@ export function EditTaskModal({
     due_at: task.due_at ? isoToEasternDateInput(task.due_at) : "",
     unlock_at: task.unlock_at ? task.unlock_at.split("T")[0] : "",
     execution_limit: task.execution_limit || undefined,
-    lead_time_hours: 24, // Default, updated via fetch
+    lead_time_hours: DEFAULT_LEAD_TIME_HOURS, // Updated via fetch
   });
   const [mutationScope, setMutationScope] =
     useState<RecurringMutationScope>("this_and_future");
@@ -80,7 +82,7 @@ export function EditTaskModal({
             setScheduleLoaded(true);
             setFormData((prev) => ({
               ...prev,
-              lead_time_hours: res.data?.lead_time_hours || 24,
+              lead_time_hours: res.data?.lead_time_hours || DEFAULT_LEAD_TIME_HOURS,
             }));
           }
         } catch (e) {
@@ -127,7 +129,8 @@ export function EditTaskModal({
 
           // Recalculate Unlock Logic if Recurring
           if (isRecurring) {
-            const leadTime = Number(formData.lead_time_hours) || 24;
+            const leadTime =
+              Number(formData.lead_time_hours) || DEFAULT_LEAD_TIME_HOURS;
             const unlockDate = new Date(dueIso);
             unlockDate.setTime(
               unlockDate.getTime() - leadTime * 60 * 60 * 1000,
@@ -175,7 +178,9 @@ export function EditTaskModal({
               effectiveFromDueAt,
               ...(shouldMergeLeadTimeIntoRecurringUpdate
                 ? {
-                    scheduleLeadTimeHours: Number(formData.lead_time_hours) || 24,
+                    scheduleLeadTimeHours:
+                      Number(formData.lead_time_hours) ||
+                      DEFAULT_LEAD_TIME_HOURS,
                   }
                 : {}),
             }
@@ -439,7 +444,9 @@ export function EditTaskModal({
                     setFormData({ ...formData, due_at: e.target.value })
                   }
                 />
-                <p className="text-[10px] text-stone-400 mt-1">12:00 PM</p>
+                <p className="text-[10px] text-stone-400 mt-1">
+                  {DUE_TIME_LABEL}
+                </p>
               </div>
 
               {/* Unlock Date REMOVED per requirements */}

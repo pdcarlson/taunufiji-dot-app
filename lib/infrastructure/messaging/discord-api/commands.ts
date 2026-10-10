@@ -1,3 +1,5 @@
+import { DEFAULT_LEAD_TIME_HOURS } from "../../../domain/types/schedule";
+
 export const COMMANDS = [
   // --- Core (Public) ---
   {
@@ -78,7 +80,7 @@ export const COMMANDS = [
       },
       {
         name: "lead_time_hours",
-        description: "Hours before deadline to unlock (default: 24)",
+        description: `Hours before deadline to unlock (default: ${DEFAULT_LEAD_TIME_HOURS})`,
         type: 4, // INTEGER
         required: false,
       },

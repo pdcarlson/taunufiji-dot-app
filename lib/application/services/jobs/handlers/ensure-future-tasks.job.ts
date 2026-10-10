@@ -1,5 +1,6 @@
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { calculateNextInstance } from "@/lib/utils/scheduler";
+import { DEFAULT_LEAD_TIME_HOURS } from "@/lib/domain/types/schedule";
 
 /**
  * Self-heals **active** recurring schedules that have no open/pending/locked instance.
@@ -78,7 +79,7 @@ export const ensureFutureTasksJob = async (
       const nextInstance = calculateNextInstance(
         schedule.recurrence_rule,
         baseDate,
-        schedule.lead_time_hours || 24,
+        schedule.lead_time_hours || DEFAULT_LEAD_TIME_HOURS,
         now, // <--- Force it to be in the future
       );
 

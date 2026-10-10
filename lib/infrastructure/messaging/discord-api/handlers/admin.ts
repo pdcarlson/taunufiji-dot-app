@@ -3,6 +3,7 @@ import { getContainer } from "@/lib/infrastructure/container";
 import { CommandHandler } from "../types";
 import { rrulestr } from "rrule";
 import { buildWeeklyEasternRecurrenceRule } from "@/lib/utils/eastern-time";
+import { DEFAULT_LEAD_TIME_HOURS } from "@/lib/domain/types/schedule";
 
 const DAY_NAME_MAP = {
   MO: "Monday",
@@ -166,7 +167,10 @@ export const schedule: CommandHandler = async (interaction, options) => {
   const day = asString(options.day); // "MO", "TU", etc.
   const description = asString(options.description); // required field
   const userId = asOptionalString(options.assigned_to);
-  const leadTime = asNumber(options.lead_time_hours, 24);
+  const leadTime = asNumber(
+    options.lead_time_hours,
+    DEFAULT_LEAD_TIME_HOURS,
+  );
 
   if (!title || !description || !isDayKey(day)) {
     return createEphemeralResponse(

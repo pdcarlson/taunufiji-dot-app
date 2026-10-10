@@ -7,7 +7,10 @@
 
 import { ITaskRepository } from "@/lib/domain/ports/task.repository";
 import { CreateAssignmentDTO, HousingTask } from "@/lib/domain/types/task";
-import { CreateScheduleDTO } from "@/lib/domain/types/schedule";
+import {
+  CreateScheduleDTO,
+  DEFAULT_LEAD_TIME_HOURS,
+} from "@/lib/domain/types/schedule";
 import { calculateNextInstance } from "@/lib/utils/scheduler";
 import { DomainEventBus } from "@/lib/infrastructure/events/dispatcher";
 import { TaskEvents } from "@/lib/domain/events";
@@ -203,7 +206,7 @@ export class ScheduleService implements IScheduleService {
     const nextInstance = calculateNextInstance(
       schedule.recurrence_rule,
       new Date(),
-      schedule.lead_time_hours || 24,
+      schedule.lead_time_hours || DEFAULT_LEAD_TIME_HOURS,
     );
 
     if (nextInstance) {
@@ -252,7 +255,7 @@ export class ScheduleService implements IScheduleService {
     const nextInstance = calculateNextInstance(
       schedule.recurrence_rule,
       prevDue,
-      schedule.lead_time_hours || 24,
+      schedule.lead_time_hours || DEFAULT_LEAD_TIME_HOURS,
     );
 
     if (!nextInstance) {
